@@ -85,9 +85,6 @@ docker run --rm \
   ghcr.io/unknowlars/truenas-scale-api-prometheus-exporter:latest
 ```
 
-> [!NOTE]
-> Published image tags should include both `latest` and a fixed release tag such as `1.0.0`.
-
 If you want to build the image locally instead, use:
 
 ```bash
@@ -153,11 +150,6 @@ The repository includes a ready-to-import dashboard in `truenas-exporter-dashboa
 3. Choose your Prometheus data source.
 4. Save the dashboard.
 
-If you want to regenerate or extend the dashboard later, the source builder is `generate_truenas_dashboard.py`.
-
-### Screenshot Assets for the README
-
-README screenshots live in `.github/images/`, so you can refresh the visuals over time without changing the overall README structure.
 
 ## Included Files
 

@@ -719,7 +719,7 @@ def convert(source_root: Path, output_root: Path, clean: bool) -> None:
 def main() -> None:
     repo_root = Path(__file__).resolve().parent
     default_source = repo_root / "truenas-v25.10.2-docs"
-    default_output = default_source / "ai_markdown"
+    default_output = repo_root / "docs" / "truenas-api"
 
     parser = argparse.ArgumentParser(description="Convert offline TrueNAS API docs into AI-friendly Markdown.")
     parser.add_argument("--source", type=Path, default=default_source, help="Path to the offline docs snapshot root.")

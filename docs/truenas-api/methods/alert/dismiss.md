@@ -1,0 +1,48 @@
+---
+title: alert.dismiss
+kind: method
+source_rst: _sources/api_methods_alert.dismiss.rst.txt
+source_html: api_methods_alert.dismiss.html
+required_roles:
+  - ALERT_LIST_WRITE
+---
+
+# alert.dismiss
+
+## Summary
+
+Dismiss `id` alert.
+
+## Required Roles
+
+- `ALERT_LIST_WRITE`
+
+## Schema
+
+- Type: object
+
+### Call parameters
+
+- Type: array
+- No Additional Items
+- Schema name: `Tuple Validation`
+
+#### Parameter 1: uuid
+
+#### uuid
+
+- Schema name: `uuid`
+- Type: string
+
+UUID of the alert to dismiss.
+
+### Return value
+
+- Schema name: `Result`
+- Type: null
+
+Returns `null` when the alert is successfully dismissed.
+
+## Related Docs
+
+- JSON-RPC transport: [JSON-RPC 2.0 over WebSocket API](../../shared/jsonrpc.md)

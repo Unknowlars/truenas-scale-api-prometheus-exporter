@@ -1,0 +1,28 @@
+# pool
+
+AI-friendly Markdown index for the `pool` method namespace.
+
+- [pool.attach](attach.md)
+- [pool.attachments](attachments.md)
+- [pool.create](create.md)
+- [pool.ddt_prefetch](ddt_prefetch.md)
+- [pool.ddt_prune](ddt_prune.md)
+- [pool.detach](detach.md)
+- [pool.expand](expand.md)
+- [pool.export](export.md)
+- [pool.filesystem_choices](filesystem_choices.md)
+- [pool.get_disks](get_disks.md)
+- [pool.get_instance](get_instance.md)
+- [pool.import_find](import_find.md)
+- [pool.import_pool](import_pool.md)
+- [pool.is_upgraded](is_upgraded.md)
+- [pool.offline](offline.md)
+- [pool.online](online.md)
+- [pool.processes](processes.md)
+- [pool.query](query.md)
+- [pool.remove](remove.md)
+- [pool.replace](replace.md)
+- [pool.scrub](scrub/index.md)
+- [pool.update](update.md)
+- [pool.upgrade](upgrade.md)
+- [pool.validate_name](validate_name.md)

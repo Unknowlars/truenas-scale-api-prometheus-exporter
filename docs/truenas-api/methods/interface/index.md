@@ -1,0 +1,27 @@
+# interface
+
+AI-friendly Markdown index for the `interface` method namespace.
+
+- [interface.bridge_members_choices](bridge_members_choices.md)
+- [interface.cancel_rollback](cancel_rollback.md)
+- [interface.checkin](checkin.md)
+- [interface.checkin_waiting](checkin_waiting.md)
+- [interface.choices](choices.md)
+- [interface.commit](commit.md)
+- [interface.create](create.md)
+- [interface.delete](delete.md)
+- [interface.get_instance](get_instance.md)
+- [interface.has_pending_changes](has_pending_changes.md)
+- [interface.ip_in_use](ip_in_use.md)
+- [interface.lacpdu_rate_choices](lacpdu_rate_choices.md)
+- [interface.lag_ports_choices](lag_ports_choices.md)
+- [interface.network_config_to_be_removed](network_config_to_be_removed.md)
+- [interface.query](query.md)
+- [interface.rollback](rollback.md)
+- [interface.save_network_config](save_network_config.md)
+- [interface.services_restarted_on_sync](services_restarted_on_sync.md)
+- [interface.update](update.md)
+- [interface.vlan_parent_interface_choices](vlan_parent_interface_choices.md)
+- [interface.websocket_interface](websocket_interface.md)
+- [interface.websocket_local_ip](websocket_local_ip.md)
+- [interface.xmit_hash_policy_choices](xmit_hash_policy_choices.md)
