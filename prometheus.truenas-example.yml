@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 30s
+
+scrape_configs:
+  - job_name: truenas_exporter
+    static_configs:
+      - targets:
+          - truenas-exporter:9108

@@ -1,0 +1,38 @@
+services:
+  truenas-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: truenas-exporter
+    restart: unless-stopped
+    ports:
+      - "${EXPORTER_PORT:-9108}:${EXPORTER_PORT:-9108}"
+    env_file:
+      - .env
+    environment:
+      TRUENAS_WS_URL: "${TRUENAS_WS_URL}"
+      TRUENAS_API_KEY: "${TRUENAS_API_KEY}"
+      TRUENAS_VERIFY_TLS: "${TRUENAS_VERIFY_TLS:-true}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      EXPORTER_PORT: "${EXPORTER_PORT:-9108}"
+      SCRAPE_INTERVAL_SECONDS: "${SCRAPE_INTERVAL_SECONDS:-30}"
+      TRUENAS_TIMEOUT_SECONDS: "${TRUENAS_TIMEOUT_SECONDS:-20}"
+      AUTO_DISCOVER_METHODS: "${AUTO_DISCOVER_METHODS:-false}"
+      SCRAPE_ALL_METRICS: "${SCRAPE_ALL_METRICS:-false}"
+      QUERY_LIMIT: "${QUERY_LIMIT:-200}"
+      MAX_METHOD_CALLS: "${MAX_METHOD_CALLS:-250}"
+      MAX_LIST_ITEMS: "${MAX_LIST_ITEMS:-200}"
+      MAX_METRIC_DEPTH: "${MAX_METRIC_DEPTH:-6}"
+      MAX_ENTITY_CALLS: "${MAX_ENTITY_CALLS:-50}"
+      MAX_DATASETS: "${MAX_DATASETS:-100}"
+      FILESYSTEM_PATHS: "${FILESYSTEM_PATHS:-/mnt}"
+      ENABLE_FILESYSTEM_LISTDIR: "${ENABLE_FILESYSTEM_LISTDIR:-false}"
+      EXTRA_METHODS: "${EXTRA_METHODS:-}"
+      EXCLUDE_METHODS: "${EXCLUDE_METHODS:-}"
+      ENABLE_EVENT_STREAMS: "${ENABLE_EVENT_STREAMS:-true}"
+      ENABLE_DATASET_METRICS: "${ENABLE_DATASET_METRICS:-true}"
+      ENABLE_TASK_METRICS: "${ENABLE_TASK_METRICS:-true}"
+      ENABLE_IPMI_METRICS: "${ENABLE_IPMI_METRICS:-true}"
+      EVENT_INTERVAL_SECONDS: "${EVENT_INTERVAL_SECONDS:-2}"
+      EVENT_READ_TIMEOUT_SECONDS: "${EVENT_READ_TIMEOUT_SECONDS:-60}"
+      EVENT_SUBSCRIPTIONS: "${EVENT_SUBSCRIPTIONS:-reporting.realtime,app.stats,virt.instance.metrics,pool.scan,pool.query,disk.query,docker.state,interface.query,alert.list,directoryservices.status,service.query,failover.status,update.status,system.reboot.info,system.shutdown,core.get_jobs,container.query,vm.query}"
