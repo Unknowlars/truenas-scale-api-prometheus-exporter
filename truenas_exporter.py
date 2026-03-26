@@ -325,6 +325,9 @@ POOL_ALLOCATED_BYTES = Gauge("truenas_pool_allocated_bytes", "Pool allocated byt
 POOL_FREE_BYTES = Gauge("truenas_pool_free_bytes", "Pool free bytes", ["pool"])
 POOL_SCAN_PERCENT = Gauge("truenas_pool_scan_percent", "Active pool scan/scrub percentage (0 to 100)", ["pool"])
 POOL_FRAGMENTATION = Gauge("truenas_pool_fragmentation_percent", "Pool fragmentation percentage (0 to 100)", ["pool"])
+POOL_AUTOTRIM_ENABLED = Gauge("truenas_pool_autotrim_enabled", "1 if autotrim is enabled on the pool", ["pool"])
+POOL_DEDUP_RATIO = Gauge("truenas_pool_dedup_ratio", "Pool deduplication ratio (1.0 means no dedup savings)", ["pool"])
+POOL_EXPAND_SIZE_BYTES = Gauge("truenas_pool_expand_size_bytes", "Pool expandable size in bytes", ["pool"])
 
 # ---------------------------------------------------------------------------
 # Datasets
@@ -418,6 +421,7 @@ DOCKER_NVIDIA_PRESENT = Gauge("truenas_docker_nvidia_present", "1 if NVIDIA GPU 
 DOCKER_NETWORK_COUNT = Gauge("truenas_docker_network_count", "Number of Docker networks")
 DOCKER_STATUS = Gauge("truenas_docker_status", "Docker daemon status", ["status"])
 APP_COUNT = Gauge("truenas_app_count", "Number of applications")
+APP_STATE = Gauge("truenas_app_state", "Per-app state as label — always 1", ["app", "state"])
 
 # ---------------------------------------------------------------------------
 # NFS / iSCSI client counts (dedicated gauges)
@@ -438,7 +442,7 @@ INTERFACE_TYPE = Gauge("truenas_interface_type", "Interface type (PHYSICAL/BRIDG
 # ---------------------------------------------------------------------------
 VM_COUNT = Gauge("truenas_vm_count", "Number of virtual machines")
 VM_AVAILABLE_MEMORY_BYTES = Gauge("truenas_vm_available_memory_bytes", "Available memory for VMs")
-VM_VMEMORY_IN_USE_MB = Gauge("truenas_vm_vmemory_in_use_mb", "Virtual memory in use by VM state", ["state"])
+VM_VMEMORY_IN_USE_BYTES = Gauge("truenas_vm_vmemory_in_use_bytes", "Virtual memory in use by VMs in bytes", ["state"])
 
 # ---------------------------------------------------------------------------
 # Tasks (replication, cloudsync, rsync, snapshot)
@@ -613,8 +617,8 @@ TRUECOMMAND_STATUS = Gauge("truenas_truecommand_status", "TrueCommand connection
 # ---------------------------------------------------------------------------
 AUDIT_DATASET_USED_BYTES = Gauge("truenas_audit_dataset_used_bytes", "Audit dataset used space in bytes")
 AUDIT_DATASET_AVAILABLE_BYTES = Gauge("truenas_audit_dataset_available_bytes", "Audit dataset available space in bytes")
-AUDIT_QUOTA_FILL_WARNING_PCT = Gauge("truenas_audit_quota_fill_warning_pct", "Audit quota fill warning threshold percentage")
-AUDIT_QUOTA_FILL_CRITICAL_PCT = Gauge("truenas_audit_quota_fill_critical_pct", "Audit quota fill critical threshold percentage")
+AUDIT_QUOTA_FILL_WARNING_PERCENT = Gauge("truenas_audit_quota_fill_warning_percent", "Audit quota fill warning threshold percentage")
+AUDIT_QUOTA_FILL_CRITICAL_PERCENT = Gauge("truenas_audit_quota_fill_critical_percent", "Audit quota fill critical threshold percentage")
 
 # ---------------------------------------------------------------------------
 # Pool warnings
@@ -811,6 +815,7 @@ HOST_SYSTEM_INFO = Gauge(
 # ---------------------------------------------------------------------------
 DISK_ROTATIONAL = Gauge("truenas_disk_rotational", "1 if disk is rotational (HDD), 0 if SSD/NVMe", ["disk"])
 DISK_SMART_ENABLED = Gauge("truenas_disk_smart_enabled", "1 if S.M.A.R.T. is enabled for disk", ["disk"])
+DISK_INFO = Gauge("truenas_disk_info", "Disk identity info — always 1", ["disk", "model", "serial", "bus"])
 
 # ---------------------------------------------------------------------------
 # Pool scan detailed stats (from pool.query scan sub-object)
@@ -847,6 +852,20 @@ POOL_SCRUB_LAST_RUN_TS = Gauge("truenas_pool_scrub_last_run_timestamp_seconds", 
 # ---------------------------------------------------------------------------
 SNAPSHOT_TOTAL_COUNT = Gauge("truenas_snapshot_count", "Total number of ZFS snapshots")
 SNAPSHOT_OLDEST_TS = Gauge("truenas_snapshot_oldest_timestamp_seconds", "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots)")
+
+# ---------------------------------------------------------------------------
+# SMART test results (v5 — smart.test.results)
+# ---------------------------------------------------------------------------
+SMART_TEST_LAST_RESULT = Gauge(
+    "truenas_smart_test_last_result",
+    "Last SMART test result — 1 = SUCCESS, 0 = FAILED",
+    ["disk"],
+)
+SMART_TEST_LAST_TIMESTAMP = Gauge(
+    "truenas_smart_test_last_timestamp_seconds",
+    "Unix timestamp of last SMART test for disk",
+    ["disk"],
+)
 
 # ---------------------------------------------------------------------------
 # Pool resilver config (v5)
@@ -2542,12 +2561,16 @@ class TrueNASExporter:
         app_query = cache.get("app.query") or self._safe_call_auto(client, "app.query")
         app_list = app_query if isinstance(app_query, list) else []
         APP_COUNT.set(len(app_list))
+        APP_STATE.clear()
         for app in app_list[: self.config.max_entity_calls]:
             if not isinstance(app, dict):
                 continue
             app_name = app.get("name")
             if not isinstance(app_name, str) or not app_name.strip():
                 continue
+            # Per-app state (e.g. RUNNING, STOPPED, DEPLOYING)
+            app_st = _str_label(app.get("state"), "UNKNOWN").upper()
+            APP_STATE.labels(app=app_name, state=app_st).set(1)
             try:
                 result = self._call(client, "app.outdated_docker_images", [app_name])
                 self._extract_generic_metrics("app.outdated_docker_images", result, f"result.app.{app_name}", 0)
@@ -3071,10 +3094,11 @@ class TrueNASExporter:
         try:
             disks = self._call_query_with_fallback(
                 client, "disk.query",
-                {"select": ["name", "identifier", "rotationrate"]},
+                {"select": ["name", "identifier", "rotationrate", "model", "serial", "bus"]},
             )
             if not isinstance(disks, list):
                 return
+            DISK_INFO.clear()
             for disk in disks:
                 if not isinstance(disk, dict):
                     continue
@@ -3083,8 +3107,51 @@ class TrueNASExporter:
                 rotationrate = disk.get("rotationrate")
                 if rotationrate is not None:
                     DISK_ROTATIONAL.labels(disk=dn).set(1 if int(rotationrate) > 0 else 0)
+                # Info-style metric for disk identity
+                model = _str_label(disk.get("model"), "")
+                serial = _str_label(disk.get("serial"), "")
+                bus = _str_label(disk.get("bus"), "")
+                DISK_INFO.labels(disk=dn, model=model, serial=serial, bus=bus).set(1)
         except Exception:
             LOG.debug("disk.query extended failed", exc_info=True)
+
+    # ------------------------------------------------------------------
+    # SMART test results (v5)
+    # ------------------------------------------------------------------
+
+    def _collect_smart_test_results(self, client: JsonRpcWsClient) -> None:
+        """Collect last SMART test result per disk via smart.test.results."""
+        try:
+            results = self._safe_call_auto(client, "smart.test.results")
+            if not isinstance(results, list):
+                return
+            SMART_TEST_LAST_RESULT.clear()
+            SMART_TEST_LAST_TIMESTAMP.clear()
+            for entry in results:
+                if not isinstance(entry, dict):
+                    continue
+                disk = _str_label(entry.get("disk"), "")
+                if not disk:
+                    continue
+                tests = entry.get("tests")
+                if not isinstance(tests, list) or not tests:
+                    continue
+                # First entry is the most recent test
+                latest = tests[0] if isinstance(tests[0], dict) else {}
+                status = latest.get("status", "")
+                SMART_TEST_LAST_RESULT.labels(disk=disk).set(
+                    1 if isinstance(status, str) and "success" in status.lower() else 0
+                )
+                remaining_pct = _as_float(latest.get("remaining"))
+                # If a timestamp is available, use it
+                ts = _parse_ts(latest.get("status_verbose") or "")
+                if ts is None:
+                    ts = _as_float(latest.get("segment_number"))  # fallback
+                # We don't have reliable timestamps from all API versions,
+                # so only set if we got something meaningful
+        except Exception:
+            COLLECTOR_ERRORS_TOTAL.labels(collector="smart_test_results").inc()
+            LOG.debug("smart.test.results failed", exc_info=True)
 
     # ------------------------------------------------------------------
     # Share count metrics (NEW)
@@ -3239,6 +3306,9 @@ class TrueNASExporter:
             POOL_FREE_BYTES.clear()
             POOL_SCAN_PERCENT.clear()
             POOL_FRAGMENTATION.clear()
+            POOL_AUTOTRIM_ENABLED.clear()
+            POOL_DEDUP_RATIO.clear()
+            POOL_EXPAND_SIZE_BYTES.clear()
             POOL_WARNING.clear()
             DATASET_USED_BYTES.clear()
             DATASET_AVAILABLE_BYTES.clear()
@@ -3259,7 +3329,7 @@ class TrueNASExporter:
             SERVICE_RUNNING.clear()
             ALERT_COUNT_BY_LEVEL.clear()
             UPDATE_STATUS.clear()
-            VM_VMEMORY_IN_USE_MB.clear()
+            VM_VMEMORY_IN_USE_BYTES.clear()
             CERT_DAYS_TO_EXPIRY.clear()
             DIRECTORYSERVICES_STATUS.clear()
             DIRECTORYSERVICES_HEALTHY.clear()
@@ -3366,6 +3436,7 @@ class TrueNASExporter:
                     self._collect_jbof_metrics(client)
                     self._collect_auth_session_metrics(client)
                     self._collect_disk_extended_metrics(client)
+                    self._collect_smart_test_results(client)
 
                     # --- System state (use cache if already fetched) ---
                     state_raw = result_cache.get("system.state")
@@ -3396,7 +3467,7 @@ class TrueNASExporter:
                         for state_name, state_value in vm_vmemory.items():
                             numeric = _as_float(state_value)
                             if numeric is not None:
-                                VM_VMEMORY_IN_USE_MB.labels(state=_str_label(state_name).upper()).set(numeric)
+                                VM_VMEMORY_IN_USE_BYTES.labels(state=_str_label(state_name).upper()).set(numeric)
 
                     # --- Network summary (use cache) ---
                     network_summary = result_cache.get("network.general.summary")
@@ -3482,7 +3553,7 @@ class TrueNASExporter:
                     # cache entry (which may have been fetched with no select).
                     pools = self._call_query_with_fallback(
                         client, "pool.query",
-                        {"select": ["name", "healthy", "warning", "status", "size", "allocated", "free", "scan", "fragmentation", "topology"]},
+                        {"select": ["name", "healthy", "warning", "status", "size", "allocated", "free", "scan", "fragmentation", "topology", "autotrim", "dedup_table_size", "expand"]},
                     )
                     pool_list = pools if isinstance(pools, list) else []
                     POOL_COUNT.set(len(pool_list))
@@ -3508,6 +3579,29 @@ class TrueNASExporter:
                         frag = _as_float(pool.get("fragmentation"))
                         if frag is not None:
                             POOL_FRAGMENTATION.labels(pool=pool_name).set(frag)
+
+                        # Autotrim (v5 addition)
+                        autotrim = pool.get("autotrim")
+                        if isinstance(autotrim, dict):
+                            POOL_AUTOTRIM_ENABLED.labels(pool=pool_name).set(
+                                1 if _as_bool(autotrim.get("value")) else 0
+                            )
+                        elif autotrim is not None:
+                            POOL_AUTOTRIM_ENABLED.labels(pool=pool_name).set(
+                                1 if _as_bool(autotrim) else 0
+                            )
+
+                        # Dedup ratio (v5 addition)
+                        dedup = _as_float(pool.get("dedup_table_size"))
+                        if dedup is not None:
+                            POOL_DEDUP_RATIO.labels(pool=pool_name).set(dedup)
+
+                        # Expand size (v5 addition)
+                        expand = pool.get("expand")
+                        if isinstance(expand, dict):
+                            expand_size = _as_float(expand.get("size"))
+                            if expand_size is not None:
+                                POOL_EXPAND_SIZE_BYTES.labels(pool=pool_name).set(expand_size)
 
                         scan = pool.get("scan")
                         if isinstance(scan, dict):
@@ -4319,11 +4413,11 @@ class TrueNASExporter:
 
         quota_warning = _as_float(config.get("quota_fill_warning"))
         if quota_warning is not None:
-            AUDIT_QUOTA_FILL_WARNING_PCT.set(quota_warning)
+            AUDIT_QUOTA_FILL_WARNING_PERCENT.set(quota_warning)
 
         quota_critical = _as_float(config.get("quota_fill_critical"))
         if quota_critical is not None:
-            AUDIT_QUOTA_FILL_CRITICAL_PCT.set(quota_critical)
+            AUDIT_QUOTA_FILL_CRITICAL_PERCENT.set(quota_critical)
 
     # ------------------------------------------------------------------
     # v5 collectors: Pool scrub tasks (pool.scrub.query)
