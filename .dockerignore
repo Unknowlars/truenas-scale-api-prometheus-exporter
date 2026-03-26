@@ -23,4 +23,3 @@ pytest.ini
 requirements-dev.txt
 docker-compose.prometheus.yml
 prometheus.yml
-truenas-v25.10.2-docs/

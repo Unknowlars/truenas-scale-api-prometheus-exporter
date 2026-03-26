@@ -14,10 +14,23 @@ Standalone Prometheus exporter for the TrueNAS JSON-RPC WebSocket API, with Dock
 
 Repository: `github.com/Unknowlars/truenas-scale-api-prometheus-exporter`
 
-![Grafana dashboard preview placeholder](.github/images/dashboard-preview.svg)
+![Grafana dashboard overview](.github/images/dashboard_1.png)
 
-> [!TIP]
-> Store README screenshots in `.github/images/`. When you have a real Grafana screenshot, replace `.github/images/dashboard-preview.svg` or update the image path in this README.
+## Dashboard Preview
+
+The repository includes a ready-to-import Grafana dashboard covering system health, storage pools, disks, ZFS cache, services, apps, tasks, alerts, and virtualization.
+
+| Overview | Storage |
+| --- | --- |
+| ![Dashboard overview](.github/images/dashboard_1.png) | ![Storage and pools dashboard](.github/images/Storage_Pools_1.png) |
+
+| Disks | ZFS ARC / L2ARC |
+| --- | --- |
+| ![Disks and temperatures dashboard](.github/images/Disks_Temperatures_1.png) | ![ZFS ARC and L2ARC dashboard](.github/images/ZFS_ARC_L2ARC_Cache_1.png) |
+
+| Services | Alerts |
+| --- | --- |
+| ![Services dashboard](.github/images/Services.png) | ![Alerts and updates dashboard](.github/images/Alerts_Updates.png) |
 
 ## Overview
 
@@ -144,15 +157,7 @@ If you want to regenerate or extend the dashboard later, the source builder is `
 
 ### Screenshot Assets for the README
 
-Use `.github/images/` for public README images.
-
-Suggested filenames:
-
-- `.github/images/dashboard-overview.png`
-- `.github/images/dashboard-storage.png`
-- `.github/images/dashboard-disks.png`
-
-After adding a real screenshot, update the image block near the top of this README if you want it displayed instead of the placeholder.
+README screenshots live in `.github/images/`, so you can refresh the visuals over time without changing the overall README structure.
 
 ## Included Files
 
