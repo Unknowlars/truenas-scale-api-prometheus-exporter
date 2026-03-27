@@ -51,6 +51,11 @@ def reset_gauges():
     for metric in (
         exporter_module.SNAPSHOT_TOTAL_COUNT,
         exporter_module.SNAPSHOT_OLDEST_TS,
+        exporter_module.DATASET_USED_BYTES,
+        exporter_module.DATASET_REFERENCED_BYTES,
+        exporter_module.DATASET_SNAPSHOT_COUNT,
+        exporter_module.BOOT_ENV_SIZE_BYTES,
+        exporter_module.CERT_DAYS_TO_EXPIRY,
         exporter_module.SSH_ENABLED,
         exporter_module.SSH_PASSWORD_AUTH,
         exporter_module.FTP_ENABLED,
@@ -118,6 +123,81 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
     assert oldest_options["limit"] == 1
     assert oldest_options["order_by"] == ["properties.creation.parsed"]
     assert oldest_options["select"] == [["properties.creation.parsed", "creation_parsed"]]
+
+
+def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        if method == "pool.dataset.query":
+            return [{"name": "tank/data", "used": 123.0, "available": 456.0, "referenced": 78.0}]
+        if method == "pool.dataset.snapshot_count":
+            assert params == ["tank/data"]
+            return 9
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_dataset_metrics(object())
+
+    dataset_options = calls[0][1][1]
+    assert dataset_options["extra"]["properties"] == [
+        "used",
+        "available",
+        "referenced",
+        "quota",
+        "refquota",
+        "compressratio",
+    ]
+    assert dataset_options["select"] == [
+        "name",
+        ["used.parsed", "used"],
+        ["available.parsed", "available"],
+        ["referenced.parsed", "referenced"],
+        ["quota.parsed", "quota"],
+        ["refquota.parsed", "refquota"],
+        ["compressratio.parsed", "compressratio"],
+        "encrypted",
+    ]
+    assert exporter_module.DATASET_USED_BYTES.labels(dataset="tank/data")._value.get() == 123.0
+    assert exporter_module.DATASET_REFERENCED_BYTES.labels(dataset="tank/data")._value.get() == 78.0
+    assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/data")._value.get() == 9.0
+
+
+def test_boot_env_metrics_use_used_bytes_field(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        assert method == "boot.environment.query"
+        return [{"id": "default", "active": True, "keep": True, "used_bytes": 2048}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_boot_env_metrics(object(), {})
+
+    assert calls[0][1][1]["select"] == ["id", "active", "activated", "keep", "created", "used_bytes"]
+    assert exporter_module.BOOT_ENV_SIZE_BYTES.labels(name="default")._value.get() == 2048.0
+
+
+def test_certificate_metrics_do_not_request_undocumented_issuer_field(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        assert method == "certificate.query"
+        return [{"name": "ui_cert", "organization": "Example Org", "until": "2099-01-01T00:00:00+00:00", "CSR": None}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_certificate_metrics(object())
+
+    assert calls[0][1][1]["select"] == ["name", "organization", "common", "until", "CSR"]
+    assert exporter_module.CERT_DAYS_TO_EXPIRY.labels(name="ui_cert", issuer="Example Org")._value.get() > 0
 
 
 def test_inventory_collectors_accept_numeric_count_results(monkeypatch):

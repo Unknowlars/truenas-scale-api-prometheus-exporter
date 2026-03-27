@@ -2630,7 +2630,7 @@ class TrueNASExporter:
     def _collect_certificate_metrics(self, client: JsonRpcWsClient) -> None:
         try:
             certs = self._call(client, "certificate.query", [
-                [], {"select": ["name", "issuer", "until", "CSR"]}
+                [], {"select": ["name", "organization", "common", "until", "CSR"]}
             ])
         except Exception:
             LOG.debug("certificate.query failed", exc_info=True)
@@ -2646,14 +2646,10 @@ class TrueNASExporter:
 
         for cert in real_certs:
             name = _str_label(cert.get("name"), "unnamed")
-            issuer_raw = cert.get("issuer")
-            if isinstance(issuer_raw, dict):
-                issuer = _str_label(
-                    issuer_raw.get("common_name") or issuer_raw.get("organization") or issuer_raw.get("CN"),
-                    "unknown",
-                )
-            else:
-                issuer = _str_label(issuer_raw, "unknown")
+            issuer = _str_label(
+                cert.get("organization") or cert.get("common") or cert.get("issuer") or cert.get("signedby"),
+                "unknown",
+            )
 
             days = _cert_days_to_expiry(cert.get("until"))
             if days is not None:
@@ -2671,10 +2667,25 @@ class TrueNASExporter:
                 [],
                 {
                     "limit": self.config.max_datasets,
+                    "extra": {
+                        "properties": [
+                            "used",
+                            "available",
+                            "referenced",
+                            "quota",
+                            "refquota",
+                            "compressratio",
+                        ],
+                    },
                     "select": [
-                        "name", "used", "available", "referenced",
-                        "quota", "refquota", "snapshot_count",
-                        "compressratio", "encrypted",
+                        "name",
+                        ["used.parsed", "used"],
+                        ["available.parsed", "available"],
+                        ["referenced.parsed", "referenced"],
+                        ["quota.parsed", "quota"],
+                        ["refquota.parsed", "refquota"],
+                        ["compressratio.parsed", "compressratio"],
+                        "encrypted",
                     ],
                 },
             ])
@@ -2690,7 +2701,7 @@ class TrueNASExporter:
         # inside the lock. Do not clear them again here — doing so would be a
         # no-op at best and could create a race window if the lock is ever relaxed.
 
-        for ds in datasets:
+        for index, ds in enumerate(datasets):
             if not isinstance(ds, dict):
                 continue
             name = _str_label(ds.get("name"), "unknown")
@@ -2714,6 +2725,11 @@ class TrueNASExporter:
                     gauge.labels(dataset=name).set(val)
 
             snap_count = _as_float(ds.get("snapshot_count"))
+            if snap_count is None and index < self.config.max_entity_calls:
+                try:
+                    snap_count = _as_float(self._call(client, "pool.dataset.snapshot_count", [name]))
+                except Exception:
+                    LOG.debug("pool.dataset.snapshot_count failed for %s", name, exc_info=True)
             if snap_count is not None:
                 DATASET_SNAPSHOT_COUNT.labels(dataset=name).set(snap_count)
 
@@ -3943,7 +3959,7 @@ class TrueNASExporter:
         """Collect boot environment inventory and keep/active flags."""
         try:
             envs = cache.get("boot.environment.query") or self._call(client, "boot.environment.query", [
-                [], {"select": ["id", "active", "keep", "created", "rawspace"]}
+                [], {"select": ["id", "active", "activated", "keep", "created", "used_bytes"]}
             ])
         except Exception:
             LOG.debug("boot.environment.query failed", exc_info=True)
@@ -3971,7 +3987,7 @@ class TrueNASExporter:
                 keep_count += 1
             BOOT_ENV_ACTIVE.labels(name=name).set(1 if active else 0)
             BOOT_ENV_KEEP.labels(name=name).set(1 if keep else 0)
-            rawspace = _as_float(env.get("rawspace") or env.get("size"))
+            rawspace = _as_float(env.get("used_bytes") or env.get("rawspace") or env.get("size"))
             if rawspace is not None:
                 BOOT_ENV_SIZE_BYTES.labels(name=name).set(rawspace)
 
