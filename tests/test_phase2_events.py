@@ -110,11 +110,11 @@ def test_dispatch_routes_virt_instance_metrics_to_dedicated_handler(monkeypatch)
     def fake_handle(payload):
         calls.append(("virt", payload))
 
-    def fake_extract(event, payload, path, depth):
-        calls.append(("generic", event, payload, path, depth))
+    def fake_extract(event, payload):
+        calls.append(("generic", event, payload))
 
     monkeypatch.setattr(exporter, "_handle_virt_metrics_event", fake_handle)
-    monkeypatch.setattr(exporter, "_extract_event_metrics", fake_extract)
+    monkeypatch.setattr(exporter, "_replace_generic_event_metrics", fake_extract)
 
     payload = {"fields": [{"name": "vm1", "cpu_usage": 12.5}]}
     before = time.time()
@@ -122,7 +122,7 @@ def test_dispatch_routes_virt_instance_metrics_to_dedicated_handler(monkeypatch)
 
     assert calls == [
         ("virt", payload),
-        ("generic", "virt.instance.metrics", payload, "event", 0),
+        ("generic", "virt.instance.metrics", payload),
     ]
     assert labeled_value(exporter_module.EVENT_LAST_MESSAGE_TS, "virt.instance.metrics") >= before
 
@@ -227,3 +227,29 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
     assert labeled_value(exporter_module.NETWORK_TX_BYTES_RATE, "eth1") == 600.0
     assert ("tank",) not in exporter_module.POOL_REALTIME_READ_BYTES._metrics
     assert labeled_value(exporter_module.POOL_REALTIME_WRITE_BYTES, "fast") == 800.0
+
+
+def test_realtime_event_accepts_alternative_cpu_core_and_temperature_shapes():
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    exporter._handle_realtime_event(
+        {
+            "cpu": {
+                "cpu": {
+                    "usage": {
+                        "cpu0": {"percent": 14.5},
+                        "core1": {"usage": 27.0},
+                    },
+                    "temperatures": [
+                        {"core": "cpu0", "celsius": 44.0},
+                        {"core": "core1", "temperature": 46.5},
+                    ],
+                },
+            },
+        }
+    )
+
+    assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "0") == 14.5
+    assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "1") == 27.0
+    assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "0") == 44.0
+    assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "1") == 46.5

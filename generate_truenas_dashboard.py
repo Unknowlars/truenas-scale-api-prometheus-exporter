@@ -1054,7 +1054,18 @@ def build_dashboard():
         stat("Docker Up", f'max(truenas_docker_status{{instance=~"{I}", status="RUNNING"}})', 12, y, w=3, desc="Docker service running.", mappings=UP_MAP),
         stat("NVIDIA GPU", f'max(truenas_docker_nvidia_present{{instance=~"{I}"}})', 15, y, w=3, desc="NVIDIA GPU available.", mappings=BOOL_MAP),
         stat("Catalog Trains", f'truenas_catalog_train_count{{instance=~"{I}"}}', 18, y, w=3, desc="App catalog trains."),
-        stat("Outdated Imgs", f'count(truenas_app_state{{instance=~"{I}"}}) or vector(0)', 21, y, w=3, desc="App state entries."),
+        stat("Img Updates", f'sum(truenas_app_image_updates_available{{instance=~"{I}", app=~"$app"}}) or vector(0)', 21, y, w=3, desc="Apps with container image updates available."),
+    ])
+    y += 4
+    panels.extend([
+        stat("App Upgrades", f'sum(truenas_app_upgrade_available{{instance=~"{I}", app=~"$app"}}) or vector(0)', 0, y, w=6,
+             desc="Apps with a newer chart or package version available."),
+        stat("Custom Apps", f'sum(truenas_app_custom{{instance=~"{I}", app=~"$app"}}) or vector(0)', 6, y, w=6,
+             desc="Apps deployed as custom apps."),
+        stat("Migrated Apps", f'sum(truenas_app_migrated{{instance=~"{I}", app=~"$app"}}) or vector(0)', 12, y, w=6,
+             desc="Apps migrated from the older Kubernetes stack."),
+        stat("Containers", f'sum(truenas_app_container_count{{instance=~"{I}", app=~"$app"}}) or vector(0)', 18, y, w=6,
+             desc="Active app workload containers."),
     ])
     y += 4
     panels.append(bargauge(
@@ -1097,30 +1108,49 @@ def build_dashboard():
         12, y, unit="Bps", desc="App network ingress/egress.",
     ))
     y += 8
+    panels.append(bargauge(
+        "Apps by Container Count",
+        [tgt(f'topk(12, truenas_app_container_count{{instance=~"{I}", app=~"$app"}})', '{{app}}', 'A')],
+        0, y, w=8, unit="short", desc="Apps with the largest active workload footprint.",
+    ))
+    panels.append(piechart(
+        "App State Distribution",
+        [tgt(f'sum by (state) (truenas_app_state{{instance=~"{I}", app=~"$app"}})', '{{state}}', 'A')],
+        8, y, w=8, desc="Current state mix across installed apps.",
+    ))
+    panels.append(piechart(
+        "App Container State Distribution",
+        [tgt(f'sum by (state) (truenas_app_container_state_count{{instance=~"{I}", app=~"$app"}})', '{{state}}', 'A')],
+        16, y, w=8, desc="Current runtime state mix across app containers.",
+    ))
+    y += 8
     app_table_targets = [
         table_target(f'max by (app) (truenas_app_cpu_percent{{instance=~"{I}", app=~"$app"}})', 'A'),
         table_target(f'max by (app) (truenas_app_memory_bytes{{instance=~"{I}", app=~"$app"}})', 'B'),
-        table_target(f'max by (app) (truenas_app_net_rx_bytes_per_second{{instance=~"{I}", app=~"$app"}})', 'C'),
-        table_target(f'max by (app) (truenas_app_net_tx_bytes_per_second{{instance=~"{I}", app=~"$app"}})', 'D'),
+        table_target(f'max by (app) (truenas_app_container_count{{instance=~"{I}", app=~"$app"}})', 'C'),
+        table_target(f'max by (app) (truenas_app_upgrade_available{{instance=~"{I}", app=~"$app"}})', 'D'),
+        table_target(f'max by (app) (truenas_app_image_updates_available{{instance=~"{I}", app=~"$app"}})', 'E'),
+        table_target(f'max by (app) (truenas_app_used_port_count{{instance=~"{I}", app=~"$app"}})', 'F'),
+        table_target(f'max by (app) (truenas_app_used_host_ip_count{{instance=~"{I}", app=~"$app"}})', 'G'),
     ]
     app_table_transforms = [
         outer_join('app'),
         tf('organize', {
             'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
-            'renameByName': {'app': 'App', 'Value #A': 'CPU %', 'Value #B': 'Memory', 'Value #C': 'RX B/s', 'Value #D': 'TX B/s'},
-            'indexByName': {'App': 0, 'CPU %': 1, 'Memory': 2, 'RX B/s': 3, 'TX B/s': 4},
+            'renameByName': {'app': 'App', 'Value #A': 'CPU %', 'Value #B': 'Memory', 'Value #C': 'Containers', 'Value #D': 'Upgrade', 'Value #E': 'Img Updates', 'Value #F': 'Ports', 'Value #G': 'Host IPs'},
+            'indexByName': {'App': 0, 'CPU %': 1, 'Memory': 2, 'Containers': 3, 'Ports': 4, 'Host IPs': 5, 'Upgrade': 6, 'Img Updates': 7},
         }),
         tf('sortBy', {'fields': [{'displayName': 'Memory', 'desc': True}]}),
     ]
     app_overrides = [
         {"matcher": {"id": "byName", "options": "CPU %"}, "properties": [{"id": "unit", "value": "percent"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 50}, {"color": "red", "value": 80}]}}]},
         {"matcher": {"id": "byName", "options": "Memory"}, "properties": [{"id": "unit", "value": "bytes"}]},
-        {"matcher": {"id": "byName", "options": "RX B/s"}, "properties": [{"id": "unit", "value": "Bps"}]},
-        {"matcher": {"id": "byName", "options": "TX B/s"}, "properties": [{"id": "unit", "value": "Bps"}]},
+        {"matcher": {"id": "byName", "options": "Upgrade"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+        {"matcher": {"id": "byName", "options": "Img Updates"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
     ]
     panels.append(table(
         "App Inventory", app_table_targets, 0, y,
-        desc="App resource footprint.", overrides=app_overrides, transforms=app_table_transforms, sort_col='Memory',
+        desc="App resource footprint, update posture, and exposure summary.", overrides=app_overrides, transforms=app_table_transforms, sort_col='Memory',
     ))
     y += 10
 
@@ -1168,7 +1198,7 @@ def build_dashboard():
     panels.append(row("Alerts, Tasks & Updates", y))
     y += 1
     panels.extend([
-        stat("Total Alerts", f'sum(truenas_alert_count_by_level{{instance=~"{I}", level=~"$level"}})', 0, y, w=3,
+        stat("Total Alerts", f'max(truenas_alert_count{{instance=~"{I}"}})', 0, y, w=3,
              desc="Active alerts.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}], graph=True),
         stat("Critical", f'sum(truenas_alert_count_by_level{{instance=~"{I}", level="CRITICAL"}})', 3, y, w=3,
              desc="Critical alerts.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}], graph=True),
@@ -1179,6 +1209,15 @@ def build_dashboard():
         stat("Cloud Bkp", f'sum(truenas_cloud_backup_task_count{{instance=~"{I}"}})', 15, y, w=3, desc="Cloud backup tasks."),
         stat("Cron Jobs", f'truenas_cronjob_count{{instance=~"{I}"}}', 18, y, w=3, desc="Configured cron jobs."),
         stat("Reboot Req", f'max(truenas_system_reboot_required{{instance=~"{I}"}})', 21, y, w=3, desc="Reboot pending.", mappings=BOOL_MAP),
+    ])
+    y += 4
+    panels.extend([
+        stat("Dismissed", f'max(truenas_alert_dismissed_count{{instance=~"{I}"}})', 0, y, w=4, desc="Alerts dismissed but still present."),
+        stat("One-Shot", f'max(truenas_alert_one_shot_count{{instance=~"{I}"}})', 4, y, w=4, desc="One-shot alerts requiring explicit handling."),
+        stat("Active Jobs", f'max(truenas_job_active_count{{instance=~"{I}"}}) or vector(0)', 8, y, w=4, desc="Jobs currently waiting or running."),
+        stat("Abortable", f'max(truenas_job_abortable_active_count{{instance=~"{I}"}}) or vector(0)', 12, y, w=4, desc="Active jobs that can be cancelled."),
+        stat("Transient", f'max(truenas_job_transient_active_count{{instance=~"{I}"}}) or vector(0)', 16, y, w=4, desc="Active transient jobs."),
+        stat("Last Alert Activity", f'time() - clamp_min(max(truenas_alert_last_occurrence_timestamp_seconds{{instance=~"{I}"}}), 1)', 20, y, w=4, unit="s", desc="Age since the most recent alert occurrence."),
     ])
     y += 4
     panels.append(piechart(
@@ -1202,6 +1241,84 @@ def build_dashboard():
         16, y, w=8, desc="Alert count trend.",
     ))
     y += 8
+    alert_class_transforms = [
+        tf('labelsToFields', {'mode': 'columns', 'source': 'labels'}),
+        tf('reduce', {'reducers': ['lastNotNull']}),
+        tf('organize', {'excludeByName': {'Time': True}}),
+    ]
+    panels.append(barchart(
+        "Alert Classes",
+        [tgt(f'sum by (klass) (truenas_alert_count_by_class{{instance=~"{I}", level=~"$level"}})', '{{klass}}', 'A')],
+        0, y, w=8, desc="Most common current alert classes.", transforms=alert_class_transforms,
+    ))
+    panels.append(piechart(
+        "Alert Sources",
+        [tgt(f'truenas_alert_count_by_source{{instance=~"{I}"}}', '{{source}}', 'A')],
+        8, y, w=8, desc="Which subsystems are generating alerts.",
+    ))
+    panels.append(bargauge(
+        "Running Job Progress",
+        [tgt(f'topk(10, truenas_job_progress_percent{{instance=~"{I}"}})', '{{method}}', 'A')],
+        16, y, w=8, unit="percent", max_value=100, desc="Progress of currently running jobs by method.",
+        thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 50}, {"color": "red", "value": 90}],
+    ))
+    y += 8
+    panels.append(timeseries(
+        "Active Jobs by State",
+        [tgt(f'truenas_job_active_count_by_state{{instance=~"{I}"}}', '{{state}}', 'A')],
+        0, y, w=12, unit="short", desc="Current active job counts split by WAITING and RUNNING state.",
+    ))
+    panels.append(timeseries(
+        "Oldest Active Job Age",
+        [tgt(f'time() - truenas_job_oldest_active_timestamp_seconds{{instance=~"{I}"}}', '{{state}}', 'A')],
+        12, y, w=12, unit="s", desc="Age of the oldest active job in each state.",
+    ))
+    y += 8
+    panels.append(table(
+        "Job Method Detail",
+        [
+            table_target(f'sum by (method) (truenas_job_active_count_by_method{{instance=~"{I}"}})', 'A'),
+            table_target(f'sum by (method) (truenas_job_active_count_by_method{{instance=~"{I}", state="RUNNING"}})', 'B'),
+            table_target(f'sum by (method) (truenas_job_active_count_by_method{{instance=~"{I}", state="WAITING"}})', 'C'),
+            table_target(f'max by (method) (truenas_job_progress_percent{{instance=~"{I}"}})', 'D'),
+        ],
+        0, y, w=12,
+        desc="Active job counts and progress by middleware method.",
+        transforms=[
+            outer_join('method'),
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'method': 'Method', 'Value #A': 'Active', 'Value #B': 'Running', 'Value #C': 'Waiting', 'Value #D': 'Progress %'},
+                'indexByName': {'Method': 0, 'Active': 1, 'Running': 2, 'Waiting': 3, 'Progress %': 4},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Active', 'desc': True}]}),
+        ],
+        overrides=[
+            {"matcher": {"id": "byName", "options": "Progress %"}, "properties": [{"id": "unit", "value": "percent"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 50}, {"color": "red", "value": 90}]}}]},
+        ],
+        sort_col='Active',
+    ))
+    panels.append(table(
+        "Alert Source and Node Detail",
+        [
+            table_target(f'truenas_alert_count_by_source{{instance=~"{I}"}}', 'A'),
+            table_target(f'truenas_alert_count_by_node{{instance=~"{I}"}}', 'B'),
+        ],
+        12, y, w=12,
+        desc="Current alert counts grouped by source and by node.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'source': 'Source', 'node': 'Node', 'Value #A': 'Source Alerts', 'Value #B': 'Node Alerts'},
+                'indexByName': {'Source': 0, 'Source Alerts': 1, 'Node': 2, 'Node Alerts': 3},
+            }),
+        ],
+        overrides=[
+            {"matcher": {"id": "byName", "options": "Source Alerts"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}]},
+            {"matcher": {"id": "byName", "options": "Node Alerts"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}]},
+        ],
+    ))
+    y += 10
     # Task state detail table
     panels.append(table(
         "Task State Detail",
@@ -1442,6 +1559,17 @@ def build_dashboard():
         12, dy, unit="short", desc="Compression effectiveness per dataset.",
     ))
     dy += 8
+    ds_panels.append(bargauge(
+        "Datasets Using Snapshot Space",
+        [tgt(f'topk(15, truenas_dataset_used_by_snapshots_bytes{{instance=~"{I}", dataset=~"$dataset"}} > 0)', '{{dataset}}', 'A')],
+        0, dy, unit="bytes", desc="Datasets consuming the most space in snapshots.",
+    ))
+    ds_panels.append(bargauge(
+        "Datasets with Reservations",
+        [tgt(f'topk(15, truenas_dataset_reservation_bytes{{instance=~"{I}", dataset=~"$dataset"}} > 0)', '{{dataset}}', 'A')],
+        12, dy, unit="bytes", desc="Datasets with explicit ZFS reservations.",
+    ))
+    dy += 8
     ds_panels.append(table(
         "Dataset Capacity Detail",
         [
@@ -1452,6 +1580,9 @@ def build_dashboard():
             table_target(f'max by (dataset) (truenas_dataset_quota_bytes{{instance=~"{I}", dataset=~"$dataset"}})', 'E'),
             table_target(f'max by (dataset) (truenas_dataset_snapshot_count{{instance=~"{I}", dataset=~"$dataset"}})', 'F'),
             table_target(f'100 * max by (dataset) (truenas_dataset_used_bytes{{instance=~"{I}", dataset=~"$dataset"}}) / clamp_min(max by (dataset) (truenas_dataset_used_bytes{{instance=~"{I}", dataset=~"$dataset"}}) + max by (dataset) (truenas_dataset_available_bytes{{instance=~"{I}", dataset=~"$dataset"}}), 1)', 'G'),
+            table_target(f'max by (dataset) (truenas_dataset_refquota_bytes{{instance=~"{I}", dataset=~"$dataset"}})', 'H'),
+            table_target(f'max by (dataset) (truenas_dataset_reservation_bytes{{instance=~"{I}", dataset=~"$dataset"}})', 'I'),
+            table_target(f'max by (dataset) (truenas_dataset_used_by_snapshots_bytes{{instance=~"{I}", dataset=~"$dataset"}})', 'J'),
         ],
         0, dy,
         desc="Detailed dataset capacity, encryption, quota, and snapshot info.",
@@ -1459,8 +1590,8 @@ def build_dashboard():
             outer_join('dataset'),
             tf('organize', {
                 'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
-                'renameByName': {'dataset': 'Dataset', 'Value #A': 'Used', 'Value #B': 'Available', 'Value #C': 'Compression', 'Value #D': 'Encrypted', 'Value #E': 'Quota', 'Value #F': 'Snapshots', 'Value #G': 'Used %'},
-                'indexByName': {'Dataset': 0, 'Used %': 1, 'Used': 2, 'Available': 3, 'Quota': 4, 'Snapshots': 5, 'Compression': 6, 'Encrypted': 7},
+                'renameByName': {'dataset': 'Dataset', 'Value #A': 'Used', 'Value #B': 'Available', 'Value #C': 'Compression', 'Value #D': 'Encrypted', 'Value #E': 'Quota', 'Value #F': 'Snapshots', 'Value #G': 'Used %', 'Value #H': 'Refquota', 'Value #I': 'Reservation', 'Value #J': 'Snapshot Space'},
+                'indexByName': {'Dataset': 0, 'Used %': 1, 'Used': 2, 'Available': 3, 'Quota': 4, 'Refquota': 5, 'Reservation': 6, 'Snapshot Space': 7, 'Snapshots': 8, 'Compression': 9, 'Encrypted': 10},
             }),
             tf('sortBy', {'fields': [{'displayName': 'Used %', 'desc': True}]}),
         ],
@@ -1469,9 +1600,58 @@ def build_dashboard():
             {"matcher": {"id": "byName", "options": "Used"}, "properties": [{"id": "unit", "value": "bytes"}]},
             {"matcher": {"id": "byName", "options": "Available"}, "properties": [{"id": "unit", "value": "bytes"}]},
             {"matcher": {"id": "byName", "options": "Quota"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "Refquota"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "Reservation"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "Snapshot Space"}, "properties": [{"id": "unit", "value": "bytes"}]},
             {"matcher": {"id": "byName", "options": "Encrypted"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
         ],
         sort_col='Used %',
+    ))
+    dy += 10
+    ds_panels.append(table(
+        "Dataset Policy Detail",
+        [
+            table_target(f'max by (dataset) (truenas_dataset_key_loaded{{instance=~"{I}", dataset=~"$dataset"}})', 'A'),
+            table_target(f'max by (dataset) (truenas_dataset_locked{{instance=~"{I}", dataset=~"$dataset"}})', 'B'),
+            table_target(f'max by (dataset) (truenas_dataset_readonly{{instance=~"{I}", dataset=~"$dataset"}})', 'C'),
+            table_target(f'max by (dataset) (truenas_dataset_atime{{instance=~"{I}", dataset=~"$dataset"}})', 'D'),
+            table_target(f'max by (dataset) (truenas_dataset_exec{{instance=~"{I}", dataset=~"$dataset"}})', 'E'),
+            table_target(f'max by (dataset) (truenas_dataset_quota_warning_percent{{instance=~"{I}", dataset=~"$dataset"}})', 'F'),
+            table_target(f'max by (dataset) (truenas_dataset_quota_critical_percent{{instance=~"{I}", dataset=~"$dataset"}})', 'G'),
+            table_target(f'max by (dataset) (truenas_dataset_refquota_warning_percent{{instance=~"{I}", dataset=~"$dataset"}})', 'H'),
+            table_target(f'max by (dataset) (truenas_dataset_refquota_critical_percent{{instance=~"{I}", dataset=~"$dataset"}})', 'I'),
+            table_target(f'max by (dataset) (truenas_dataset_refreservation_bytes{{instance=~"{I}", dataset=~"$dataset"}})', 'J'),
+            table_target(f'max by (dataset) (truenas_dataset_used_by_children_bytes{{instance=~"{I}", dataset=~"$dataset"}})', 'K'),
+            table_target(f'max by (dataset) (truenas_dataset_used_by_dataset_bytes{{instance=~"{I}", dataset=~"$dataset"}})', 'L'),
+            table_target(f'time() - max by (dataset) (truenas_dataset_creation_timestamp_seconds{{instance=~"{I}", dataset=~"$dataset"}})', 'M'),
+        ],
+        0, dy,
+        desc="Dataset encryption, policy flags, quota thresholds, and age.",
+        transforms=[
+            outer_join('dataset'),
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'dataset': 'Dataset', 'Value #A': 'Key Loaded', 'Value #B': 'Locked', 'Value #C': 'Readonly', 'Value #D': 'Atime', 'Value #E': 'Exec', 'Value #F': 'Quota Warn %', 'Value #G': 'Quota Crit %', 'Value #H': 'Refquota Warn %', 'Value #I': 'Refquota Crit %', 'Value #J': 'Refreservation', 'Value #K': 'Used by Children', 'Value #L': 'Used by Dataset', 'Value #M': 'Age'},
+                'indexByName': {'Dataset': 0, 'Age': 1, 'Quota Warn %': 2, 'Quota Crit %': 3, 'Refquota Warn %': 4, 'Refquota Crit %': 5, 'Key Loaded': 6, 'Locked': 7, 'Readonly': 8, 'Atime': 9, 'Exec': 10, 'Refreservation': 11, 'Used by Children': 12, 'Used by Dataset': 13},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Quota Crit %', 'desc': True}]}),
+        ],
+        overrides=[
+            {"matcher": {"id": "byName", "options": "Quota Warn %"}, "properties": [{"id": "unit", "value": "percent"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 75}, {"color": "red", "value": 90}]}}]},
+            {"matcher": {"id": "byName", "options": "Quota Crit %"}, "properties": [{"id": "unit", "value": "percent"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 85}, {"color": "red", "value": 95}]}}]},
+            {"matcher": {"id": "byName", "options": "Refquota Warn %"}, "properties": [{"id": "unit", "value": "percent"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 75}, {"color": "red", "value": 90}]}}]},
+            {"matcher": {"id": "byName", "options": "Refquota Crit %"}, "properties": [{"id": "unit", "value": "percent"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 85}, {"color": "red", "value": 95}]}}]},
+            {"matcher": {"id": "byName", "options": "Age"}, "properties": [{"id": "unit", "value": "s"}]},
+            {"matcher": {"id": "byName", "options": "Refreservation"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "Used by Children"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "Used by Dataset"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "Key Loaded"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+            {"matcher": {"id": "byName", "options": "Locked"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+            {"matcher": {"id": "byName", "options": "Readonly"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+            {"matcher": {"id": "byName", "options": "Atime"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+            {"matcher": {"id": "byName", "options": "Exec"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+        ],
+        sort_col='Quota Crit %',
     ))
     dy += 10
     panels.append(row("Dataset Deep-Dive", y, collapsed=True, panels=ds_panels))

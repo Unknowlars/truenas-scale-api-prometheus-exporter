@@ -341,6 +341,21 @@ DATASET_REFQUOTA_BYTES = Gauge("truenas_dataset_refquota_bytes", "Dataset refquo
 DATASET_SNAPSHOT_COUNT = Gauge("truenas_dataset_snapshot_count", "Number of snapshots for dataset", ["dataset"])
 DATASET_COMPRESSION_RATIO = Gauge("truenas_dataset_compression_ratio", "Dataset compression ratio", ["dataset"])
 DATASET_ENCRYPTED = Gauge("truenas_dataset_encrypted", "1 if dataset is encrypted", ["dataset"])
+DATASET_RESERVATION_BYTES = Gauge("truenas_dataset_reservation_bytes", "Dataset reservation in bytes", ["dataset"])
+DATASET_REFRESERVATION_BYTES = Gauge("truenas_dataset_refreservation_bytes", "Dataset refreservation in bytes", ["dataset"])
+DATASET_USED_BY_CHILDREN_BYTES = Gauge("truenas_dataset_used_by_children_bytes", "Dataset space used by child datasets in bytes", ["dataset"])
+DATASET_USED_BY_DATASET_BYTES = Gauge("truenas_dataset_used_by_dataset_bytes", "Dataset space used by the dataset itself in bytes", ["dataset"])
+DATASET_USED_BY_SNAPSHOTS_BYTES = Gauge("truenas_dataset_used_by_snapshots_bytes", "Dataset space used by snapshots in bytes", ["dataset"])
+DATASET_READONLY = Gauge("truenas_dataset_readonly", "1 if dataset readonly is enabled", ["dataset"])
+DATASET_ATIME = Gauge("truenas_dataset_atime", "1 if dataset atime updates are enabled", ["dataset"])
+DATASET_EXEC = Gauge("truenas_dataset_exec", "1 if dataset allows executable files", ["dataset"])
+DATASET_KEY_LOADED = Gauge("truenas_dataset_key_loaded", "1 if encrypted dataset keys are loaded", ["dataset"])
+DATASET_LOCKED = Gauge("truenas_dataset_locked", "1 if encrypted dataset is locked", ["dataset"])
+DATASET_QUOTA_WARNING_PERCENT = Gauge("truenas_dataset_quota_warning_percent", "Dataset quota warning threshold percentage", ["dataset"])
+DATASET_QUOTA_CRITICAL_PERCENT = Gauge("truenas_dataset_quota_critical_percent", "Dataset quota critical threshold percentage", ["dataset"])
+DATASET_REFQUOTA_WARNING_PERCENT = Gauge("truenas_dataset_refquota_warning_percent", "Dataset refquota warning threshold percentage", ["dataset"])
+DATASET_REFQUOTA_CRITICAL_PERCENT = Gauge("truenas_dataset_refquota_critical_percent", "Dataset refquota critical threshold percentage", ["dataset"])
+DATASET_CREATION_TS = Gauge("truenas_dataset_creation_timestamp_seconds", "Dataset creation timestamp as Unix seconds", ["dataset"])
 
 # ---------------------------------------------------------------------------
 # Disks
@@ -378,6 +393,24 @@ SMB_SHARE_COUNT = Gauge("truenas_smb_share_count", "Number of configured SMB sha
 # ---------------------------------------------------------------------------
 ALERT_COUNT = Gauge("truenas_alert_count", "Total number of active alerts")
 ALERT_COUNT_BY_LEVEL = Gauge("truenas_alert_count_by_level", "Alert count by level", ["level"])
+ALERT_COUNT_BY_SOURCE = Gauge("truenas_alert_count_by_source", "Alert count by source component", ["source"])
+ALERT_COUNT_BY_CLASS = Gauge("truenas_alert_count_by_class", "Alert count by class and level", ["klass", "level"])
+ALERT_COUNT_BY_NODE = Gauge("truenas_alert_count_by_node", "Alert count by node", ["node"])
+ALERT_DISMISSED_COUNT = Gauge("truenas_alert_dismissed_count", "Number of dismissed alerts")
+ALERT_ONE_SHOT_COUNT = Gauge("truenas_alert_one_shot_count", "Number of one-shot alerts")
+ALERT_OLDEST_TS = Gauge("truenas_alert_oldest_timestamp_seconds", "Unix timestamp of the oldest current alert")
+ALERT_LAST_OCCURRENCE_TS = Gauge("truenas_alert_last_occurrence_timestamp_seconds", "Most recent alert occurrence timestamp by level", ["level"])
+
+# ---------------------------------------------------------------------------
+# Jobs
+# ---------------------------------------------------------------------------
+JOB_ACTIVE_COUNT = Gauge("truenas_job_active_count", "Number of active jobs in WAITING or RUNNING state")
+JOB_ACTIVE_COUNT_BY_STATE = Gauge("truenas_job_active_count_by_state", "Number of active jobs by state", ["state"])
+JOB_ACTIVE_COUNT_BY_METHOD = Gauge("truenas_job_active_count_by_method", "Number of active jobs by method and state", ["method", "state"])
+JOB_ABORTABLE_ACTIVE_COUNT = Gauge("truenas_job_abortable_active_count", "Number of active abortable jobs")
+JOB_TRANSIENT_ACTIVE_COUNT = Gauge("truenas_job_transient_active_count", "Number of active transient jobs")
+JOB_OLDEST_ACTIVE_TS = Gauge("truenas_job_oldest_active_timestamp_seconds", "Unix timestamp of the oldest active job by state", ["state"])
+JOB_PROGRESS_PERCENT = Gauge("truenas_job_progress_percent", "Maximum running job progress percent by method", ["method"])
 
 # ---------------------------------------------------------------------------
 # Updates
@@ -422,6 +455,14 @@ DOCKER_NETWORK_COUNT = Gauge("truenas_docker_network_count", "Number of Docker n
 DOCKER_STATUS = Gauge("truenas_docker_status", "Docker daemon status", ["status"])
 APP_COUNT = Gauge("truenas_app_count", "Number of applications")
 APP_STATE = Gauge("truenas_app_state", "Per-app state as label — always 1", ["app", "state"])
+APP_UPGRADE_AVAILABLE = Gauge("truenas_app_upgrade_available", "1 if an app upgrade is available", ["app"])
+APP_IMAGE_UPDATES_AVAILABLE = Gauge("truenas_app_image_updates_available", "1 if updated app container images are available", ["app"])
+APP_CUSTOM = Gauge("truenas_app_custom", "1 if the app is a custom app", ["app"])
+APP_MIGRATED = Gauge("truenas_app_migrated", "1 if the app was migrated from Kubernetes", ["app"])
+APP_CONTAINER_COUNT = Gauge("truenas_app_container_count", "Number of active containers for an app", ["app"])
+APP_USED_PORT_COUNT = Gauge("truenas_app_used_port_count", "Number of active workload port mappings for an app", ["app"])
+APP_USED_HOST_IP_COUNT = Gauge("truenas_app_used_host_ip_count", "Number of host IPs used by an app", ["app"])
+APP_CONTAINER_STATE_COUNT = Gauge("truenas_app_container_state_count", "Count of app containers by runtime state", ["app", "state"])
 
 # ---------------------------------------------------------------------------
 # NFS / iSCSI client counts (dedicated gauges)
@@ -1141,6 +1182,68 @@ def _str_label(value: Any, fallback: str = "unknown") -> str:
     return text or fallback
 
 
+def _normalize_core_label(value: Any) -> str:
+    text = _str_label(value)
+    match = re.search(r"(\d+)$", text)
+    return match.group(1) if match else text
+
+
+def _extract_labeled_numeric_series(
+    payload: Any,
+    *,
+    label_keys: tuple[str, ...] = ("core", "cpu", "id", "name"),
+    value_keys: tuple[str, ...] = ("value",),
+    normalize_label: bool = False,
+) -> dict[tuple[str, ...], float]:
+    series: dict[tuple[str, ...], float] = {}
+
+    if isinstance(payload, list):
+        for idx, item in enumerate(payload):
+            if isinstance(item, dict):
+                label = None
+                for label_key in label_keys:
+                    candidate = item.get(label_key)
+                    if candidate is not None:
+                        label = candidate
+                        break
+                if label is None:
+                    label = idx
+
+                value = None
+                for value_key in value_keys:
+                    value = _as_float(item.get(value_key))
+                    if value is not None:
+                        break
+            else:
+                label = idx
+                value = _as_float(item)
+
+            if value is None:
+                continue
+
+            label_text = _normalize_core_label(label) if normalize_label else _str_label(label)
+            series[(label_text,)] = value
+        return series
+
+    if isinstance(payload, dict):
+        for raw_label, raw_value in payload.items():
+            value = None
+            if isinstance(raw_value, dict):
+                for value_key in value_keys:
+                    value = _as_float(raw_value.get(value_key))
+                    if value is not None:
+                        break
+            if value is None:
+                value = _as_float(raw_value)
+            if value is None:
+                continue
+
+            label_text = _normalize_core_label(raw_label) if normalize_label else _str_label(raw_label)
+            series[(label_text,)] = value
+
+    return series
+
+
 def _parse_ts(value: Any) -> float | None:
     """Convert various TrueNAS datetime representations to a Unix timestamp."""
     if value is None:
@@ -1603,6 +1706,170 @@ class TrueNASExporter:
 
         return None
 
+    def _export_alert_metrics(self, alerts_raw: Any) -> None:
+        alert_list = alerts_raw if isinstance(alerts_raw, list) else []
+
+        ALERT_COUNT_BY_LEVEL.clear()
+        ALERT_COUNT_BY_SOURCE.clear()
+        ALERT_COUNT_BY_CLASS.clear()
+        ALERT_COUNT_BY_NODE.clear()
+        ALERT_LAST_OCCURRENCE_TS.clear()
+
+        ALERT_COUNT.set(len(alert_list))
+
+        level_counts: dict[str, int] = {}
+        source_counts: dict[str, int] = {}
+        class_counts: dict[tuple[str, str], int] = {}
+        node_counts: dict[str, int] = {}
+        last_occurrence_by_level: dict[str, float] = {}
+        dismissed_count = 0
+        one_shot_count = 0
+        oldest_ts: float | None = None
+
+        for alert in alert_list:
+            if not isinstance(alert, dict):
+                continue
+
+            level = _str_label(alert.get("level"), "UNKNOWN").upper()
+            source = _str_label(alert.get("source"), "unknown")
+            klass = _str_label(alert.get("klass"), "unknown")
+            node = _str_label(alert.get("node"), "unknown")
+
+            level_counts[level] = level_counts.get(level, 0) + 1
+            source_counts[source] = source_counts.get(source, 0) + 1
+            class_counts[(klass, level)] = class_counts.get((klass, level), 0) + 1
+            node_counts[node] = node_counts.get(node, 0) + 1
+
+            if _as_bool(alert.get("dismissed")):
+                dismissed_count += 1
+            if _as_bool(alert.get("one_shot")):
+                one_shot_count += 1
+
+            created_ts = _parse_ts(alert.get("datetime"))
+            if created_ts is not None:
+                oldest_ts = created_ts if oldest_ts is None else min(oldest_ts, created_ts)
+
+            last_occurrence_ts = _parse_ts(alert.get("last_occurrence"))
+            if last_occurrence_ts is not None:
+                last_occurrence_by_level[level] = max(
+                    last_occurrence_by_level.get(level, last_occurrence_ts),
+                    last_occurrence_ts,
+                )
+
+        for level, count in level_counts.items():
+            ALERT_COUNT_BY_LEVEL.labels(level=level).set(count)
+        for source, count in source_counts.items():
+            ALERT_COUNT_BY_SOURCE.labels(source=source).set(count)
+        for (klass, level), count in class_counts.items():
+            ALERT_COUNT_BY_CLASS.labels(klass=klass, level=level).set(count)
+        for node, count in node_counts.items():
+            ALERT_COUNT_BY_NODE.labels(node=node).set(count)
+        for level, ts in last_occurrence_by_level.items():
+            ALERT_LAST_OCCURRENCE_TS.labels(level=level).set(ts)
+
+        ALERT_DISMISSED_COUNT.set(dismissed_count)
+        ALERT_ONE_SHOT_COUNT.set(one_shot_count)
+        ALERT_OLDEST_TS.set(oldest_ts if oldest_ts is not None else 0)
+
+    def _collect_job_metrics(self, client: JsonRpcWsClient) -> None:
+        active_states = ("WAITING", "RUNNING")
+
+        JOB_ACTIVE_COUNT_BY_STATE.clear()
+        JOB_ACTIVE_COUNT_BY_METHOD.clear()
+        JOB_OLDEST_ACTIVE_TS.clear()
+        JOB_PROGRESS_PERCENT.clear()
+
+        state_counts: dict[str, int] = {}
+        total_active = 0
+
+        for state in active_states:
+            try:
+                count = self._query_count(client, "core.get_jobs", [["state", "=", state]])
+            except Exception:
+                self._collector_error("jobs", f"core.get_jobs count failed for state={state}")
+                return
+
+            state_counts[state] = count
+            total_active += count
+            JOB_ACTIVE_COUNT_BY_STATE.labels(state=state).set(count)
+
+        JOB_ACTIVE_COUNT.set(total_active)
+        JOB_ABORTABLE_ACTIVE_COUNT.set(0)
+        JOB_TRANSIENT_ACTIVE_COUNT.set(0)
+
+        if total_active == 0:
+            return
+
+        detail_limit = max(self.config.query_limit, total_active)
+
+        try:
+            jobs = self._call(
+                client,
+                "core.get_jobs",
+                [
+                    [["state", "in", list(active_states)]],
+                    {
+                        "limit": detail_limit,
+                        "select": [
+                            "method",
+                            "state",
+                            "abortable",
+                            "transient",
+                            "time_started",
+                            ["progress.percent", "progress_percent"],
+                        ],
+                    },
+                ],
+            )
+        except Exception:
+            self._collector_error("jobs", "core.get_jobs detail query failed")
+            return
+
+        if not isinstance(jobs, list):
+            return
+
+        method_state_counts: dict[tuple[str, str], int] = {}
+        oldest_by_state: dict[str, float] = {}
+        progress_by_method: dict[str, float] = {}
+        abortable_count = 0
+        transient_count = 0
+
+        for job in jobs:
+            if not isinstance(job, dict):
+                continue
+
+            method = _str_label(job.get("method"), "unknown")
+            state = _str_label(job.get("state"), "UNKNOWN").upper()
+            if state not in active_states:
+                continue
+
+            method_state_counts[(method, state)] = method_state_counts.get((method, state), 0) + 1
+
+            if _as_bool(job.get("abortable")):
+                abortable_count += 1
+            if _as_bool(job.get("transient")):
+                transient_count += 1
+
+            started_ts = _parse_ts(job.get("time_started"))
+            if started_ts is not None:
+                current = oldest_by_state.get(state)
+                oldest_by_state[state] = started_ts if current is None else min(current, started_ts)
+
+            if state == "RUNNING":
+                progress = _as_float(job.get("progress_percent"))
+                if progress is not None:
+                    progress_by_method[method] = max(progress_by_method.get(method, progress), progress)
+
+        for (method, state), count in method_state_counts.items():
+            JOB_ACTIVE_COUNT_BY_METHOD.labels(method=method, state=state).set(count)
+        for state, ts in oldest_by_state.items():
+            JOB_OLDEST_ACTIVE_TS.labels(state=state).set(ts)
+        for method, progress in progress_by_method.items():
+            JOB_PROGRESS_PERCENT.labels(method=method).set(progress)
+
+        JOB_ABORTABLE_ACTIVE_COUNT.set(abortable_count)
+        JOB_TRANSIENT_ACTIVE_COUNT.set(transient_count)
+
     def _query_service_enable_map(
         self,
         client: JsonRpcWsClient,
@@ -1668,7 +1935,15 @@ class TrueNASExporter:
                       "core.get_jobs"}:
             return [[], {"limit": self.config.query_limit}]
         if method == "app.query":
-            return [[], {"limit": self.config.query_limit, "select": ["name", "active_workloads"]}]
+            return [[], {"limit": self.config.query_limit, "select": [
+                "name",
+                "state",
+                "upgrade_available",
+                "image_updates_available",
+                "custom_app",
+                "migrated",
+                "active_workloads",
+            ]}]
         if method in {"reporting.graph", "reporting.netdata_graph"}:
             return ["cpu", {"unit": "HOURLY"}]
         return []
@@ -1969,29 +2244,48 @@ class TrueNASExporter:
             if val is not None:
                 gauge.set(val)
 
-        # Per-core list: payload["cpu"]["cpu"]["per_cpu"] = [12.5, 8.0, ...]
-        per_cpu = cpu_data.get("per_cpu") or cpu_section.get("per_cpu")
+        # Per-core CPU data is not stable across TrueNAS builds. Prefer the
+        # documented per_cpu shape, but also accept common alternates seen in
+        # Netdata-backed payloads where cores are emitted as cpu0/core1 dicts or
+        # lists of {core, percent} objects.
         cpu_core_usage: dict[tuple[str, ...], float] = {}
-        if isinstance(per_cpu, list):
-            for idx, core_val in enumerate(per_cpu):
-                v = _as_float(core_val)
-                if v is not None:
-                    cpu_core_usage[(str(idx),)] = v
-        elif isinstance(per_cpu, dict):
-            for core_id, core_val in per_cpu.items():
-                v = _as_float(core_val)
-                if v is not None:
-                    cpu_core_usage[(_str_label(core_id),)] = v
+        for per_cpu_candidate in (
+            cpu_data.get("per_cpu"),
+            cpu_section.get("per_cpu"),
+            cpu_data.get("usage"),
+            cpu_data.get("usage_percent"),
+            cpu_section.get("usage"),
+            cpu_section.get("usage_percent"),
+            cpu_section.get("cores"),
+        ):
+            cpu_core_usage = _extract_labeled_numeric_series(
+                per_cpu_candidate,
+                value_keys=("percent", "usage", "value"),
+                normalize_label=True,
+            )
+            if cpu_core_usage:
+                break
         self._replace_event_metric_series(CPU_CORE_USAGE_PERCENT, cpu_core_usage)
 
-        # Per-core temperatures: payload["cpu"]["temperature"] = {"0": 45.0, "1": 43.0}
-        temps = cpu_section.get("temperature")
+        # Per-core temperatures are even less consistent: some systems expose
+        # temperature, others temperatures/temp, and labels may be 0/1, cpu0,
+        # or core1.
         cpu_temps: dict[tuple[str, ...], float] = {}
-        if isinstance(temps, dict):
-            for core_id, temp_val in temps.items():
-                v = _as_float(temp_val)
-                if v is not None:
-                    cpu_temps[(_str_label(core_id),)] = v
+        for temp_candidate in (
+            cpu_section.get("temperature"),
+            cpu_section.get("temperatures"),
+            cpu_data.get("temperature"),
+            cpu_data.get("temperatures"),
+            cpu_section.get("temp"),
+            cpu_data.get("temp"),
+        ):
+            cpu_temps = _extract_labeled_numeric_series(
+                temp_candidate,
+                value_keys=("temperature", "temp", "celsius", "value"),
+                normalize_label=True,
+            )
+            if cpu_temps:
+                break
         self._replace_event_metric_series(CPU_TEMPERATURE_C, cpu_temps)
 
         # ── Memory ───────────────────────────────────────────────────────────
@@ -2562,6 +2856,14 @@ class TrueNASExporter:
         app_list = app_query if isinstance(app_query, list) else []
         APP_COUNT.set(len(app_list))
         APP_STATE.clear()
+        APP_UPGRADE_AVAILABLE.clear()
+        APP_IMAGE_UPDATES_AVAILABLE.clear()
+        APP_CUSTOM.clear()
+        APP_MIGRATED.clear()
+        APP_CONTAINER_COUNT.clear()
+        APP_USED_PORT_COUNT.clear()
+        APP_USED_HOST_IP_COUNT.clear()
+        APP_CONTAINER_STATE_COUNT.clear()
         for app in app_list[: self.config.max_entity_calls]:
             if not isinstance(app, dict):
                 continue
@@ -2571,6 +2873,41 @@ class TrueNASExporter:
             # Per-app state (e.g. RUNNING, STOPPED, DEPLOYING)
             app_st = _str_label(app.get("state"), "UNKNOWN").upper()
             APP_STATE.labels(app=app_name, state=app_st).set(1)
+
+            for raw_value, gauge in (
+                (app.get("upgrade_available"), APP_UPGRADE_AVAILABLE),
+                (app.get("image_updates_available"), APP_IMAGE_UPDATES_AVAILABLE),
+                (app.get("custom_app"), APP_CUSTOM),
+                (app.get("migrated"), APP_MIGRATED),
+            ):
+                if raw_value is not None:
+                    gauge.labels(app=app_name).set(1 if _as_bool(raw_value) else 0)
+
+            active_workloads = app.get("active_workloads")
+            if isinstance(active_workloads, dict):
+                container_count = _as_float(active_workloads.get("containers"))
+                if container_count is not None:
+                    APP_CONTAINER_COUNT.labels(app=app_name).set(container_count)
+
+                used_ports = active_workloads.get("used_ports")
+                if isinstance(used_ports, list):
+                    APP_USED_PORT_COUNT.labels(app=app_name).set(len(used_ports))
+
+                used_host_ips = active_workloads.get("used_host_ips")
+                if isinstance(used_host_ips, list):
+                    APP_USED_HOST_IP_COUNT.labels(app=app_name).set(len(used_host_ips))
+
+                container_details = active_workloads.get("container_details")
+                if isinstance(container_details, list):
+                    container_states: dict[str, int] = {}
+                    for detail in container_details:
+                        if not isinstance(detail, dict):
+                            continue
+                        state = _str_label(detail.get("state"), "UNKNOWN").upper()
+                        container_states[state] = container_states.get(state, 0) + 1
+                    for state, count in container_states.items():
+                        APP_CONTAINER_STATE_COUNT.labels(app=app_name, state=state).set(count)
+
             try:
                 result = self._call(client, "app.outdated_docker_images", [app_name])
                 self._extract_generic_metrics("app.outdated_docker_images", result, f"result.app.{app_name}", 0)
@@ -2675,6 +3012,19 @@ class TrueNASExporter:
                             "quota",
                             "refquota",
                             "compressratio",
+                            "reservation",
+                            "refreservation",
+                            "usedbychildren",
+                            "usedbydataset",
+                            "usedbysnapshots",
+                            "readonly",
+                            "atime",
+                            "exec",
+                            "quota_warning",
+                            "quota_critical",
+                            "refquota_warning",
+                            "refquota_critical",
+                            "creation",
                         ],
                     },
                     "select": [
@@ -2685,7 +3035,22 @@ class TrueNASExporter:
                         ["quota.parsed", "quota"],
                         ["refquota.parsed", "refquota"],
                         ["compressratio.parsed", "compressratio"],
+                        ["reservation.parsed", "reservation"],
+                        ["refreservation.parsed", "refreservation"],
+                        ["usedbychildren.parsed", "usedbychildren"],
+                        ["usedbydataset.parsed", "usedbydataset"],
+                        ["usedbysnapshots.parsed", "usedbysnapshots"],
+                        ["readonly.parsed", "readonly"],
+                        ["atime.parsed", "atime"],
+                        ["exec.parsed", "exec"],
+                        ["quota_warning.parsed", "quota_warning"],
+                        ["quota_critical.parsed", "quota_critical"],
+                        ["refquota_warning.parsed", "refquota_warning"],
+                        ["refquota_critical.parsed", "refquota_critical"],
+                        ["creation.parsed", "creation"],
                         "encrypted",
+                        "key_loaded",
+                        "locked",
                     ],
                 },
             ])
@@ -2710,6 +3075,11 @@ class TrueNASExporter:
                 (DATASET_USED_BYTES, "used"),
                 (DATASET_AVAILABLE_BYTES, "available"),
                 (DATASET_REFERENCED_BYTES, "referenced"),
+                (DATASET_RESERVATION_BYTES, "reservation"),
+                (DATASET_REFRESERVATION_BYTES, "refreservation"),
+                (DATASET_USED_BY_CHILDREN_BYTES, "usedbychildren"),
+                (DATASET_USED_BY_DATASET_BYTES, "usedbydataset"),
+                (DATASET_USED_BY_SNAPSHOTS_BYTES, "usedbysnapshots"),
             ):
                 val = _as_float(ds.get(field))
                 if val is not None:
@@ -2738,9 +3108,33 @@ class TrueNASExporter:
             if ratio is not None:
                 DATASET_COMPRESSION_RATIO.labels(dataset=name).set(ratio)
 
+            for raw_value, gauge in (
+                (ds.get("readonly"), DATASET_READONLY),
+                (ds.get("atime"), DATASET_ATIME),
+                (ds.get("exec"), DATASET_EXEC),
+                (ds.get("key_loaded"), DATASET_KEY_LOADED),
+                (ds.get("locked"), DATASET_LOCKED),
+            ):
+                if raw_value is not None:
+                    gauge.labels(dataset=name).set(1 if _as_bool(raw_value) else 0)
+
+            for gauge, field in (
+                (DATASET_QUOTA_WARNING_PERCENT, "quota_warning"),
+                (DATASET_QUOTA_CRITICAL_PERCENT, "quota_critical"),
+                (DATASET_REFQUOTA_WARNING_PERCENT, "refquota_warning"),
+                (DATASET_REFQUOTA_CRITICAL_PERCENT, "refquota_critical"),
+            ):
+                val = _as_float(ds.get(field))
+                if val is not None:
+                    gauge.labels(dataset=name).set(val)
+
             encrypted = ds.get("encrypted")
             if encrypted is not None:
                 DATASET_ENCRYPTED.labels(dataset=name).set(1 if _as_bool(encrypted) else 0)
+
+            creation_ts = _parse_ts(ds.get("creation"))
+            if creation_ts is not None:
+                DATASET_CREATION_TS.labels(dataset=name).set(creation_ts)
 
     # ------------------------------------------------------------------
     # Task health metrics (NEW)
@@ -3334,6 +3728,21 @@ class TrueNASExporter:
             DATASET_SNAPSHOT_COUNT.clear()
             DATASET_COMPRESSION_RATIO.clear()
             DATASET_ENCRYPTED.clear()
+            DATASET_RESERVATION_BYTES.clear()
+            DATASET_REFRESERVATION_BYTES.clear()
+            DATASET_USED_BY_CHILDREN_BYTES.clear()
+            DATASET_USED_BY_DATASET_BYTES.clear()
+            DATASET_USED_BY_SNAPSHOTS_BYTES.clear()
+            DATASET_READONLY.clear()
+            DATASET_ATIME.clear()
+            DATASET_EXEC.clear()
+            DATASET_KEY_LOADED.clear()
+            DATASET_LOCKED.clear()
+            DATASET_QUOTA_WARNING_PERCENT.clear()
+            DATASET_QUOTA_CRITICAL_PERCENT.clear()
+            DATASET_REFQUOTA_WARNING_PERCENT.clear()
+            DATASET_REFQUOTA_CRITICAL_PERCENT.clear()
+            DATASET_CREATION_TS.clear()
             DISK_SIZE_BYTES.clear()
             DISK_TEMPERATURE_C.clear()
             DISK_TEMP_ALERT_COUNT.clear()
@@ -3343,7 +3752,24 @@ class TrueNASExporter:
             INTERFACE_TYPE.clear()
             SERVICE_ENABLED.clear()
             SERVICE_RUNNING.clear()
+            APP_STATE.clear()
+            APP_UPGRADE_AVAILABLE.clear()
+            APP_IMAGE_UPDATES_AVAILABLE.clear()
+            APP_CUSTOM.clear()
+            APP_MIGRATED.clear()
+            APP_CONTAINER_COUNT.clear()
+            APP_USED_PORT_COUNT.clear()
+            APP_USED_HOST_IP_COUNT.clear()
+            APP_CONTAINER_STATE_COUNT.clear()
             ALERT_COUNT_BY_LEVEL.clear()
+            ALERT_COUNT_BY_SOURCE.clear()
+            ALERT_COUNT_BY_CLASS.clear()
+            ALERT_COUNT_BY_NODE.clear()
+            ALERT_LAST_OCCURRENCE_TS.clear()
+            JOB_ACTIVE_COUNT_BY_STATE.clear()
+            JOB_ACTIVE_COUNT_BY_METHOD.clear()
+            JOB_OLDEST_ACTIVE_TS.clear()
+            JOB_PROGRESS_PERCENT.clear()
             UPDATE_STATUS.clear()
             VM_VMEMORY_IN_USE_BYTES.clear()
             CERT_DAYS_TO_EXPIRY.clear()
@@ -3427,7 +3853,6 @@ class TrueNASExporter:
                     methods_to_call = self._discover_methods(client)
                     self._collect_reporting_timeseries(client, result_cache)
                     self._collect_filesystem_metrics(client)
-                    self._collect_entity_detail_metrics(client, result_cache)
 
                     for method in methods_to_call:
                         result = self._safe_call_auto(client, method)
@@ -3435,12 +3860,15 @@ class TrueNASExporter:
                             result_cache[method] = result
                             self._extract_generic_metrics(method, result, "result", 0)
 
+                    self._collect_entity_detail_metrics(client, result_cache)
+
                     # --- Dedicated collection methods ---
                     # These use result_cache to avoid re-calling APIs already fetched
                     # in the generic loop above.
                     self._collect_boot_pool_metrics(client)
                     self._collect_certificate_metrics(client)
                     self._collect_dataset_metrics(client)
+                    self._collect_job_metrics(client)
                     self._collect_task_metrics(client)
                     self._collect_directoryservices_metrics(client, result_cache)
                     self._collect_ipmi_metrics(client)
@@ -3756,16 +4184,7 @@ class TrueNASExporter:
                     alerts_raw = result_cache.get("alert.list")
                     if alerts_raw is None:
                         alerts_raw = self._call(client, "alert.list", [])
-                    alert_list = alerts_raw if isinstance(alerts_raw, list) else []
-                    ALERT_COUNT.set(len(alert_list))
-                    level_counts: dict[str, int] = {}
-                    for alert in alert_list:
-                        if not isinstance(alert, dict):
-                            continue
-                        level = _str_label(alert.get("level"), "UNKNOWN").upper()
-                        level_counts[level] = level_counts.get(level, 0) + 1
-                    for level, count in level_counts.items():
-                        ALERT_COUNT_BY_LEVEL.labels(level=level).set(count)
+                    self._export_alert_metrics(alerts_raw)
 
                     # --- Update status (use cache) ---
                     update = result_cache.get("update.status")

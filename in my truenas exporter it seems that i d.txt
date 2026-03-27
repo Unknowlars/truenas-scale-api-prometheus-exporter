@@ -1,0 +1,17 @@
+in my truenas exporter it seems that i dont get any metrics from 
+truenas_cpu_core_usage_percent
+truenas_cpu_temperature_celsius
+truenas_pool_scan_seconds_remaining
+truenas_pool_realtime_read_bytes_per_second
+truenas_pool_realtime_write_bytes_per_second
+truenas_zfs_arc_max_size_bytes and truenas_zfs_arc_min_size_bytes and truenas_zfs_l2arc_hit_ratio and truenas_zfs_demand_data_hit_ratio is contant at 0, maybe that correct or its not
+
+
+and panel : Disk Throughput by Device works is i delete disk!="total" from topk(8, truenas_disk_read_bytes_per_second{instance=~"$instance", disk=~"$disk", disk!="total"}) and topk(8, truenas_disk_write_bytes_per_second{instance=~"$instance", disk=~"$disk", disk!="total"})
+
+And same thing with Disk IOPS by Device it does not like the disk!="total" from the orignal querys topk(8, truenas_disk_read_ops_per_second{instance=~"$instance", disk=~"$disk", disk!="total"}) and topk(8, truenas_disk_write_ops_per_second{instance=~"$instance", disk=~"$disk", disk!="total"})
+
+And same story for panel Disk Busy % i need to delete disk!="total" topk(8, truenas_disk_busy_percent{instance=~"$instance", disk=~"$disk", disk!="total"})
+
+
+And is there any metrics we have missed on our dashboard that we collect, you can see the full metric page at http://localhost:9108/

@@ -45,6 +45,8 @@ It is designed to be easy to run publicly and easy to operate:
 - bundled Grafana dashboard JSON and dashboard generator source
 - conservative defaults that keep higher-cardinality options disabled unless you opt in
 
+See `docs/exporter-metric-expansion-plan.md` for the current dedicated-metric roadmap.
+
 > [!IMPORTANT]
 > This exporter is currently maintained against TrueNAS SCALE `25.10.2`. Nearby versions may work, but collector coverage and default event subscriptions are tuned for that release.
 
@@ -162,6 +164,7 @@ The repository includes a ready-to-import dashboard in `truenas-exporter-dashboa
 | `prometheus.truenas-example.yml` | Minimal Prometheus scrape config |
 | `truenas-exporter-dashboard.json` | Importable Grafana dashboard |
 | `generate_truenas_dashboard.py` | Dashboard generator source |
+| `docs/exporter-metric-expansion-plan.md` | Planned metric expansion roadmap |
 | `tests/` | Unit tests for collector and event behavior |
 
 ## Testing

@@ -39,6 +39,10 @@ def gauge_value(gauge):
     return gauge._value.get()
 
 
+def labeled_value(metric, *label_values):
+    return metric.labels(*label_values)._value.get()
+
+
 def reset_metric(metric):
     if getattr(metric, "_labelnames", ()):  # pragma: no branch
         metric.clear()
@@ -54,8 +58,49 @@ def reset_gauges():
         exporter_module.DATASET_USED_BYTES,
         exporter_module.DATASET_REFERENCED_BYTES,
         exporter_module.DATASET_SNAPSHOT_COUNT,
+        exporter_module.DATASET_RESERVATION_BYTES,
+        exporter_module.DATASET_REFRESERVATION_BYTES,
+        exporter_module.DATASET_USED_BY_CHILDREN_BYTES,
+        exporter_module.DATASET_USED_BY_DATASET_BYTES,
+        exporter_module.DATASET_USED_BY_SNAPSHOTS_BYTES,
+        exporter_module.DATASET_READONLY,
+        exporter_module.DATASET_ATIME,
+        exporter_module.DATASET_EXEC,
+        exporter_module.DATASET_KEY_LOADED,
+        exporter_module.DATASET_LOCKED,
+        exporter_module.DATASET_QUOTA_WARNING_PERCENT,
+        exporter_module.DATASET_QUOTA_CRITICAL_PERCENT,
+        exporter_module.DATASET_REFQUOTA_WARNING_PERCENT,
+        exporter_module.DATASET_REFQUOTA_CRITICAL_PERCENT,
+        exporter_module.DATASET_CREATION_TS,
         exporter_module.BOOT_ENV_SIZE_BYTES,
         exporter_module.CERT_DAYS_TO_EXPIRY,
+        exporter_module.ALERT_COUNT,
+        exporter_module.ALERT_COUNT_BY_LEVEL,
+        exporter_module.ALERT_COUNT_BY_SOURCE,
+        exporter_module.ALERT_COUNT_BY_CLASS,
+        exporter_module.ALERT_COUNT_BY_NODE,
+        exporter_module.ALERT_DISMISSED_COUNT,
+        exporter_module.ALERT_ONE_SHOT_COUNT,
+        exporter_module.ALERT_OLDEST_TS,
+        exporter_module.ALERT_LAST_OCCURRENCE_TS,
+        exporter_module.JOB_ACTIVE_COUNT,
+        exporter_module.JOB_ACTIVE_COUNT_BY_STATE,
+        exporter_module.JOB_ACTIVE_COUNT_BY_METHOD,
+        exporter_module.JOB_ABORTABLE_ACTIVE_COUNT,
+        exporter_module.JOB_TRANSIENT_ACTIVE_COUNT,
+        exporter_module.JOB_OLDEST_ACTIVE_TS,
+        exporter_module.JOB_PROGRESS_PERCENT,
+        exporter_module.APP_COUNT,
+        exporter_module.APP_STATE,
+        exporter_module.APP_UPGRADE_AVAILABLE,
+        exporter_module.APP_IMAGE_UPDATES_AVAILABLE,
+        exporter_module.APP_CUSTOM,
+        exporter_module.APP_MIGRATED,
+        exporter_module.APP_CONTAINER_COUNT,
+        exporter_module.APP_USED_PORT_COUNT,
+        exporter_module.APP_USED_HOST_IP_COUNT,
+        exporter_module.APP_CONTAINER_STATE_COUNT,
         exporter_module.SSH_ENABLED,
         exporter_module.SSH_PASSWORD_AUTH,
         exporter_module.FTP_ENABLED,
@@ -132,7 +177,31 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
     def fake_call(client, method, params=None):
         calls.append((method, params))
         if method == "pool.dataset.query":
-            return [{"name": "tank/data", "used": 123.0, "available": 456.0, "referenced": 78.0}]
+            return [{
+                "name": "tank/data",
+                "used": 123.0,
+                "available": 456.0,
+                "referenced": 78.0,
+                "quota": 1000.0,
+                "refquota": 900.0,
+                "compressratio": 1.5,
+                "reservation": 50.0,
+                "refreservation": 25.0,
+                "usedbychildren": 11.0,
+                "usedbydataset": 12.0,
+                "usedbysnapshots": 13.0,
+                "readonly": True,
+                "atime": False,
+                "exec": True,
+                "key_loaded": True,
+                "locked": False,
+                "quota_warning": 80.0,
+                "quota_critical": 95.0,
+                "refquota_warning": 70.0,
+                "refquota_critical": 90.0,
+                "creation": 1700000000,
+                "encrypted": True,
+            }]
         if method == "pool.dataset.snapshot_count":
             assert params == ["tank/data"]
             return 9
@@ -150,6 +219,19 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
         "quota",
         "refquota",
         "compressratio",
+        "reservation",
+        "refreservation",
+        "usedbychildren",
+        "usedbydataset",
+        "usedbysnapshots",
+        "readonly",
+        "atime",
+        "exec",
+        "quota_warning",
+        "quota_critical",
+        "refquota_warning",
+        "refquota_critical",
+        "creation",
     ]
     assert dataset_options["select"] == [
         "name",
@@ -159,11 +241,201 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
         ["quota.parsed", "quota"],
         ["refquota.parsed", "refquota"],
         ["compressratio.parsed", "compressratio"],
+        ["reservation.parsed", "reservation"],
+        ["refreservation.parsed", "refreservation"],
+        ["usedbychildren.parsed", "usedbychildren"],
+        ["usedbydataset.parsed", "usedbydataset"],
+        ["usedbysnapshots.parsed", "usedbysnapshots"],
+        ["readonly.parsed", "readonly"],
+        ["atime.parsed", "atime"],
+        ["exec.parsed", "exec"],
+        ["quota_warning.parsed", "quota_warning"],
+        ["quota_critical.parsed", "quota_critical"],
+        ["refquota_warning.parsed", "refquota_warning"],
+        ["refquota_critical.parsed", "refquota_critical"],
+        ["creation.parsed", "creation"],
         "encrypted",
+        "key_loaded",
+        "locked",
     ]
     assert exporter_module.DATASET_USED_BYTES.labels(dataset="tank/data")._value.get() == 123.0
     assert exporter_module.DATASET_REFERENCED_BYTES.labels(dataset="tank/data")._value.get() == 78.0
     assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/data")._value.get() == 9.0
+    assert exporter_module.DATASET_RESERVATION_BYTES.labels(dataset="tank/data")._value.get() == 50.0
+    assert exporter_module.DATASET_USED_BY_SNAPSHOTS_BYTES.labels(dataset="tank/data")._value.get() == 13.0
+    assert exporter_module.DATASET_READONLY.labels(dataset="tank/data")._value.get() == 1.0
+    assert exporter_module.DATASET_ATIME.labels(dataset="tank/data")._value.get() == 0.0
+    assert exporter_module.DATASET_KEY_LOADED.labels(dataset="tank/data")._value.get() == 1.0
+    assert exporter_module.DATASET_LOCKED.labels(dataset="tank/data")._value.get() == 0.0
+    assert exporter_module.DATASET_QUOTA_WARNING_PERCENT.labels(dataset="tank/data")._value.get() == 80.0
+    assert exporter_module.DATASET_REFQUOTA_CRITICAL_PERCENT.labels(dataset="tank/data")._value.get() == 90.0
+    assert exporter_module.DATASET_CREATION_TS.labels(dataset="tank/data")._value.get() == 1700000000.0
+
+
+def test_alert_metrics_export_enriched_rollups():
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    exporter._export_alert_metrics([
+        {
+            "level": "WARNING",
+            "source": "SMART",
+            "klass": "DiskTemp",
+            "node": "A",
+            "dismissed": False,
+            "one_shot": False,
+            "datetime": "2025-01-01T00:00:00+00:00",
+            "last_occurrence": "2025-01-03T00:00:00+00:00",
+        },
+        {
+            "level": "WARNING",
+            "source": "SMART",
+            "klass": "DiskTemp",
+            "node": "B",
+            "dismissed": True,
+            "one_shot": True,
+            "datetime": "2025-01-02T00:00:00+00:00",
+            "last_occurrence": "2025-01-04T00:00:00+00:00",
+        },
+        {
+            "level": "ERROR",
+            "source": "POOL",
+            "klass": "PoolHealth",
+            "node": "A",
+            "dismissed": False,
+            "one_shot": False,
+            "datetime": "2025-01-05T00:00:00+00:00",
+            "last_occurrence": "2025-01-05T01:00:00+00:00",
+        },
+    ])
+
+    assert gauge_value(exporter_module.ALERT_COUNT) == 3
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_LEVEL, "WARNING") == 2
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_SOURCE, "SMART") == 2
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_CLASS, "DiskTemp", "WARNING") == 2
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_NODE, "A") == 2
+    assert gauge_value(exporter_module.ALERT_DISMISSED_COUNT) == 1
+    assert gauge_value(exporter_module.ALERT_ONE_SHOT_COUNT) == 1
+    assert gauge_value(exporter_module.ALERT_OLDEST_TS) == exporter_module._parse_ts("2025-01-01T00:00:00+00:00")
+    assert labeled_value(exporter_module.ALERT_LAST_OCCURRENCE_TS, "WARNING") == exporter_module._parse_ts("2025-01-04T00:00:00+00:00")
+
+
+def test_job_metrics_use_exact_active_counts_and_filtered_detail_query(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(query_limit=1))
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        assert method == "core.get_jobs"
+        filters, options = params
+        if options == {"count": True}:
+            if filters == [["state", "=", "WAITING"]]:
+                return 1
+            if filters == [["state", "=", "RUNNING"]]:
+                return 2
+        assert filters == [["state", "in", ["WAITING", "RUNNING"]]]
+        assert options["limit"] == 3
+        assert options["select"] == [
+            "method",
+            "state",
+            "abortable",
+            "transient",
+            "time_started",
+            ["progress.percent", "progress_percent"],
+        ]
+        return [
+            {
+                "method": "replication.run",
+                "state": "RUNNING",
+                "abortable": False,
+                "transient": False,
+                "time_started": "2025-02-01T00:10:00+00:00",
+                "progress_percent": 35,
+            },
+            {
+                "method": "replication.run",
+                "state": "RUNNING",
+                "abortable": False,
+                "transient": True,
+                "time_started": "2025-02-01T00:05:00+00:00",
+                "progress_percent": 55,
+            },
+            {
+                "method": "pool.scrub.run",
+                "state": "WAITING",
+                "abortable": True,
+                "transient": False,
+                "time_started": "2025-02-01T00:01:00+00:00",
+                "progress_percent": None,
+            },
+        ]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_job_metrics(object())
+
+    assert gauge_value(exporter_module.JOB_ACTIVE_COUNT) == 3
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_STATE, "WAITING") == 1
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_STATE, "RUNNING") == 2
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_METHOD, "replication.run", "RUNNING") == 2
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_METHOD, "pool.scrub.run", "WAITING") == 1
+    assert gauge_value(exporter_module.JOB_ABORTABLE_ACTIVE_COUNT) == 1
+    assert gauge_value(exporter_module.JOB_TRANSIENT_ACTIVE_COUNT) == 1
+    assert labeled_value(exporter_module.JOB_PROGRESS_PERCENT, "replication.run") == 55
+    assert labeled_value(exporter_module.JOB_OLDEST_ACTIVE_TS, "RUNNING") == exporter_module._parse_ts("2025-02-01T00:05:00+00:00")
+    assert labeled_value(exporter_module.JOB_OLDEST_ACTIVE_TS, "WAITING") == exporter_module._parse_ts("2025-02-01T00:01:00+00:00")
+    assert calls[:2] == [
+        ("core.get_jobs", [[["state", "=", "WAITING"]], {"count": True}]),
+        ("core.get_jobs", [[["state", "=", "RUNNING"]], {"count": True}]),
+    ]
+
+
+def test_app_query_enrichment_metrics(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    def fake_call(client, method, params=None):
+        if method == "app.outdated_docker_images":
+            return []
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_entity_detail_metrics(
+        object(),
+        {
+            "vm.query": [],
+            "app.query": [
+                {
+                    "name": "plex",
+                    "state": "RUNNING",
+                    "upgrade_available": True,
+                    "image_updates_available": False,
+                    "custom_app": False,
+                    "migrated": True,
+                    "active_workloads": {
+                        "containers": 2,
+                        "used_ports": [{"container_port": 32400}, {"container_port": 1900}],
+                        "used_host_ips": ["10.0.0.10", "10.0.0.11"],
+                        "container_details": [
+                            {"state": "running"},
+                            {"state": "exited"},
+                        ],
+                    },
+                }
+            ],
+        },
+    )
+
+    assert gauge_value(exporter_module.APP_COUNT) == 1
+    assert labeled_value(exporter_module.APP_STATE, "plex", "RUNNING") == 1
+    assert labeled_value(exporter_module.APP_UPGRADE_AVAILABLE, "plex") == 1
+    assert labeled_value(exporter_module.APP_IMAGE_UPDATES_AVAILABLE, "plex") == 0
+    assert labeled_value(exporter_module.APP_CUSTOM, "plex") == 0
+    assert labeled_value(exporter_module.APP_MIGRATED, "plex") == 1
+    assert labeled_value(exporter_module.APP_CONTAINER_COUNT, "plex") == 2
+    assert labeled_value(exporter_module.APP_USED_PORT_COUNT, "plex") == 2
+    assert labeled_value(exporter_module.APP_USED_HOST_IP_COUNT, "plex") == 2
+    assert labeled_value(exporter_module.APP_CONTAINER_STATE_COUNT, "plex", "RUNNING") == 1
+    assert labeled_value(exporter_module.APP_CONTAINER_STATE_COUNT, "plex", "EXITED") == 1
 
 
 def test_boot_env_metrics_use_used_bytes_field(monkeypatch):
