@@ -165,9 +165,6 @@ The exporter now supports two runtime modes behind `EXPORTER_MODE`:
 - `legacy` (default): existing background poll loop that updates global Prometheus gauges
 - `collector`: Prometheus custom collector mode that builds fresh metric families on each scrape for migrated core metrics (health/scrape, system, pools, datasets, tasks, services, alerts, and curated realtime event metrics)
 
-### Rollout recommendation
-
-Start with `EXPORTER_MODE=legacy` in production, validate `collector` mode in a staging scrape job, and then switch production once dashboard and alert parity is confirmed.
 
 ### Temporary collector-mode gaps
 
