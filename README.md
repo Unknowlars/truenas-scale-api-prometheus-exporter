@@ -56,6 +56,9 @@ The repository includes a ready-to-import Grafana dashboard covering system heal
 | --- | --- |
 | ![Advanced protocols dashboard](.github/images/Advanced_Protocols_NVMe-oF_FC_HA.png) | ![Boot environment dashboard](.github/images/Boot_Environment.png) |
 
+> [!IMPORTANT]
+> This exporter was built mostly by AI over a few weeks running on my own truenas setup, its read only and follow the truenas API docs i have made a script to convert to markdown files in docs
+
 ## Overview
 
 TrueNAS Prometheus Exporter connects to a TrueNAS system over the JSON-RPC WebSocket API, collects inventory and state data, and exposes Prometheus metrics on `/metrics` with a lightweight `/healthz` endpoint for container health checks.
