@@ -32,6 +32,10 @@ def make_config(**overrides):
         "event_read_timeout_seconds": 60,
         "event_subscriptions": ["reporting.realtime", "app.stats", "virt.instance.metrics"],
         "scrape_all_metrics": False,
+        "enable_generic_method_metrics": False,
+        "enable_generic_event_metrics": False,
+        "dataset_snapshot_fallback_limit": 0,
+        "exporter_mode": "legacy",
     }
     values.update(overrides)
     return exporter_module.Config(**values)
@@ -104,7 +108,7 @@ def test_event_subscription_formatting_handles_documented_interval_events():
 
 
 def test_dispatch_routes_virt_instance_metrics_to_dedicated_handler(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_event_metrics=True))
     calls = []
 
     def fake_handle(payload):

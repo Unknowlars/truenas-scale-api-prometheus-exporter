@@ -485,7 +485,7 @@ def build_dashboard():
     panels.append(text_panel(
         "# TrueNAS Operations Center\n\n"
         "Comprehensive monitoring covering **system health, CPU, memory, ZFS pools & ARC, disks, network, "
-        "services, shares, apps, VMs, boot environments, hardware, alerts, tasks, and exporter diagnostics**.\n\n"
+        "services, shares, apps, VMs, boot environments, hardware, alerts, tasks, security posture, and exporter diagnostics**.\n\n"
         "> **Tip:** start with `$instance`, then narrow by `$pool`, `$dataset`, `$disk`, `$service`, `$app`, or `$method`. "
         "Collapsed detail rows keep the default view fast.",
         0, y, h=4,
@@ -826,8 +826,11 @@ def build_dashboard():
              desc="Average disk busy %.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 60}, {"color": "red", "value": 85}], graph=True),
         stat("Temp Alerts", f'sum(truenas_disk_temperature_alert_count{{instance=~"{I}"}})', 12, y, w=4,
              desc="Disk temperature alerts.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
-        stat("Total Capacity", f'sum(truenas_disk_size_bytes{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 16, y, w=4, unit="bytes", desc="Total raw disk capacity."),
-        stat("Used Disks", f'count(truenas_disk_in_use{{instance=~"{I}", disk=~"$disk"}} == 1)', 20, y, w=4, desc="Disks in use by a pool."),
+        stat("SMART Tested", f'count(truenas_smart_test_last_timestamp_seconds{{instance=~"{I}", disk=~"$disk"}})', 16, y, w=4,
+             desc="Disks with a parseable SMART last-test timestamp."),
+        stat("SMART Failed", f'count(truenas_smart_test_last_result{{instance=~"{I}", disk=~"$disk"}} == 0)', 20, y, w=4,
+             desc="Disks whose latest SMART test result is not success.",
+             thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 2}]),
     ])
     y += 4
     panels.append(timeseries(
@@ -885,7 +888,8 @@ def build_dashboard():
         table_target(f'max by (disk) (truenas_disk_write_bytes_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'E'),
         table_target(f'max by (disk) (truenas_disk_read_ops_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'F'),
         table_target(f'max by (disk) (truenas_disk_write_ops_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'G'),
-        table_target(f'max by (disk) (truenas_disk_smart_enabled{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'H'),
+        table_target(f'max by (disk) (truenas_smart_test_last_result{{instance=~"{I}", disk=~"$disk"}})', 'H'),
+        table_target(f'time() - max by (disk) (truenas_smart_test_last_timestamp_seconds{{instance=~"{I}", disk=~"$disk"}})', 'I'),
         table_target(f'max by (disk) (truenas_disk_rotational{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'J'),
     ]
     disk_table_transforms = [
@@ -895,9 +899,9 @@ def build_dashboard():
             'renameByName': {
                 'disk': 'Disk', 'Value #A': 'Size', 'Value #B': 'Busy %', 'Value #C': 'Temp C',
                 'Value #D': 'Read B/s', 'Value #E': 'Write B/s', 'Value #F': 'Read IOPS', 'Value #G': 'Write IOPS',
-                'Value #H': 'SMART', 'Value #J': 'HDD',
+                'Value #H': 'SMART Pass', 'Value #I': 'SMART Age', 'Value #J': 'HDD',
             },
-            'indexByName': {'Disk': 0, 'Busy %': 1, 'Temp C': 2, 'Read B/s': 3, 'Write B/s': 4, 'Read IOPS': 5, 'Write IOPS': 6, 'Size': 7, 'SMART': 8, 'HDD': 9},
+            'indexByName': {'Disk': 0, 'Busy %': 1, 'Temp C': 2, 'Read B/s': 3, 'Write B/s': 4, 'Read IOPS': 5, 'Write IOPS': 6, 'SMART Age': 7, 'Size': 8, 'SMART Pass': 9, 'HDD': 10},
         }),
         tf('sortBy', {'fields': [{'displayName': 'Busy %', 'desc': True}]}),
     ]
@@ -909,7 +913,8 @@ def build_dashboard():
         {"matcher": {"id": "byName", "options": "Write B/s"}, "properties": [{"id": "unit", "value": "Bps"}]},
         {"matcher": {"id": "byName", "options": "Read IOPS"}, "properties": [{"id": "unit", "value": "iops"}]},
         {"matcher": {"id": "byName", "options": "Write IOPS"}, "properties": [{"id": "unit", "value": "iops"}]},
-        {"matcher": {"id": "byName", "options": "SMART"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+        {"matcher": {"id": "byName", "options": "SMART Pass"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+        {"matcher": {"id": "byName", "options": "SMART Age"}, "properties": [{"id": "unit", "value": "s"}]},
         {"matcher": {"id": "byName", "options": "HDD"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": [{"type": "value", "options": {"0": {"color": "blue", "text": "SSD/NVMe"}, "1": {"color": "orange", "text": "HDD"}}}]}]},
     ]
     panels.append(table(
@@ -1011,11 +1016,19 @@ def build_dashboard():
         stat("Portals", f'sum(truenas_iscsi_portal_count{{instance=~"{I}"}})', 0, y, w=3, desc="iSCSI portals."),
         stat("Extents", f'sum(truenas_iscsi_extent_count{{instance=~"{I}"}})', 3, y, w=3, desc="iSCSI extents."),
         stat("Initiators", f'sum(truenas_iscsi_initiator_count{{instance=~"{I}"}})', 6, y, w=3, desc="iSCSI initiator groups."),
-        stat("ALUA", f'max(truenas_iscsi_alua_enabled{{instance=~"{I}"}})', 9, y, w=3, desc="iSCSI ALUA protocol.", mappings=BOOL_MAP),
-        stat("iSER", f'max(truenas_iscsi_iser_enabled{{instance=~"{I}"}})', 12, y, w=3, desc="iSCSI iSER (RDMA) protocol.", mappings=BOOL_MAP),
-        stat("SMB Multi", f'max(truenas_smb_multichannel_enabled{{instance=~"{I}"}})', 15, y, w=3, desc="SMB multichannel.", mappings=BOOL_MAP),
-        stat("NFSv4 On", f'max(truenas_nfs_v4_enabled{{instance=~"{I}"}})', 18, y, w=3, desc="NFSv4 enabled.", mappings=BOOL_MAP),
-        stat("NFS Threads", f'max(truenas_nfs_servers{{instance=~"{I}"}})', 21, y, w=3, desc="NFS server threads."),
+        stat("iSCSI Sess", f'sum(truenas_iscsi_session_count{{instance=~"{I}"}})', 9, y, w=3, desc="Active iSCSI sessions."),
+        stat("ALUA", f'max(truenas_iscsi_alua_enabled{{instance=~"{I}"}})', 12, y, w=3, desc="iSCSI ALUA protocol.", mappings=BOOL_MAP),
+        stat("iSER", f'max(truenas_iscsi_iser_enabled{{instance=~"{I}"}})', 15, y, w=3, desc="iSCSI iSER (RDMA) protocol.", mappings=BOOL_MAP),
+        stat("SMB Multi", f'max(truenas_smb_multichannel_enabled{{instance=~"{I}"}})', 18, y, w=3, desc="SMB multichannel.", mappings=BOOL_MAP),
+        stat("NFSv4 On", f'max(truenas_nfs_v4_enabled{{instance=~"{I}"}})', 21, y, w=3, desc="NFSv4 enabled.", mappings=BOOL_MAP),
+    ])
+    y += 4
+    panels.extend([
+        stat("iSER Sess", f'sum(truenas_iscsi_session_iser_count{{instance=~"{I}"}})', 0, y, w=4, desc="Active iSCSI sessions using iSER."),
+        stat("Offload Sess", f'sum(truenas_iscsi_session_offload_count{{instance=~"{I}"}})', 4, y, w=5, desc="Active iSCSI sessions using offload."),
+        stat("ImmediateData", f'sum(truenas_iscsi_session_immediate_data_count{{instance=~"{I}"}})', 9, y, w=5, desc="Active iSCSI sessions with immediate-data enabled."),
+        stat("NFS Threads", f'max(truenas_nfs_servers{{instance=~"{I}"}})', 14, y, w=5, desc="NFS server threads."),
+        stat("Used Disks", f'count(truenas_disk_in_use{{instance=~"{I}", disk=~"$disk"}} == 1)', 19, y, w=5, desc="Disks currently in use by pools."),
     ])
     y += 4
     # Service inventory table
@@ -1054,7 +1067,34 @@ def build_dashboard():
         stat("Docker Up", f'max(truenas_docker_status{{instance=~"{I}", status="RUNNING"}})', 12, y, w=3, desc="Docker service running.", mappings=UP_MAP),
         stat("NVIDIA GPU", f'max(truenas_docker_nvidia_present{{instance=~"{I}"}})', 15, y, w=3, desc="NVIDIA GPU available.", mappings=BOOL_MAP),
         stat("Catalog Trains", f'truenas_catalog_train_count{{instance=~"{I}"}}', 18, y, w=3, desc="App catalog trains."),
-        stat("Img Updates", f'sum(truenas_app_image_updates_available{{instance=~"{I}", app=~"$app"}}) or vector(0)', 21, y, w=3, desc="Apps with container image updates available."),
+        stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}}) or vector(0)', 21, y, w=3, desc="Preferred catalog trains configured."),
+    ])
+    y += 4
+    panels.extend([
+        stat(
+            "DH RL Error",
+            f'max(truenas_app_dockerhub_rate_limit_error_present{{instance=~"{I}"}}) or vector(0)',
+            0,
+            y,
+            w=4,
+            mappings=BOOL_MAP,
+            thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}],
+            desc="DockerHub rate-limit endpoint currently reports an error.",
+        ),
+        stat(
+            "DH Rem %",
+            f'100 * max(truenas_app_dockerhub_pull_limit_remaining{{instance=~"{I}"}}) / '
+            f'clamp_min(max(truenas_app_dockerhub_pull_limit_total{{instance=~"{I}"}}), 1)',
+            4,
+            y,
+            w=5,
+            unit="percent",
+            thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 20}, {"color": "green", "value": 50}],
+            desc="DockerHub pull-limit budget remaining percentage.",
+        ),
+        stat("DockerHub Rem", f'max(truenas_app_dockerhub_pull_limit_remaining{{instance=~"{I}"}}) or vector(0)', 9, y, w=5, desc="DockerHub pull requests remaining in current window."),
+        stat("DockerHub Limit", f'max(truenas_app_dockerhub_pull_limit_total{{instance=~"{I}"}}) or vector(0)', 14, y, w=5, desc="DockerHub pull limit window total requests."),
+        stat("DH Window", f'max(truenas_app_dockerhub_pull_limit_window_seconds{{instance=~"{I}"}}) or vector(0)', 19, y, w=5, unit="s", desc="DockerHub pull limit window duration."),
     ])
     y += 4
     panels.extend([
@@ -1064,8 +1104,8 @@ def build_dashboard():
              desc="Apps deployed as custom apps."),
         stat("Migrated Apps", f'sum(truenas_app_migrated{{instance=~"{I}", app=~"$app"}}) or vector(0)', 12, y, w=6,
              desc="Apps migrated from the older Kubernetes stack."),
-        stat("Containers", f'sum(truenas_app_container_count{{instance=~"{I}", app=~"$app"}}) or vector(0)', 18, y, w=6,
-             desc="Active app workload containers."),
+        stat("Img Updates", f'sum(truenas_app_image_updates_available{{instance=~"{I}", app=~"$app"}}) or vector(0)', 18, y, w=6,
+             desc="Apps with container image updates available."),
     ])
     y += 4
     panels.append(bargauge(
@@ -1160,12 +1200,23 @@ def build_dashboard():
     panels.extend([
         stat("VM Count", f'sum(truenas_vm_count{{instance=~"{I}"}})', 0, y, w=3, desc="Virtual machines."),
         stat("Virt Support", f'max(truenas_vm_supports_virtualization{{instance=~"{I}"}})', 3, y, w=3, desc="KVM/HW virt available.", mappings=BOOL_MAP),
-        stat("Max vCPUs", f'max(truenas_vm_maximum_supported_vcpus{{instance=~"{I}"}})', 6, y, w=3, desc="Maximum supported vCPUs."),
-        stat("VM Avail RAM", f'sum(truenas_vm_available_memory_bytes{{instance=~"{I}"}})', 9, y, w=3, unit="bytes", desc="Available memory for VMs."),
-        stat("Incus Inst", f'sum(truenas_virt_instance_count{{instance=~"{I}"}})', 12, y, w=3, desc="Incus/LXD instances."),
-        stat("Incus Vols", f'sum(truenas_virt_volume_count{{instance=~"{I}"}})', 15, y, w=3, desc="Incus storage volumes."),
-        stat("IOMMU", f'max(truenas_iommu_enabled{{instance=~"{I}"}})', 18, y, w=3, desc="IOMMU/PCI passthrough.", mappings=BOOL_MAP),
-        stat("VM Mem Used", f'sum(truenas_vm_vmemory_in_use_bytes{{instance=~"{I}"}})', 21, y, w=3, unit="bytes", desc="VM memory in use."),
+        stat("Virt Details", f'max(truenas_vm_virtualization_details_supported{{instance=~"{I}"}}) or vector(0)', 6, y, w=3,
+             desc="Virtualization support from vm.virtualization_details.", mappings=BOOL_MAP),
+        stat("Virt Error", f'max(truenas_vm_virtualization_details_error_present{{instance=~"{I}"}}) or vector(0)', 9, y, w=3,
+             desc="vm.virtualization_details currently reports an error.", mappings=BOOL_MAP),
+        stat("Max vCPUs", f'max(truenas_vm_maximum_supported_vcpus{{instance=~"{I}"}})', 12, y, w=3, desc="Maximum supported vCPUs."),
+        stat("VM Avail RAM", f'sum(truenas_vm_available_memory_bytes{{instance=~"{I}"}})', 15, y, w=3, unit="bytes", desc="Available memory for VMs."),
+        stat("Incus Inst", f'sum(truenas_virt_instance_count{{instance=~"{I}"}})', 18, y, w=3, desc="Incus/LXD instances."),
+        stat("IOMMU", f'max(truenas_iommu_enabled{{instance=~"{I}"}})', 21, y, w=3, desc="IOMMU/PCI passthrough.", mappings=BOOL_MAP),
+    ])
+    y += 4
+    panels.extend([
+        stat("Intel VMX", f'max(truenas_vm_flag_intel_vmx{{instance=~"{I}"}}) or vector(0)', 0, y, w=4, desc="Intel VT-x capability flag.", mappings=BOOL_MAP),
+        stat("AMD RVI", f'max(truenas_vm_flag_amd_rvi{{instance=~"{I}"}}) or vector(0)', 4, y, w=4, desc="AMD RVI/NPT capability flag.", mappings=BOOL_MAP),
+        stat("Unrestricted", f'max(truenas_vm_flag_unrestricted_guest{{instance=~"{I}"}}) or vector(0)', 8, y, w=4, desc="Unrestricted guest capability flag.", mappings=BOOL_MAP),
+        stat("AMD ASIDs", f'max(truenas_vm_flag_amd_asids{{instance=~"{I}"}}) or vector(0)', 12, y, w=4, desc="AMD ASID count if reported."),
+        stat("Incus Vols", f'sum(truenas_virt_volume_count{{instance=~"{I}"}})', 16, y, w=4, desc="Incus storage volumes."),
+        stat("VM Mem Used", f'sum(truenas_vm_vmemory_in_use_bytes{{instance=~"{I}"}})', 20, y, w=4, unit="bytes", desc="VM memory in use."),
     ])
     y += 4
     panels.append(timeseries(
@@ -1178,18 +1229,18 @@ def build_dashboard():
     ))
     panels.append(timeseries(
         "Incus Instance CPU",
-        [tgt(f'truenas_virt_instance_cpu_usage_percent{{instance=~"{I}"}}', '{{instance}}', 'A')],
+        [tgt(f'truenas_virt_instance_cpu_usage_percent{{instance=~"{I}"}}', '{{name}}', 'A')],
         12, y, unit="percent", desc="Per-instance CPU usage.",
     ))
     y += 8
     panels.append(timeseries(
         "Incus Instance Memory",
-        [tgt(f'truenas_virt_instance_mem_bytes{{instance=~"{I}"}}', '{{instance}}', 'A')],
+        [tgt(f'truenas_virt_instance_mem_bytes{{instance=~"{I}"}}', '{{name}}', 'A')],
         0, y, unit="bytes", desc="Per-instance memory usage.",
     ))
     panels.append(bargauge(
         "Incus Volume Sizes",
-        [tgt(f'truenas_virt_volume_size_bytes{{instance=~"{I}"}}', '{{volume}}', 'A')],
+        [tgt(f'truenas_virt_volume_size_bytes{{instance=~"{I}"}}', '{{name}} ({{pool}})', 'A')],
         12, y, unit="bytes", desc="Incus storage volume sizes.",
     ))
     y += 8
@@ -1366,9 +1417,47 @@ def build_dashboard():
         stat("TN Connect", f'max(truenas_tn_connect_enabled{{instance=~"{I}"}})', 6, y, w=3, desc="TrueNAS Connect.", mappings=BOOL_MAP),
         stat("TrueCommand", f'max(truenas_managed_by_truecommand{{instance=~"{I}"}})', 9, y, w=3, desc="Managed by TrueCommand.", mappings=BOOL_MAP),
         stat("Mail Conf", f'max(truenas_mail_configured{{instance=~"{I}"}})', 12, y, w=3, desc="Email configured.", mappings=BOOL_MAP),
-        stat("Support", f'max(truenas_support_available{{instance=~"{I}"}})', 15, y, w=3, desc="Proactive support.", mappings=BOOL_MAP),
-        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 18, y, w=3, desc="Directory services healthy.", mappings=UP_MAP),
+        stat("Support A+E", f'max(truenas_support_available_and_enabled{{instance=~"{I}"}}) or vector(0)', 15, y, w=3,
+             desc="Support available and enabled.", mappings=BOOL_MAP),
+        stat("Support Cfg", f'max(truenas_support_config_enabled{{instance=~"{I}"}}) or vector(0)', 18, y, w=3,
+             desc="Support config enabled flag.", mappings=BOOL_MAP),
         stat("Sessions", f'max(truenas_auth_sessions_active{{instance=~"{I}"}})', 21, y, w=3, desc="Active API sessions."),
+    ])
+    y += 4
+    panels.extend([
+        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 0, y, w=3, desc="Directory services healthy.", mappings=UP_MAP),
+        stat("Dir Svc Cfg", f'max(truenas_directoryservices_config_enabled{{instance=~"{I}"}}) or vector(0)', 3, y, w=3, desc="Directoryservices configuration enabled.", mappings=BOOL_MAP),
+        stat("Dir Kerberos", f'max(truenas_directoryservices_kerberos_configured{{instance=~"{I}"}}) or vector(0)', 6, y, w=3, desc="Directoryservices kerberos configuration present.", mappings=BOOL_MAP),
+        stat("Security FIPS", f'max(truenas_system_security_fips_configured{{instance=~"{I}"}}) or vector(0)', 9, y, w=3, desc="System security FIPS configured.", mappings=BOOL_MAP),
+        stat("GPOS STIG", f'max(truenas_system_security_gpos_stig{{instance=~"{I}"}}) or vector(0)', 12, y, w=3, desc="GPOS STIG policy enabled.", mappings=BOOL_MAP),
+        stat(
+            "Pwd Min Len",
+            f'max(truenas_system_security_password_min_length{{instance=~"{I}"}}) or vector(0)',
+            15,
+            y,
+            w=3,
+            thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 10}, {"color": "green", "value": 14}],
+            desc="Minimum password length policy.",
+        ),
+        stat(
+            "Pwd Max Age",
+            f'max(truenas_system_security_password_max_age_days{{instance=~"{I}"}}) or vector(0)',
+            18,
+            y,
+            w=3,
+            unit="d",
+            thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 90}, {"color": "red", "value": 180}],
+            desc="Maximum password age in days.",
+        ),
+        stat(
+            "Pwd History",
+            f'max(truenas_system_security_password_history_count{{instance=~"{I}"}}) or vector(0)',
+            21,
+            y,
+            w=3,
+            thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 3}, {"color": "green", "value": 5}],
+            desc="Password history retention count.",
+        ),
     ])
     y += 4
     panels.append(table(
@@ -1529,6 +1618,41 @@ def build_dashboard():
         stat("Static Routes", f'truenas_static_route_count{{instance=~"{I}"}}', 15, cy, w=3),
         stat("Tunables", f'truenas_tunable_count{{instance=~"{I}"}}', 18, cy, w=3),
         stat("Init Scripts", f'truenas_initshutdownscript_count{{instance=~"{I}"}}', 21, cy, w=3),
+    ])
+    cy += 4
+    cfg_panels.extend([
+        stat("Upd AutoChk", f'max(truenas_update_autocheck_enabled{{instance=~"{I}"}}) or vector(0)', 0, cy, w=3, mappings=BOOL_MAP,
+             desc="Automatic update checks enabled."),
+        stat("Upd Profile", f'clamp_max(count(truenas_update_profile_info{{instance=~"{I}"}}), 1)', 3, cy, w=3, mappings=BOOL_MAP,
+             desc="Update profile information present."),
+        stat("NTP Servers", f'max(truenas_ntp_server_count{{instance=~"{I}"}}) or vector(0)', 6, cy, w=3,
+             desc="Configured NTP servers."),
+        stat("NTP Reach %", f'100 * max(truenas_ntp_server_reachable_count{{instance=~"{I}"}}) / clamp_min(max(truenas_ntp_server_count{{instance=~"{I}"}}), 1)', 9, cy, w=3,
+             unit="percent", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 70}, {"color": "green", "value": 95}],
+             desc="Percent of configured NTP servers currently reachable."),
+        stat("NTP Reachable", f'max(truenas_ntp_server_reachable_count{{instance=~"{I}"}}) or vector(0)', 12, cy, w=3,
+             desc="NTP servers currently reachable."),
+        stat("Tier0 Days", f'max(truenas_reporting_tier0_retention_days{{instance=~"{I}"}}) or vector(0)', 15, cy, w=3, unit="d",
+             desc="Reporting tier0 retention period."),
+        stat("Tier1 Days", f'max(truenas_reporting_tier1_retention_days{{instance=~"{I}"}}) or vector(0)', 18, cy, w=3, unit="d",
+             desc="Reporting tier1 retention period."),
+        stat("Tier1 Int", f'max(truenas_reporting_tier1_update_interval_seconds{{instance=~"{I}"}}) or vector(0)', 21, cy, w=3, unit="s",
+             desc="Reporting tier1 update interval."),
+    ])
+    cy += 4
+    cfg_panels.extend([
+        stat("Catalog Cfg", f'max(truenas_catalog_config_present{{instance=~"{I}"}}) or vector(0)', 0, cy, w=4, mappings=BOOL_MAP,
+             desc="Catalog config payload present."),
+        stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}}) or vector(0)', 4, cy, w=4,
+             desc="Preferred catalog trains configured."),
+        stat("NTP Burst", f'max(truenas_ntp_server_burst_count{{instance=~"{I}"}}) or vector(0)', 8, cy, w=4,
+             desc="NTP servers with burst enabled."),
+        stat("NTP Iburst", f'max(truenas_ntp_server_iburst_count{{instance=~"{I}"}}) or vector(0)', 12, cy, w=4,
+             desc="NTP servers with iburst enabled."),
+        stat("NTP Min Poll", f'max(truenas_ntp_server_min_poll_minutes{{instance=~"{I}"}}) or vector(0)', 16, cy, w=4,
+             desc="Minimum configured NTP poll interval (minutes)."),
+        stat("NTP Max Poll", f'max(truenas_ntp_server_max_poll_minutes{{instance=~"{I}"}}) or vector(0)', 20, cy, w=4,
+             desc="Maximum configured NTP poll interval (minutes)."),
     ])
     cy += 4
     panels.append(row("System Configuration", y, collapsed=True, panels=cfg_panels))

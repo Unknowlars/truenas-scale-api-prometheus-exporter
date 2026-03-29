@@ -30,6 +30,10 @@ def make_config(**overrides):
         "event_read_timeout_seconds": 60,
         "event_subscriptions": ["reporting.realtime"],
         "scrape_all_metrics": False,
+        "enable_generic_method_metrics": False,
+        "enable_generic_event_metrics": False,
+        "dataset_snapshot_fallback_limit": 0,
+        "exporter_mode": "legacy",
     }
     values.update(overrides)
     return exporter_module.Config(**values)
@@ -124,6 +128,50 @@ def reset_gauges():
         exporter_module.REPORTING_EXPORTER_COUNT,
         exporter_module.NETWORK_HTTPPROXY_CONFIGURED,
         exporter_module.REPLICATION_MAX_PARALLEL,
+        exporter_module.APP_DOCKERHUB_PULL_LIMIT_TOTAL,
+        exporter_module.APP_DOCKERHUB_PULL_LIMIT_REMAINING,
+        exporter_module.APP_DOCKERHUB_PULL_LIMIT_WINDOW_SECONDS,
+        exporter_module.APP_DOCKERHUB_RATE_LIMIT_ERROR_PRESENT,
+        exporter_module.VM_FLAG_INTEL_VMX,
+        exporter_module.VM_FLAG_AMD_RVI,
+        exporter_module.VM_FLAG_UNRESTRICTED_GUEST,
+        exporter_module.VM_FLAG_AMD_ASIDS,
+        exporter_module.VM_VIRTUALIZATION_DETAILS_SUPPORTED,
+        exporter_module.VM_VIRTUALIZATION_DETAILS_ERROR_PRESENT,
+        exporter_module.DIRECTORYSERVICES_CONFIG_ENABLED,
+        exporter_module.DIRECTORYSERVICES_ACCOUNT_CACHE_ENABLED,
+        exporter_module.DIRECTORYSERVICES_DNS_UPDATES_ENABLED,
+        exporter_module.DIRECTORYSERVICES_TIMEOUT_SECONDS,
+        exporter_module.DIRECTORYSERVICES_SERVICE_TYPE,
+        exporter_module.DIRECTORYSERVICES_KERBEROS_CONFIGURED,
+        exporter_module.SYSTEM_SECURITY_FIPS_CONFIGURED,
+        exporter_module.SYSTEM_SECURITY_GPOS_STIG,
+        exporter_module.SYSTEM_SECURITY_PASSWORD_MIN_LENGTH,
+        exporter_module.SYSTEM_SECURITY_PASSWORD_MIN_AGE_DAYS,
+        exporter_module.SYSTEM_SECURITY_PASSWORD_MAX_AGE_DAYS,
+        exporter_module.SYSTEM_SECURITY_PASSWORD_WARN_AGE_DAYS,
+        exporter_module.SYSTEM_SECURITY_PASSWORD_HISTORY_COUNT,
+        exporter_module.SUPPORT_AVAILABLE_AND_ENABLED,
+        exporter_module.SUPPORT_CONFIG_ENABLED,
+        exporter_module.UPDATE_AUTOCHECK_ENABLED,
+        exporter_module.UPDATE_PROFILE_INFO,
+        exporter_module.NTP_SERVER_COUNT,
+        exporter_module.NTP_SERVER_ACTIVE_COUNT,
+        exporter_module.NTP_SERVER_REACHABLE_COUNT,
+        exporter_module.NTP_SERVER_PREFER_COUNT,
+        exporter_module.NTP_SERVER_BURST_COUNT,
+        exporter_module.NTP_SERVER_IBURST_COUNT,
+        exporter_module.NTP_SERVER_MIN_POLL_MINUTES,
+        exporter_module.NTP_SERVER_MAX_POLL_MINUTES,
+        exporter_module.CATALOG_CONFIG_PRESENT,
+        exporter_module.CATALOG_PREFERRED_TRAIN_COUNT,
+        exporter_module.ISCSI_SESSION_COUNT,
+        exporter_module.ISCSI_SESSION_ISER_COUNT,
+        exporter_module.ISCSI_SESSION_OFFLOAD_COUNT,
+        exporter_module.ISCSI_SESSION_IMMEDIATE_DATA_COUNT,
+        exporter_module.REPORTING_TIER0_RETENTION_DAYS,
+        exporter_module.REPORTING_TIER1_RETENTION_DAYS,
+        exporter_module.REPORTING_TIER1_UPDATE_INTERVAL_SECONDS,
     ):
         reset_metric(metric)
 
@@ -171,7 +219,7 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
 
 
 def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(dataset_snapshot_fallback_limit=50))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -504,6 +552,10 @@ def test_inventory_collectors_accept_numeric_count_results(monkeypatch):
             return {"max_parallel_replication_tasks": 6}
         if method == "service.query":
             return [{"service": "netdata", "enable": False}]
+        if method == "reporting.config":
+            return {"tier0_days": 7, "tier1_days": 30, "tier1_update_interval_seconds": 300}
+        if method == "system.ntpserver.query":
+            return []
         raise AssertionError(f"Unexpected call: {method} {params}")
 
     monkeypatch.setattr(exporter, "_call", fake_call)
@@ -561,6 +613,10 @@ def test_enabled_gauges_follow_service_enable_state(monkeypatch):
             return 0
         if method == "dns.query":
             return 1
+        if method == "reporting.config":
+            return {"tier0_days": 7, "tier1_days": 30, "tier1_update_interval_seconds": 300}
+        if method == "system.ntpserver.query":
+            return []
         raise AssertionError(f"Unexpected call: {method} {params}")
 
     monkeypatch.setattr(exporter, "_call", fake_call)
@@ -623,3 +679,459 @@ def test_load_config_requires_mandatory_env(monkeypatch, env, message):
 
     with pytest.raises(ValueError, match=message):
         exporter_module._load_config()
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 additions
+# ---------------------------------------------------------------------------
+
+
+def test_load_config_new_flags_defaults(monkeypatch):
+    for key in ("TRUENAS_WS_URL", "TRUENAS_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    for key in ("ENABLE_GENERIC_METHOD_METRICS", "ENABLE_GENERIC_EVENT_METRICS", "DATASET_SNAPSHOT_FALLBACK_LIMIT"):
+        monkeypatch.delenv(key, raising=False)
+
+    config = exporter_module._load_config()
+
+    assert config.enable_generic_method_metrics is False
+    assert config.enable_generic_event_metrics is False
+    assert config.dataset_snapshot_fallback_limit == 0
+
+
+def test_load_config_new_flags_enabled(monkeypatch):
+    for key in ("TRUENAS_WS_URL", "TRUENAS_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("ENABLE_GENERIC_METHOD_METRICS", "true")
+    monkeypatch.setenv("ENABLE_GENERIC_EVENT_METRICS", "1")
+    monkeypatch.setenv("DATASET_SNAPSHOT_FALLBACK_LIMIT", "25")
+
+    config = exporter_module._load_config()
+
+    assert config.enable_generic_method_metrics is True
+    assert config.enable_generic_event_metrics is True
+    assert config.dataset_snapshot_fallback_limit == 25
+
+
+def test_dataset_snapshot_fallback_disabled_by_default(monkeypatch):
+    """With DATASET_SNAPSHOT_FALLBACK_LIMIT=0, no per-dataset snapshot_count calls are made."""
+    exporter = exporter_module.TrueNASExporter(make_config(dataset_snapshot_fallback_limit=0))
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        if method == "pool.dataset.query":
+            return [{"name": "tank/data", "used": 1.0, "available": 2.0}]
+        raise AssertionError(f"Unexpected fallback call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_dataset_metrics(object())
+
+    methods_called = [c[0] for c in calls]
+    assert "pool.dataset.snapshot_count" not in methods_called
+
+
+def test_generic_event_metrics_gated_by_flag():
+    """With enable_generic_event_metrics=False, _dispatch_event skips generic extraction."""
+    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_event_metrics=False))
+    called = []
+
+    original = exporter._replace_generic_event_metrics
+
+    def spy(*args, **kwargs):
+        called.append(args)
+        return original(*args, **kwargs)
+
+    exporter._replace_generic_event_metrics = spy
+
+    exporter._dispatch_event("pool.query", {"fields": {"status": "ONLINE"}})
+
+    assert called == [], "Generic event extraction should be skipped when disabled"
+
+
+def test_generic_event_metrics_enabled():
+    """With enable_generic_event_metrics=True, _dispatch_event calls generic extraction."""
+    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_event_metrics=True))
+    called = []
+
+    original = exporter._replace_generic_event_metrics
+
+    def spy(*args, **kwargs):
+        called.append(args)
+        return original(*args, **kwargs)
+
+    exporter._replace_generic_event_metrics = spy
+
+    exporter._dispatch_event("pool.query", {"fields": {"status": "ONLINE"}})
+
+    assert len(called) == 1
+
+
+def test_landing_page():
+    """The / endpoint returns an HTML landing page with links."""
+    import io
+
+    captured_status = []
+    captured_headers = []
+
+    def start_response(status, headers):
+        captured_status.append(status)
+        captured_headers.extend(headers)
+
+    lock = exporter_module.threading.Lock()
+    body = exporter_module._LANDING_PAGE
+
+    assert b"/metrics" in body
+    assert b"/healthz" in body
+
+
+def test_disable_created_metrics():
+    """Verify that disable_created_metrics was called (Counter has no _created child)."""
+    # After disable_created_metrics(), new Counters should not produce _created series.
+    # We can verify by checking that the module-level counter doesn't have _created.
+    from prometheus_client import generate_latest
+    output = generate_latest().decode()
+    assert "truenas_api_call_errors_created" not in output
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 additions — performance and cardinality tuning
+# ---------------------------------------------------------------------------
+
+
+def test_scrub_task_collector_makes_single_api_call(monkeypatch):
+    """Phase 2: _collect_scrub_task_metrics uses one list query, not count+list."""
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        if method == "pool.scrub.query":
+            return [{"id": 1, "pool_name": "tank", "enabled": True}]
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_scrub_task_metrics(object(), {})
+
+    scrub_calls = [c for c in calls if c[0] == "pool.scrub.query"]
+    assert len(scrub_calls) == 1, f"Expected 1 pool.scrub.query call, got {len(scrub_calls)}"
+    # Count should come from list length
+    assert gauge_value(exporter_module.POOL_SCRUB_TASK_COUNT) == 1
+
+
+def test_cloud_backup_collector_makes_single_api_call(monkeypatch):
+    """Phase 2: _collect_cloud_backup_metrics uses one list query, not count+list."""
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        if method == "cloud_backup.query":
+            return [
+                {"id": 1, "description": "daily", "enabled": True, "job": {"state": "SUCCESS"}},
+                {"id": 2, "description": "weekly", "enabled": False, "job": None},
+            ]
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_cloud_backup_metrics(object(), {})
+
+    backup_calls = [c for c in calls if c[0] == "cloud_backup.query"]
+    assert len(backup_calls) == 1
+    assert gauge_value(exporter_module.CLOUD_BACKUP_TASK_COUNT) == 2
+
+
+def test_cronjob_collector_makes_single_api_call(monkeypatch):
+    """Phase 2: _collect_cronjob_metrics uses one list query, not count+list."""
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        if method == "cronjob.query":
+            return [{"id": 1, "description": "nightly", "enabled": True, "command": "echo hi"}]
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_cronjob_metrics(object(), {})
+
+    cron_calls = [c for c in calls if c[0] == "cronjob.query"]
+    assert len(cron_calls) == 1
+    assert gauge_value(exporter_module.CRONJOB_COUNT) == 1
+
+
+def test_task_collectors_make_single_call_per_type(monkeypatch):
+    """Phase 2: _collect_task_metrics uses one call per task type, not count+list."""
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        if method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
+            options = params[1] if params and len(params) > 1 else {}
+            if options.get("count"):
+                raise AssertionError(f"Unexpected count query for {method}")
+            return []
+        if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
+            return 0
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_task_metrics(object())
+
+    for method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
+        method_calls = [c for c in calls if c[0] == method]
+        assert len(method_calls) == 1, f"Expected 1 call for {method}, got {len(method_calls)}"
+
+
+def test_reporting_graph_discovery_skipped_when_generic_disabled(monkeypatch):
+    """Phase 2: graph discovery calls are skipped when enable_generic_method_metrics=False."""
+    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_method_metrics=False))
+    calls = []
+
+    def fake_safe_call(client, method):
+        calls.append(method)
+        return None
+
+    monkeypatch.setattr(exporter, "_safe_call_auto", fake_safe_call)
+
+    cache = {}
+    exporter._collect_reporting_timeseries(object(), cache)
+
+    graph_calls = [c for c in calls if "graph" in c or "reporting" in c]
+    assert graph_calls == [], f"No graph discovery calls expected, got {graph_calls}"
+    assert cache == {}
+
+
+def test_reporting_graph_discovery_runs_when_generic_enabled(monkeypatch):
+    """Phase 2: graph discovery calls run when enable_generic_method_metrics=True."""
+    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_method_metrics=True))
+    calls = []
+
+    def fake_safe_call(client, method):
+        calls.append(method)
+        if method == "reporting.netdata_graphs":
+            return [{"name": "cpu"}]
+        return None
+
+    monkeypatch.setattr(exporter, "_safe_call_auto", fake_safe_call)
+
+    extracted = []
+    original_extract = exporter._extract_generic_metrics
+
+    def spy_extract(*args, **kwargs):
+        extracted.append(args[0])
+        return original_extract(*args, **kwargs)
+
+    monkeypatch.setattr(exporter, "_extract_generic_metrics", spy_extract)
+
+    cache = {}
+    exporter._collect_reporting_timeseries(object(), cache)
+
+    assert "reporting.netdata_graphs" in calls
+    assert "reporting.graphs" in calls
+    assert "reporting.netdata_graphs" in cache
+    assert "reporting.netdata_graphs" in extracted
+
+
+def test_smart_timestamp_parsing_sets_last_timestamp(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    monkeypatch.setattr(
+        exporter,
+        "_safe_call_auto",
+        lambda client, method: [
+            {
+                "disk": "sda",
+                "tests": [
+                    {
+                        "status": "SUCCESS",
+                        "timestamp": {"$date": 1700000000000},
+                    }
+                ],
+            },
+            {
+                "disk": "sdb",
+                "tests": [
+                    {
+                        "status": "FAILED",
+                        "time_finished": "2025-01-01T00:00:00+00:00",
+                    }
+                ],
+            },
+        ],
+    )
+
+    exporter._collect_smart_test_results(object())
+
+    assert labeled_value(exporter_module.SMART_TEST_LAST_RESULT, "sda") == 1
+    assert labeled_value(exporter_module.SMART_TEST_LAST_RESULT, "sdb") == 0
+    assert labeled_value(exporter_module.SMART_TEST_LAST_TIMESTAMP, "sda") == 1700000000.0
+    assert labeled_value(exporter_module.SMART_TEST_LAST_TIMESTAMP, "sdb") == exporter_module._parse_ts("2025-01-01T00:00:00+00:00")
+
+
+def test_smart_results_unavailable_is_non_fatal(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+    monkeypatch.setattr(exporter, "_safe_call_auto", lambda client, method: None)
+
+    exporter._collect_smart_test_results(object())
+
+
+def test_safe_call_auto_runtime_skips_missing_argument_methods(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+    calls = []
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        raise exporter_module.JsonRpcError(
+            "virt.global.get_network failed: {'error': '[EINVAL] missing required argument: id'}"
+        )
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    assert exporter._safe_call_auto(object(), "virt.global.get_network") is None
+    assert exporter._safe_call_auto(object(), "virt.global.get_network") is None
+    assert len(calls) == 1
+    assert "virt.global.get_network" in exporter._auto_skipped_methods
+
+
+def test_requires_entity_param_includes_virt_global_get_network():
+    assert "virt.global.get_network" in exporter_module.REQUIRES_ENTITY_PARAM
+
+
+def test_priority_gap_collectors_emit_dedicated_metrics(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    def fake_call(client, method, params=None):
+        if method == "service.query":
+            requested = tuple(params[0][0][2])
+            if requested == ("netdata", "reporting"):
+                return [{"service": "netdata", "enable": True}]
+            if requested == ("ssh", "ftp", "snmp"):
+                return []
+        if method == "reporting.exporters.query":
+            return 0
+        if method == "dns.query":
+            return 0
+        if method == "app.image.query":
+            return 0
+        if method == "network.configuration.config":
+            return {"httpproxy": ""}
+        if method == "replication.config.config":
+            return {"max_parallel_replication_tasks": 1}
+        if method == "vm.device.iommu_enabled":
+            return False
+        if method == "mail.config":
+            return {"outgoingserver": ""}
+        if method == "alertservice.query":
+            if params and len(params) > 1 and params[1].get("count"):
+                return 0
+            return []
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    cache = {
+        "app.image.dockerhub_rate_limit": {
+            "total": 100,
+            "remaining": 75,
+            "window_seconds": 21600,
+            "error": "",
+        },
+        "update.config": {"autocheck": True, "profile": "STABLE"},
+        "catalog.config": {"preferred_trains": ["stable", "enterprise"]},
+        "vm.flags": {"intel_vmx": True, "amd_rvi": False, "unrestricted_guest": True, "amd_asids": 128},
+        "vm.virtualization_details": {"supported": True, "error": ""},
+        "directoryservices.config": {
+            "enabled": True,
+            "account_cache": False,
+            "allow_dns_updates": True,
+            "timeout": 45,
+            "service_type": "ACTIVEDIRECTORY",
+            "kerberos_realm": "EXAMPLE.LOCAL",
+        },
+        "system.security.config": {
+            "fips_configured": True,
+            "gpos_stig": False,
+            "min_length": 14,
+            "min_age_days": 1,
+            "max_age_days": 90,
+            "warn_age_days": 7,
+            "history": 5,
+        },
+        "support.is_available_and_enabled": True,
+        "support.config": {"enabled": True},
+        "system.ntpserver.query": [
+            {"enabled": True, "reachable": True, "prefer": True, "burst": False, "iburst": True, "minpoll": 6, "maxpoll": 10},
+            {"enabled": False, "reachable": False, "prefer": False, "burst": True, "iburst": False, "minpoll": 8, "maxpoll": 12},
+        ],
+        "iscsi.global.sessions": [
+            {"iser": True, "offload": False, "immediate_data": True},
+            {"iser": False, "offload": True, "immediate_data": False},
+        ],
+        "reporting.config": {"tier0_days": 14, "tier1_days": 60, "tier1_update_interval_seconds": 300},
+    }
+
+    exporter._collect_app_extras(object(), cache)
+    exporter._collect_update_extras(object(), cache)
+    exporter._collect_catalog_metrics(object(), cache)
+    exporter._collect_vm_extras(object(), cache)
+    exporter._collect_directoryservices_metrics(object(), cache)
+    exporter._collect_infrastructure_configs(object(), cache)
+    exporter._collect_iscsi_extras(object(), cache)
+    exporter._collect_misc_configs(object(), cache)
+    exporter._collect_security_posture(object(), cache)
+
+    assert gauge_value(exporter_module.APP_DOCKERHUB_PULL_LIMIT_TOTAL) == 100
+    assert gauge_value(exporter_module.APP_DOCKERHUB_PULL_LIMIT_REMAINING) == 75
+    assert gauge_value(exporter_module.APP_DOCKERHUB_PULL_LIMIT_WINDOW_SECONDS) == 21600
+    assert gauge_value(exporter_module.APP_DOCKERHUB_RATE_LIMIT_ERROR_PRESENT) == 0
+    assert gauge_value(exporter_module.UPDATE_AUTOCHECK_ENABLED) == 1
+    assert labeled_value(exporter_module.UPDATE_PROFILE_INFO, "STABLE") == 1
+    assert gauge_value(exporter_module.CATALOG_CONFIG_PRESENT) == 1
+    assert gauge_value(exporter_module.CATALOG_PREFERRED_TRAIN_COUNT) == 2
+    assert gauge_value(exporter_module.VM_FLAG_INTEL_VMX) == 1
+    assert gauge_value(exporter_module.VM_FLAG_AMD_RVI) == 0
+    assert gauge_value(exporter_module.VM_FLAG_UNRESTRICTED_GUEST) == 1
+    assert gauge_value(exporter_module.VM_FLAG_AMD_ASIDS) == 128
+    assert gauge_value(exporter_module.VM_VIRTUALIZATION_DETAILS_SUPPORTED) == 1
+    assert gauge_value(exporter_module.VM_VIRTUALIZATION_DETAILS_ERROR_PRESENT) == 0
+    assert gauge_value(exporter_module.DIRECTORYSERVICES_CONFIG_ENABLED) == 1
+    assert gauge_value(exporter_module.DIRECTORYSERVICES_ACCOUNT_CACHE_ENABLED) == 0
+    assert gauge_value(exporter_module.DIRECTORYSERVICES_DNS_UPDATES_ENABLED) == 1
+    assert gauge_value(exporter_module.DIRECTORYSERVICES_TIMEOUT_SECONDS) == 45
+    assert labeled_value(exporter_module.DIRECTORYSERVICES_SERVICE_TYPE, "ACTIVEDIRECTORY") == 1
+    assert gauge_value(exporter_module.DIRECTORYSERVICES_KERBEROS_CONFIGURED) == 1
+    assert gauge_value(exporter_module.SYSTEM_SECURITY_FIPS_CONFIGURED) == 1
+    assert gauge_value(exporter_module.SYSTEM_SECURITY_GPOS_STIG) == 0
+    assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_MIN_LENGTH) == 14
+    assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_MIN_AGE_DAYS) == 1
+    assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_MAX_AGE_DAYS) == 90
+    assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_WARN_AGE_DAYS) == 7
+    assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_HISTORY_COUNT) == 5
+    assert gauge_value(exporter_module.SUPPORT_AVAILABLE_AND_ENABLED) == 1
+    assert gauge_value(exporter_module.SUPPORT_CONFIG_ENABLED) == 1
+    assert gauge_value(exporter_module.NTP_SERVER_COUNT) == 2
+    assert gauge_value(exporter_module.NTP_SERVER_ACTIVE_COUNT) == 1
+    assert gauge_value(exporter_module.NTP_SERVER_REACHABLE_COUNT) == 1
+    assert gauge_value(exporter_module.NTP_SERVER_PREFER_COUNT) == 1
+    assert gauge_value(exporter_module.NTP_SERVER_BURST_COUNT) == 1
+    assert gauge_value(exporter_module.NTP_SERVER_IBURST_COUNT) == 1
+    assert gauge_value(exporter_module.NTP_SERVER_MIN_POLL_MINUTES) == 6
+    assert gauge_value(exporter_module.NTP_SERVER_MAX_POLL_MINUTES) == 12
+    assert gauge_value(exporter_module.ISCSI_SESSION_COUNT) == 2
+    assert gauge_value(exporter_module.ISCSI_SESSION_ISER_COUNT) == 1
+    assert gauge_value(exporter_module.ISCSI_SESSION_OFFLOAD_COUNT) == 1
+    assert gauge_value(exporter_module.ISCSI_SESSION_IMMEDIATE_DATA_COUNT) == 1
+    assert gauge_value(exporter_module.REPORTING_TIER0_RETENTION_DAYS) == 14
+    assert gauge_value(exporter_module.REPORTING_TIER1_RETENTION_DAYS) == 60
+    assert gauge_value(exporter_module.REPORTING_TIER1_UPDATE_INTERVAL_SECONDS) == 300

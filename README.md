@@ -14,23 +14,47 @@ Standalone Prometheus exporter for the TrueNAS JSON-RPC WebSocket API, with Dock
 
 Repository: `github.com/Unknowlars/truenas-scale-api-prometheus-exporter`
 
-![Grafana dashboard overview](.github/images/dashboard_1.png)
+![System overview and CPU and load dashboard](.github/images/System_overview_and_CPU_and_Load.png)
 
 ## Dashboard Preview
 
 The repository includes a ready-to-import Grafana dashboard covering system health, storage pools, disks, ZFS cache, services, apps, tasks, alerts, and virtualization.
 
-| Overview | Storage |
+| System & Performance | Memory |
 | --- | --- |
-| ![Dashboard overview](.github/images/dashboard_1.png) | ![Storage and pools dashboard](.github/images/Storage_Pools_1.png) |
+| ![System overview and CPU and load dashboard](.github/images/System_overview_and_CPU_and_Load.png) | ![Memory dashboard](.github/images/Memory.png) |
 
-| Disks | ZFS ARC / L2ARC |
+| Storage and Pools | Storage Deep Dive |
 | --- | --- |
-| ![Disks and temperatures dashboard](.github/images/Disks_Temperatures_1.png) | ![ZFS ARC and L2ARC dashboard](.github/images/ZFS_ARC_L2ARC_Cache_1.png) |
+| ![Storage and pools dashboard 1](.github/images/Storage_and_Pools_1.png) | ![Storage and pools dashboard 2](.github/images/Storage_and_Pools_2.png) |
 
-| Services | Alerts |
+| Dataset Deep Dive | Disks and Temperatures |
 | --- | --- |
-| ![Services dashboard](.github/images/Services.png) | ![Alerts and updates dashboard](.github/images/Alerts_Updates.png) |
+| ![Dataset deep dive dashboard](.github/images/Dataset_Deep_Dive.png) | ![Disks and temperatures dashboard](.github/images/Disks_Temperatures.png) |
+
+| ZFS ARC Cache | Network Interfaces |
+| --- | --- |
+| ![ZFS ARC cache dashboard](.github/images/ZFS_ARC_Cache.png) | ![Network interfaces dashboard](.github/images/Network_Interfaces.png) |
+
+| Services and Shares | Apps and Docker |
+| --- | --- |
+| ![Services and shares dashboard](.github/images/Services_Shares.png) | ![Apps and Docker dashboard](.github/images/Apps_and_Docker.png) |
+
+| Apps and Docker (Details) | Virtualization |
+| --- | --- |
+| ![Apps and Docker details dashboard](.github/images/Apps_and_Docker_2.png) | ![Virtualization dashboard](.github/images/Virtualization.png) |
+
+| Alerts, Tasks, and Updates | Audit and Directory Services |
+| --- | --- |
+| ![Alerts, tasks, and updates dashboard](.github/images/Alerts_andTasks_andUpdates.png) | ![Audit and directory services dashboard](.github/images/Audit_Directory_Services.png) |
+
+| Security and Platform | System Configuration |
+| --- | --- |
+| ![Security and platform dashboard](.github/images/Security_and_Platform.png) | ![System configuration dashboard](.github/images/System_Configuration.png) |
+
+| Advanced Protocols, NVMe-oF, FC, and HA | Boot Environment |
+| --- | --- |
+| ![Advanced protocols dashboard](.github/images/Advanced_Protocols_NVMe-oF_FC_HA.png) | ![Boot environment dashboard](.github/images/Boot_Environment.png) |
 
 ## Overview
 
@@ -56,6 +80,7 @@ See `docs/exporter-metric-expansion-plan.md` for the current dedicated-metric ro
 - pools, datasets, snapshots, scrub and resilver progress, and vdev errors
 - CPU, memory, swap, disks, temperatures, network throughput, and ZFS ARC/L2ARC metrics
 - SMB, NFS, iSCSI, NVMe-oF, services, apps, VMs, jobs, replication, and alerts
+- dedicated coverage for DockerHub pull limits, VM capability flags, directory services config, security posture, support state, update profiles, NTP health rollups, catalog preferences, iSCSI session features, and reporting retention
 - exporter health signals such as API call failures and collector error counters
 
 ## Quick Start
@@ -116,15 +141,35 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 | `SCRAPE_INTERVAL_SECONDS` | no | Poll interval for regular collectors |
 | `TRUENAS_TIMEOUT_SECONDS` | no | Timeout for API call batches |
 | `LOG_LEVEL` | no | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
+| `EXPORTER_MODE` | no | Exporter runtime architecture: `legacy` (default) or `collector` |
 | `ENABLE_EVENT_STREAMS` | no | Enable background event subscriptions |
 | `EVENT_SUBSCRIPTIONS` | no | Comma-separated event streams to subscribe to |
 | `EVENT_INTERVAL_SECONDS` | no | Interval used for supported realtime streams |
 | `ENABLE_DATASET_METRICS` | no | Enable dataset collectors |
 | `ENABLE_TASK_METRICS` | no | Enable task collectors |
 | `ENABLE_IPMI_METRICS` | no | Enable IPMI collectors when available |
+| `ENABLE_GENERIC_METHOD_METRICS` | no | Emit generic `METHOD_*` series from API responses (high cardinality); default `false` |
+| `ENABLE_GENERIC_EVENT_METRICS` | no | Emit generic `EVENT_*` series from event payloads (high cardinality); default `false` |
+| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | no | Max per-dataset `snapshot_count` fallback API calls; `0` disables fallback (default) |
 
 > [!NOTE]
-> Higher-cardinality and discovery-heavy options are intentionally conservative by default. Review `.env.example` before enabling settings such as `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, or filesystem list operations in production.
+> Higher-cardinality and discovery-heavy options are intentionally conservative by default. Review `.env.example` before enabling settings such as `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, `ENABLE_GENERIC_METHOD_METRICS`, `ENABLE_GENERIC_EVENT_METRICS`, or filesystem list operations in production.
+
+## Architecture Modes (Phase 3)
+
+The exporter now supports two runtime modes behind `EXPORTER_MODE`:
+
+- `legacy` (default): existing background poll loop that updates global Prometheus gauges
+- `collector`: Prometheus custom collector mode that builds fresh metric families on each scrape for migrated core metrics (health/scrape, system, pools, datasets, tasks, services, alerts, and curated realtime event metrics)
+
+### Rollout recommendation
+
+Start with `EXPORTER_MODE=legacy` in production, validate `collector` mode in a staging scrape job, and then switch production once dashboard and alert parity is confirmed.
+
+### Temporary collector-mode gaps
+
+- Generic recursive `METHOD_*` and `EVENT_*` extraction remains a legacy-path feature for now
+- Non-core dedicated metrics outside the migrated Phase 3 set still follow the legacy implementation
 
 ## Prometheus
 
@@ -178,6 +223,26 @@ python -m compileall truenas_exporter.py tests
 ```
 
 The current automated tests focus on collector behavior, query shaping, and event subscription handling.
+
+## Cardinality and Series Impact
+
+Not all configuration options produce the same number of Prometheus time series. The table below summarises which toggles increase cardinality and their expected impact on a typical system.
+
+| Option | Default | Cardinality impact |
+| --- | --- | --- |
+| `ENABLE_GENERIC_METHOD_METRICS` | `false` | **High** — generates `METHOD_*` series with `[method, path]` labels. Can produce 50k–500k+ series with discovery enabled. |
+| `ENABLE_GENERIC_EVENT_METRICS` | `false` | **High** — generates `EVENT_*` series with `[event, path]` labels. Grows with event payload complexity. |
+| `AUTO_DISCOVER_METHODS` | `false` | **High** — discovers every available API method and feeds results through generic extraction. |
+| `SCRAPE_ALL_METRICS` | `false` | **High** — calls all known methods regardless of base-method filtering. |
+| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `0` | **Medium** — each non-zero value adds up to N extra API calls per scrape for per-dataset snapshot counts. |
+| `ENABLE_FILESYSTEM_LISTDIR` | `false` | **Medium** — adds per-path directory listing metrics with generic extraction. |
+| `ENABLE_DATASET_METRICS` | `true` | **Low–Medium** — one set of labelled gauges per dataset. Grows linearly with dataset count. |
+| `ENABLE_TASK_METRICS` | `true` | **Low** — one set per configured task (replication, cloudsync, rsync, snapshot). |
+| `ENABLE_IPMI_METRICS` | `true` | **Low** — fixed set of IPMI chassis and SEL gauges. |
+
+When enabling high-cardinality options, monitor `prometheus_tsdb_head_series` and plan TSDB storage accordingly. Start with dedicated metrics (the default) and only enable generic extraction for debugging or gap analysis.
+
+Dedicated collectors remain active regardless of `ENABLE_GENERIC_METHOD_METRICS` and `ENABLE_GENERIC_EVENT_METRICS`; those generic toggles stay opt-in and disabled by default.
 
 ## Operational Notes
 
