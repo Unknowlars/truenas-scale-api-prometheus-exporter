@@ -179,7 +179,7 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 > [!NOTE]
 > Higher-cardinality and discovery-heavy options are intentionally conservative by default. Review `.env.example` before enabling settings such as `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, `ENABLE_GENERIC_METHOD_METRICS`, `ENABLE_GENERIC_EVENT_METRICS`, or filesystem list operations in production.
 
-## Architecture Modes (Phase 3)
+## Architecture Modes
 
 The exporter now supports two runtime modes behind `EXPORTER_MODE`:
 
