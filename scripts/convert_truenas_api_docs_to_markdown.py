@@ -700,7 +700,7 @@ def convert(source_root: Path, output_root: Path, clean: bool) -> None:
                 "## Regenerate",
                 "",
                 "```bash",
-                "python convert_truenas_api_docs_to_markdown.py --clean",
+                "python scripts/convert_truenas_api_docs_to_markdown.py --clean",
                 "```",
                 "",
                 "The converter reads from `_sources/*.rst.txt` for page metadata and parses each embedded `#json-schema` block into Markdown headings, bullets, and examples.",
@@ -717,7 +717,7 @@ def convert(source_root: Path, output_root: Path, clean: bool) -> None:
 
 
 def main() -> None:
-    repo_root = Path(__file__).resolve().parent
+    repo_root = Path(__file__).resolve().parent.parent
     default_source = repo_root / "truenas-v25.10.2-docs"
     default_output = repo_root / "docs" / "truenas-api"
 

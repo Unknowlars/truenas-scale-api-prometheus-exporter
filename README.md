@@ -88,6 +88,8 @@ See `docs/exporter-metric-expansion-plan.md` for the current dedicated-metric ro
 
 ## Quick Start
 
+If you are new to Prometheus exporters, start with Option 1 and follow the beginner checklist right after it.
+
 ### Option 1: Docker Compose
 
 This is the fastest way to get the exporter running locally.
@@ -101,6 +103,25 @@ curl http://localhost:9108/metrics
 ```
 
 Compose reads `.env` and publishes `EXPORTER_PORT` on the same host port by default.
+
+### Beginner Setup Checklist (Docker Compose)
+
+1. On your TrueNAS system, create a read-only API key.
+   Expected result: the key is created and visible in the TrueNAS API key list.
+2. In this repo, run `cp .env.example .env`.
+   Expected result: a new `.env` file exists in the project root.
+3. Edit `.env` and set `TRUENAS_WS_URL` to your TrueNAS WebSocket endpoint (for example `wss://truenas.example.local/api/current`).
+   Expected result: `TRUENAS_WS_URL` points to `/api/current` and has no placeholder value.
+4. Set `TRUENAS_API_KEY` in `.env`.
+   Expected result: `.env` contains your key and no spaces around `=`.
+5. Start the exporter with `docker compose up -d --build`.
+   Expected result: `docker compose ps` shows the `truenas-exporter` container as running.
+6. Confirm the exporter is healthy at `http://localhost:9108/healthz`.
+   Expected result: the endpoint returns `ok`.
+7. Confirm metrics are exposed at `http://localhost:9108/metrics`.
+   Expected result: output starts with Prometheus text such as `# HELP` and includes `truenas_up`.
+8. Add a scrape config in Prometheus (or Grafana Alloy) and verify series appear.
+   Expected result: querying `truenas_up` returns `1` for your exporter target.
 
 ### Option 2: Docker Image
 
@@ -173,7 +194,7 @@ The exporter now supports two runtime modes behind `EXPORTER_MODE`:
 
 ## Prometheus
 
-Use `prometheus.truenas-example.yml` as a starting point, or add a scrape job like this:
+Use `deploy/prometheus/prometheus.truenas-example.yml` as a starting point, or add a scrape job like this:
 
 ```yaml
 scrape_configs:
@@ -186,7 +207,23 @@ scrape_configs:
 
 If Prometheus runs outside Docker, replace `truenas-exporter:9108` with the reachable host or IP of the exporter.
 
-The repo also includes `docker-compose.prometheus.yml` and `prometheus.yml` for local experiments. Update those targets before publishing or using them outside your own environment.
+### Grafana Alloy (instead of Prometheus scrape config)
+
+If you use Grafana Alloy to scrape and forward metrics instead of managing `prometheus.yml` directly, add a scrape block like this:
+
+```hcl
+prometheus.scrape "truenasexporter" {
+  targets = [{
+    __address__ = "192.168.0.238:9108",
+  }]
+
+  forward_to = [prometheus.remote_write.local.receiver]
+}
+```
+
+Replace `192.168.0.238:9108` with your exporter host and port. The `forward_to` target should match your existing Alloy `prometheus.remote_write` component name.
+
+The repo also includes `deploy/prometheus/docker-compose.prometheus.yml` and `deploy/prometheus/prometheus.yml` for local experiments. Update those targets before publishing or using them outside your own environment.
 
 ## Grafana Dashboard
 
@@ -206,9 +243,11 @@ The repository includes a ready-to-import dashboard in `truenas-exporter-dashboa
 | `Dockerfile` | Container image build |
 | `docker-compose.yml` | Main Docker Compose deployment |
 | `.env.example` | Example environment configuration |
-| `prometheus.truenas-example.yml` | Minimal Prometheus scrape config |
+| `deploy/prometheus/prometheus.truenas-example.yml` | Minimal Prometheus scrape config |
 | `truenas-exporter-dashboard.json` | Importable Grafana dashboard |
-| `generate_truenas_dashboard.py` | Dashboard generator source |
+| `scripts/generate_truenas_dashboard.py` | Dashboard generator source |
+| `scripts/convert_truenas_api_docs_to_markdown.py` | Offline API docs converter |
+| `examples/operations-center-dashboard.json` | Example dashboard export snapshot |
 | `docs/exporter-metric-expansion-plan.md` | Planned metric expansion roadmap |
 | `tests/` | Unit tests for collector and event behavior |
 

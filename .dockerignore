@@ -17,9 +17,9 @@ _static/
 *.md
 *.json
 docker-compose.yml
-prometheus.truenas-example.yml
+deploy/prometheus/prometheus.truenas-example.yml
 tests/
 pytest.ini
 requirements-dev.txt
-docker-compose.prometheus.yml
-prometheus.yml
+deploy/prometheus/docker-compose.prometheus.yml
+deploy/prometheus/prometheus.yml

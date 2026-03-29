@@ -13,7 +13,7 @@ scrape_configs:
     scrape_timeout: 1m
     static_configs:
       - targets: 
-        # Resolves if run within the same Docker network (e.g., using `docker compose -f docker-compose.yml -f docker-compose.prometheus.yml up -d`)
+        # Replace this with your exporter IP:port when running from another host.
         - '192.168.0.247:9108'
         # Fallback to local host interface if running separately
         - 'host.docker.internal:9108'

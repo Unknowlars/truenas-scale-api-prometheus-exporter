@@ -11,7 +11,7 @@ This directory contains an AI-friendly Markdown conversion of the offline TrueNA
 ## Regenerate
 
 ```bash
-python convert_truenas_api_docs_to_markdown.py --clean
+python scripts/convert_truenas_api_docs_to_markdown.py --clean
 ```
 
 The converter reads from `_sources/*.rst.txt` for page metadata and parses each embedded `#json-schema` block into Markdown headings, bullets, and examples.

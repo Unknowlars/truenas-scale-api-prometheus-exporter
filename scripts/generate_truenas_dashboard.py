@@ -5,7 +5,8 @@ from pathlib import Path
 
 DS = {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}
 PLUGIN_VERSION = "12.4.0"
-OUT = Path("truenas-exporter-dashboard.json")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+OUT = REPO_ROOT / "truenas-exporter-dashboard.json"
 
 
 def tgt(expr, legend="", ref="A", fmt="time_series", instant=False):
