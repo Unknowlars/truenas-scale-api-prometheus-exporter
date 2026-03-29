@@ -705,10 +705,10 @@ EVENT_LIST_LENGTH = Gauge("truenas_event_list_length", "List length from event p
 
 # CPU usage (updated every time a reporting.realtime event arrives, ~1s interval)
 CPU_USAGE_PERCENT = Gauge("truenas_cpu_usage_percent", "Total host CPU usage percent (0 to 100, all cores combined)")
-CPU_USER_PERCENT = Gauge("truenas_cpu_user_percent", "Host CPU user-space usage percent (0 to 100)")
+CPU_USER_PERCENT = Gauge("truenas_cpu_user_percent", "Host CPU user-space usage percent (0 to 100); falls back to total CPU usage when user split is unavailable")
 CPU_SYSTEM_PERCENT = Gauge("truenas_cpu_system_percent", "Host CPU kernel usage percent (0 to 100)")
 CPU_IOWAIT_PERCENT = Gauge("truenas_cpu_iowait_percent", "Host CPU I/O wait percent (0 to 100)")
-CPU_IDLE_PERCENT = Gauge("truenas_cpu_idle_percent", "Host CPU idle percent (0 to 100)")
+CPU_IDLE_PERCENT = Gauge("truenas_cpu_idle_percent", "Host CPU idle percent (0 to 100); inferred as 100-total usage when idle split is unavailable")
 CPU_INTERRUPT_PERCENT = Gauge("truenas_cpu_interrupt_percent", "Host CPU interrupt/hardware IRQ percent (0 to 100)")
 CPU_CORE_USAGE_PERCENT = Gauge("truenas_cpu_core_usage_percent", "Per-CPU-core usage percent (0 to 100)", ["core"])
 CPU_TEMPERATURE_C = Gauge("truenas_cpu_temperature_celsius", "Per-CPU-core temperature in Celsius", ["core"])
@@ -2232,17 +2232,50 @@ class TrueNASExporter:
         cpu_section = payload.get("cpu") or {}
         cpu_data = cpu_section.get("cpu") or {}
 
-        for key, gauge in (
-            ("percent",   CPU_USAGE_PERCENT),
-            ("user",      CPU_USER_PERCENT),
-            ("system",    CPU_SYSTEM_PERCENT),
-            ("iowait",    CPU_IOWAIT_PERCENT),
-            ("idle",      CPU_IDLE_PERCENT),
-            ("interrupt", CPU_INTERRUPT_PERCENT),
-        ):
-            val = _as_float(cpu_data.get(key))
-            if val is not None:
-                gauge.set(val)
+        total_cpu_percent: float | None = None
+        user_cpu_percent: float | None = None
+        idle_cpu_percent: float | None = None
+
+        cpu_percent_fields = (
+            (CPU_USAGE_PERCENT, ("percent", "usage_percent", "usage")),
+            (CPU_USER_PERCENT, ("user", "user_percent", "user_usage")),
+            (CPU_SYSTEM_PERCENT, ("system", "system_percent", "sys")),
+            (CPU_IOWAIT_PERCENT, ("iowait", "io_wait", "wait", "iowait_percent")),
+            (CPU_IDLE_PERCENT, ("idle", "idle_percent")),
+            (CPU_INTERRUPT_PERCENT, ("interrupt", "interrupt_percent", "irq", "softirq")),
+        )
+
+        for gauge, keys in cpu_percent_fields:
+            val = None
+            for container in (cpu_data, cpu_section):
+                if not isinstance(container, dict):
+                    continue
+                for key in keys:
+                    val = _as_float(container.get(key))
+                    if val is not None:
+                        break
+                if val is not None:
+                    break
+            if val is None:
+                continue
+            gauge.set(val)
+            if gauge is CPU_USAGE_PERCENT:
+                total_cpu_percent = val
+            elif gauge is CPU_USER_PERCENT:
+                user_cpu_percent = val
+            elif gauge is CPU_IDLE_PERCENT:
+                idle_cpu_percent = val
+
+        # TrueNAS 25.x reporting.realtime commonly exposes only aggregate
+        # `cpu.usage` plus per-core usage/temperature (cpu0..cpuN). If a
+        # detailed user/system split is unavailable, populate user with total
+        # usage so dashboards still reflect live host load.
+        if user_cpu_percent is None and total_cpu_percent is not None:
+            CPU_USER_PERCENT.set(total_cpu_percent)
+
+        # Likewise, when explicit idle is absent, infer it from total usage.
+        if idle_cpu_percent is None and total_cpu_percent is not None:
+            CPU_IDLE_PERCENT.set(max(0.0, 100.0 - total_cpu_percent))
 
         # Per-core CPU data is not stable across TrueNAS builds. Prefer the
         # documented per_cpu shape, but also accept common alternates seen in
@@ -2265,6 +2298,19 @@ class TrueNASExporter:
             )
             if cpu_core_usage:
                 break
+        if not cpu_core_usage and isinstance(cpu_section, dict):
+            for core_name, core_payload in cpu_section.items():
+                if not isinstance(core_payload, dict):
+                    continue
+                if not re.fullmatch(r"cpu\d+", str(core_name)):
+                    continue
+                usage_val = _as_float(
+                    core_payload.get("usage")
+                    or core_payload.get("percent")
+                    or core_payload.get("value")
+                )
+                if usage_val is not None:
+                    cpu_core_usage[(_normalize_core_label(core_name),)] = usage_val
         self._replace_event_metric_series(CPU_CORE_USAGE_PERCENT, cpu_core_usage)
 
         # Per-core temperatures are even less consistent: some systems expose
@@ -2286,6 +2332,20 @@ class TrueNASExporter:
             )
             if cpu_temps:
                 break
+        if not cpu_temps and isinstance(cpu_section, dict):
+            for core_name, core_payload in cpu_section.items():
+                if not isinstance(core_payload, dict):
+                    continue
+                if not re.fullmatch(r"cpu\d+", str(core_name)):
+                    continue
+                temp_val = _as_float(
+                    core_payload.get("temp")
+                    or core_payload.get("temperature")
+                    or core_payload.get("celsius")
+                    or core_payload.get("value")
+                )
+                if temp_val is not None:
+                    cpu_temps[(_normalize_core_label(core_name),)] = temp_val
         self._replace_event_metric_series(CPU_TEMPERATURE_C, cpu_temps)
 
         # ── Memory ───────────────────────────────────────────────────────────

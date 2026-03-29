@@ -5768,7 +5768,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "topk(8, truenas_disk_read_bytes_per_second{instance=~\"$instance\", disk=~\"$disk\", disk!=\"total\"})",
+          "expr": "topk(8, truenas_disk_read_bytes_per_second{instance=~\"$instance\", disk=~\"$disk\"})",
           "legendFormat": "read {{disk}}",
           "refId": "A"
         },
@@ -5777,7 +5777,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "topk(8, truenas_disk_write_bytes_per_second{instance=~\"$instance\", disk=~\"$disk\", disk!=\"total\"})",
+          "expr": "topk(8, truenas_disk_write_bytes_per_second{instance=~\"$instance\", disk=~\"$disk\"})",
           "legendFormat": "write {{disk}}",
           "refId": "B"
         }
@@ -5867,7 +5867,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "topk(8, truenas_disk_read_ops_per_second{instance=~\"$instance\", disk=~\"$disk\", disk!=\"total\"})",
+          "expr": "topk(8, truenas_disk_read_ops_per_second{instance=~\"$instance\", disk=~\"$disk\"})",
           "legendFormat": "read {{disk}}",
           "refId": "A"
         },
@@ -5876,7 +5876,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "topk(8, truenas_disk_write_ops_per_second{instance=~\"$instance\", disk=~\"$disk\", disk!=\"total\"})",
+          "expr": "topk(8, truenas_disk_write_ops_per_second{instance=~\"$instance\", disk=~\"$disk\"})",
           "legendFormat": "write {{disk}}",
           "refId": "B"
         }
@@ -5966,7 +5966,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "topk(8, truenas_disk_busy_percent{instance=~\"$instance\", disk=~\"$disk\", disk!=\"total\"})",
+          "expr": "topk(8, truenas_disk_busy_percent{instance=~\"$instance\", disk=~\"$disk\"})",
           "legendFormat": "{{disk}}",
           "refId": "A"
         }
@@ -20842,8 +20842,8 @@
     },
     {
       "type": "row",
-      "id": 280,
-      "title": "Exporter & API Diagnostics",
+      "id": 292,
+      "title": "Exporter + Advanced ZFS",
       "collapsed": true,
       "panels": [
         {
@@ -21281,8 +21281,8 @@
         {
           "type": "stat",
           "id": 271,
-          "title": "Boot Changes",
-          "description": "Reboot count proxy.",
+          "title": "Scrape Age",
+          "description": "Seconds since last successful scrape.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -21293,7 +21293,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "truenas_system_boot_changes_total{instance=~\"$instance\"}",
+              "expr": "time() - max(truenas_last_scrape_timestamp_seconds{instance=~\"$instance\"})",
               "legendFormat": "",
               "refId": "A"
             }
@@ -21313,7 +21313,7 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "s"
             },
             "overrides": []
           },
@@ -21343,8 +21343,8 @@
         {
           "type": "stat",
           "id": 272,
-          "title": "FS Paths",
-          "description": "Filesystem paths scraped.",
+          "title": "Features On",
+          "description": "Enabled platform feature flags.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -21355,7 +21355,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "truenas_filesystem_path_count{instance=~\"$instance\"}",
+              "expr": "sum(truenas_feature_enabled{instance=~\"$instance\"}) or vector(0)",
               "legendFormat": "",
               "refId": "A"
             }
@@ -21403,8 +21403,504 @@
           "pluginVersion": "12.4.0"
         },
         {
-          "type": "timeseries",
+          "type": "stat",
           "id": 273,
+          "title": "Oldest Alert Age",
+          "description": "Age of the oldest active alert.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "time() - clamp_min(max(truenas_alert_oldest_timestamp_seconds{instance=~\"$instance\"}), 1)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 274,
+          "title": "Repl Parallel",
+          "description": "Configured maximum replication parallelism.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "max(truenas_replication_max_parallel{instance=~\"$instance\"}) or vector(0)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 3,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 275,
+          "title": "Boot Env Active",
+          "description": "Boot environments marked active.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "sum(truenas_boot_env_active{instance=~\"$instance\"}) or vector(0)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 6,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 276,
+          "title": "Boot Env Keep",
+          "description": "Boot environments marked keep.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "sum(truenas_boot_env_keep{instance=~\"$instance\"}) or vector(0)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 9,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 277,
+          "title": "Demand Access/s",
+          "description": "Total ARC demand accesses per second.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "max(truenas_zfs_demand_accesses_per_second{instance=~\"$instance\"}) or vector(0)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 278,
+          "title": "Data IO Hit %",
+          "description": "Demand data I/O hit ratio.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * avg(truenas_zfs_demand_data_io_hit_ratio{instance=~\"$instance\"}) or vector(0)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 15,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 279,
+          "title": "Meta IO Hit %",
+          "description": "Demand metadata I/O hit ratio.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * avg(truenas_zfs_demand_metadata_io_hit_ratio{instance=~\"$instance\"}) or vector(0)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 18,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 280,
+          "title": "L2ARC Miss %",
+          "description": "L2ARC miss ratio.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * avg(truenas_zfs_l2arc_miss_ratio{instance=~\"$instance\"}) or vector(0)",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 21,
+            "y": 361,
+            "w": 3,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "timeseries",
+          "id": 281,
           "title": "Exporter & Event Stream Health",
           "description": "Telemetry collection health.",
           "datasource": {
@@ -21487,7 +21983,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 361,
+            "y": 365,
             "w": 12,
             "h": 8
           },
@@ -21512,7 +22008,7 @@
         },
         {
           "type": "timeseries",
-          "id": 274,
+          "id": 282,
           "title": "Scrape Duration Over Time",
           "description": "Exporter scrape duration trend.",
           "datasource": {
@@ -21577,7 +22073,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 361,
+            "y": 365,
             "w": 12,
             "h": 8
           },
@@ -21602,7 +22098,7 @@
         },
         {
           "type": "timeseries",
-          "id": 275,
+          "id": 283,
           "title": "API Method Duration (Top 12)",
           "description": "Slowest API methods.",
           "datasource": {
@@ -21667,7 +22163,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 369,
+            "y": 373,
             "w": 12,
             "h": 8
           },
@@ -21692,7 +22188,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 276,
+          "id": 284,
           "title": "API Method Success",
           "description": "Per-method success state.",
           "datasource": {
@@ -21766,7 +22262,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 369,
+            "y": 373,
             "w": 12,
             "h": 8
           },
@@ -21790,7 +22286,7 @@
         },
         {
           "type": "histogram",
-          "id": 277,
+          "id": 285,
           "title": "API Duration Distribution",
           "description": "API method duration spread.",
           "datasource": {
@@ -21829,7 +22325,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 377,
+            "y": 381,
             "w": 12,
             "h": 8
           },
@@ -21853,7 +22349,7 @@
         },
         {
           "type": "timeseries",
-          "id": 278,
+          "id": 286,
           "title": "Event Messages Rate",
           "description": "Event stream message rate.",
           "datasource": {
@@ -21918,7 +22414,277 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 377,
+            "y": 381,
+            "w": 12,
+            "h": 8
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "transformations": [],
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "timeseries",
+          "id": 287,
+          "title": "Advanced ZFS Ratios",
+          "description": "Advanced ARC/L2ARC percentage metrics from realtime telemetry.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * truenas_zfs_demand_data_io_hit_ratio{instance=~\"$instance\"}",
+              "legendFormat": "Data I/O hit %",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * truenas_zfs_demand_data_miss_ratio{instance=~\"$instance\"}",
+              "legendFormat": "Data miss %",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * truenas_zfs_demand_metadata_io_hit_ratio{instance=~\"$instance\"}",
+              "legendFormat": "Metadata I/O hit %",
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * truenas_zfs_demand_metadata_miss_ratio{instance=~\"$instance\"}",
+              "legendFormat": "Metadata miss %",
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * truenas_zfs_l2arc_hit_ratio{instance=~\"$instance\"}",
+              "legendFormat": "L2ARC hit %",
+              "refId": "E"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "100 * truenas_zfs_l2arc_miss_ratio{instance=~\"$instance\"}",
+              "legendFormat": "L2ARC miss %",
+              "refId": "F"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": [],
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 389,
+            "w": 12,
+            "h": 8
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "transformations": [],
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "timeseries",
+          "id": 288,
+          "title": "Advanced ZFS Access & Miss Rates",
+          "description": "Advanced demand and L2ARC activity rates.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_zfs_demand_accesses_per_second{instance=~\"$instance\"}",
+              "legendFormat": "Demand accesses/s",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_zfs_demand_data_misses_per_second{instance=~\"$instance\"}",
+              "legendFormat": "Data misses/s",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_zfs_demand_meta_misses_per_second{instance=~\"$instance\"}",
+              "legendFormat": "Metadata misses/s",
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_zfs_l2arc_accesses_per_second{instance=~\"$instance\"}",
+              "legendFormat": "L2ARC accesses/s",
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_zfs_l2arc_hits_per_second{instance=~\"$instance\"}",
+              "legendFormat": "L2ARC hits/s",
+              "refId": "E"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_zfs_l2arc_misses_per_second{instance=~\"$instance\"}",
+              "legendFormat": "L2ARC misses/s",
+              "refId": "F"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": [],
+              "unit": "ops",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 389,
             "w": 12,
             "h": 8
           },
@@ -21943,7 +22709,341 @@
         },
         {
           "type": "table",
-          "id": 279,
+          "id": 289,
+          "title": "Exporter Version",
+          "description": "Exporter build version label currently active per instance.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "max by (version) (truenas_exporter_info{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "filterable": true,
+                "footer": {
+                  "reducers": []
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Present"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "color": "red",
+                            "index": 0,
+                            "text": "Down"
+                          },
+                          "1": {
+                            "color": "green",
+                            "index": 1,
+                            "text": "Up"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 397,
+            "w": 12,
+            "h": 8
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "footer": {
+              "show": false,
+              "reducer": [
+                "sum"
+              ],
+              "fields": ""
+            },
+            "sortBy": [
+              {
+                "desc": false,
+                "displayName": "Version"
+              }
+            ]
+          },
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "instance": true,
+                  "job": true
+                },
+                "renameByName": {
+                  "version": "Version",
+                  "Value": "Present"
+                },
+                "indexByName": {
+                  "Version": 0,
+                  "Present": 1
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "fields": [
+                  {
+                    "displayName": "Version",
+                    "desc": false
+                  }
+                ]
+              }
+            }
+          ],
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "table",
+          "id": 290,
+          "title": "Boot Environment Flags",
+          "description": "Per-boot-environment active/keep flags for rollback planning.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "max by (name) (truenas_boot_env_active{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "max by (name) (truenas_boot_env_keep{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "B",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "filterable": true,
+                "footer": {
+                  "reducers": []
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Active"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "color": "red",
+                            "index": 0,
+                            "text": "Down"
+                          },
+                          "1": {
+                            "color": "green",
+                            "index": 1,
+                            "text": "Up"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Keep"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "color": "red",
+                            "index": 0,
+                            "text": "No"
+                          },
+                          "1": {
+                            "color": "green",
+                            "index": 1,
+                            "text": "Yes"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 397,
+            "w": 12,
+            "h": 8
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "footer": {
+              "show": false,
+              "reducer": [
+                "sum"
+              ],
+              "fields": ""
+            },
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Active"
+              }
+            ]
+          },
+          "transformations": [
+            {
+              "id": "joinByField",
+              "options": {
+                "byField": "name",
+                "mode": "outer"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "instance": true,
+                  "job": true
+                },
+                "renameByName": {
+                  "name": "Boot Environment",
+                  "Value #A": "Active",
+                  "Value #B": "Keep"
+                },
+                "indexByName": {
+                  "Boot Environment": 0,
+                  "Active": 1,
+                  "Keep": 2
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "fields": [
+                  {
+                    "displayName": "Active",
+                    "desc": true
+                  }
+                ]
+              }
+            }
+          ],
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "table",
+          "id": 291,
           "title": "API Method Detail",
           "description": "Per-method duration, success flag, and errors.",
           "datasource": {
@@ -22086,7 +23186,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 385,
+            "y": 405,
             "w": 24,
             "h": 10
           },

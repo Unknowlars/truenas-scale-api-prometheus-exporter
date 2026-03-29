@@ -833,23 +833,23 @@ def build_dashboard():
     panels.append(timeseries(
         "Disk Throughput by Device",
         [
-            tgt(f'topk(8, truenas_disk_read_bytes_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'read {{disk}}', 'A'),
-            tgt(f'topk(8, truenas_disk_write_bytes_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'write {{disk}}', 'B'),
+            tgt(f'topk(8, truenas_disk_read_bytes_per_second{{instance=~"{I}", disk=~"$disk"}})', 'read {{disk}}', 'A'),
+            tgt(f'topk(8, truenas_disk_write_bytes_per_second{{instance=~"{I}", disk=~"$disk"}})', 'write {{disk}}', 'B'),
         ],
         0, y, unit="Bps", desc="Read/write throughput for the busiest devices.",
     ))
     panels.append(timeseries(
         "Disk IOPS by Device",
         [
-            tgt(f'topk(8, truenas_disk_read_ops_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'read {{disk}}', 'A'),
-            tgt(f'topk(8, truenas_disk_write_ops_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'write {{disk}}', 'B'),
+            tgt(f'topk(8, truenas_disk_read_ops_per_second{{instance=~"{I}", disk=~"$disk"}})', 'read {{disk}}', 'A'),
+            tgt(f'topk(8, truenas_disk_write_ops_per_second{{instance=~"{I}", disk=~"$disk"}})', 'write {{disk}}', 'B'),
         ],
         12, y, unit="iops", desc="Read/write IOPS per device.",
     ))
     y += 8
     panels.append(timeseries(
         "Disk Busy %",
-        [tgt(f'topk(8, truenas_disk_busy_percent{{instance=~"{I}", disk=~"$disk", disk!="total"}})', '{{disk}}', 'A')],
+        [tgt(f'topk(8, truenas_disk_busy_percent{{instance=~"{I}", disk=~"$disk"}})', '{{disk}}', 'A')],
         0, y, unit="percent", desc="Disk utilization saturation.",
     ))
     panels.append(timeseries(
@@ -1657,7 +1657,7 @@ def build_dashboard():
     panels.append(row("Dataset Deep-Dive", y, collapsed=True, panels=ds_panels))
     y += 1
 
-    # ── COLLAPSED ROW: Exporter & API Diagnostics ───────────────────────
+    # ── COLLAPSED ROW: Exporter + Advanced ZFS ──────────────────────────
     api_panels = []
     apy = y + 1
     api_panels.extend([
@@ -1671,8 +1671,19 @@ def build_dashboard():
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 10}], graph=True),
         stat("Coll Errors", f'sum(truenas_collector_errors_total{{instance=~"{I}"}}) or vector(0)', 15, apy, w=3,
              thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
-        stat("Boot Changes", f'truenas_system_boot_changes_total{{instance=~"{I}"}}', 18, apy, w=3, desc="Reboot count proxy."),
-        stat("FS Paths", f'truenas_filesystem_path_count{{instance=~"{I}"}}', 21, apy, w=3, desc="Filesystem paths scraped."),
+        stat("Scrape Age", f'time() - max(truenas_last_scrape_timestamp_seconds{{instance=~"{I}"}})', 18, apy, w=3, unit="s", desc="Seconds since last successful scrape."),
+        stat("Features On", f'sum(truenas_feature_enabled{{instance=~"{I}"}}) or vector(0)', 21, apy, w=3, desc="Enabled platform feature flags."),
+    ])
+    apy += 4
+    api_panels.extend([
+        stat("Oldest Alert Age", f'time() - clamp_min(max(truenas_alert_oldest_timestamp_seconds{{instance=~"{I}"}}), 1)', 0, apy, w=3, unit="s", desc="Age of the oldest active alert."),
+        stat("Repl Parallel", f'max(truenas_replication_max_parallel{{instance=~"{I}"}}) or vector(0)', 3, apy, w=3, desc="Configured maximum replication parallelism."),
+        stat("Boot Env Active", f'sum(truenas_boot_env_active{{instance=~"{I}"}}) or vector(0)', 6, apy, w=3, desc="Boot environments marked active."),
+        stat("Boot Env Keep", f'sum(truenas_boot_env_keep{{instance=~"{I}"}}) or vector(0)', 9, apy, w=3, desc="Boot environments marked keep."),
+        stat("Demand Access/s", f'max(truenas_zfs_demand_accesses_per_second{{instance=~"{I}"}}) or vector(0)', 12, apy, w=3, unit="ops", desc="Total ARC demand accesses per second."),
+        stat("Data IO Hit %", f'100 * avg(truenas_zfs_demand_data_io_hit_ratio{{instance=~"{I}"}}) or vector(0)', 15, apy, w=3, unit="percent", desc="Demand data I/O hit ratio."),
+        stat("Meta IO Hit %", f'100 * avg(truenas_zfs_demand_metadata_io_hit_ratio{{instance=~"{I}"}}) or vector(0)', 18, apy, w=3, unit="percent", desc="Demand metadata I/O hit ratio."),
+        stat("L2ARC Miss %", f'100 * avg(truenas_zfs_l2arc_miss_ratio{{instance=~"{I}"}}) or vector(0)', 21, apy, w=3, unit="percent", desc="L2ARC miss ratio."),
     ])
     apy += 4
     api_panels.append(timeseries(
@@ -1712,6 +1723,73 @@ def build_dashboard():
         12, apy, unit="ops", desc="Event stream message rate.",
     ))
     apy += 8
+    api_panels.append(timeseries(
+        "Advanced ZFS Ratios",
+        [
+            tgt(f'100 * truenas_zfs_demand_data_io_hit_ratio{{instance=~"{I}"}}', 'Data I/O hit %', 'A'),
+            tgt(f'100 * truenas_zfs_demand_data_miss_ratio{{instance=~"{I}"}}', 'Data miss %', 'B'),
+            tgt(f'100 * truenas_zfs_demand_metadata_io_hit_ratio{{instance=~"{I}"}}', 'Metadata I/O hit %', 'C'),
+            tgt(f'100 * truenas_zfs_demand_metadata_miss_ratio{{instance=~"{I}"}}', 'Metadata miss %', 'D'),
+            tgt(f'100 * truenas_zfs_l2arc_hit_ratio{{instance=~"{I}"}}', 'L2ARC hit %', 'E'),
+            tgt(f'100 * truenas_zfs_l2arc_miss_ratio{{instance=~"{I}"}}', 'L2ARC miss %', 'F'),
+        ],
+        0, apy, unit="percent", desc="Advanced ARC/L2ARC percentage metrics from realtime telemetry.",
+    ))
+    api_panels.append(timeseries(
+        "Advanced ZFS Access & Miss Rates",
+        [
+            tgt(f'truenas_zfs_demand_accesses_per_second{{instance=~"{I}"}}', 'Demand accesses/s', 'A'),
+            tgt(f'truenas_zfs_demand_data_misses_per_second{{instance=~"{I}"}}', 'Data misses/s', 'B'),
+            tgt(f'truenas_zfs_demand_meta_misses_per_second{{instance=~"{I}"}}', 'Metadata misses/s', 'C'),
+            tgt(f'truenas_zfs_l2arc_accesses_per_second{{instance=~"{I}"}}', 'L2ARC accesses/s', 'D'),
+            tgt(f'truenas_zfs_l2arc_hits_per_second{{instance=~"{I}"}}', 'L2ARC hits/s', 'E'),
+            tgt(f'truenas_zfs_l2arc_misses_per_second{{instance=~"{I}"}}', 'L2ARC misses/s', 'F'),
+        ],
+        12, apy, unit="ops", desc="Advanced demand and L2ARC activity rates.",
+    ))
+    apy += 8
+    api_panels.append(table(
+        "Exporter Version",
+        [table_target(f'max by (version) (truenas_exporter_info{{instance=~"{I}"}})', 'A')],
+        0, apy, w=12, h=8,
+        desc="Exporter build version label currently active per instance.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'version': 'Version', 'Value': 'Present'},
+                'indexByName': {'Version': 0, 'Present': 1},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Version', 'desc': False}]}),
+        ],
+        overrides=[
+            {"matcher": {"id": "byName", "options": "Present"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": UP_MAP}]},
+        ],
+        sort_col='Version', sort_desc=False,
+    ))
+    api_panels.append(table(
+        "Boot Environment Flags",
+        [
+            table_target(f'max by (name) (truenas_boot_env_active{{instance=~"{I}"}})', 'A'),
+            table_target(f'max by (name) (truenas_boot_env_keep{{instance=~"{I}"}})', 'B'),
+        ],
+        12, apy, w=12, h=8,
+        desc="Per-boot-environment active/keep flags for rollback planning.",
+        transforms=[
+            outer_join('name'),
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'name': 'Boot Environment', 'Value #A': 'Active', 'Value #B': 'Keep'},
+                'indexByName': {'Boot Environment': 0, 'Active': 1, 'Keep': 2},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Active', 'desc': True}]}),
+        ],
+        overrides=[
+            {"matcher": {"id": "byName", "options": "Active"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": UP_MAP}]},
+            {"matcher": {"id": "byName", "options": "Keep"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+        ],
+        sort_col='Active',
+    ))
+    apy += 8
     api_table_targets = [
         table_target(f'max by (method) (truenas_api_call_duration_seconds{{instance=~"{I}", method=~"$method"}})', 'A'),
         table_target(f'max by (method) (truenas_api_call_success{{instance=~"{I}", method=~"$method"}})', 'B'),
@@ -1736,7 +1814,7 @@ def build_dashboard():
         overrides=api_overrides, transforms=api_table_transforms, sort_col='Duration s',
     ))
     apy += 10
-    panels.append(row("Exporter & API Diagnostics", y, collapsed=True, panels=api_panels))
+    panels.append(row("Exporter + Advanced ZFS", y, collapsed=True, panels=api_panels))
     y += 1
 
     # ── Validate grid ───────────────────────────────────────────────────
