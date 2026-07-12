@@ -526,12 +526,13 @@ def build_dashboard():
              desc="Physical memory in use.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 75}, {"color": "red", "value": 90}], graph=True),
         stat("Pool Used", f'100 * (sum(truenas_pool_allocated_bytes{{instance=~"{I}", pool=~"$pool"}}) / clamp_min(sum(truenas_pool_size_bytes{{instance=~"{I}", pool=~"$pool"}}), 1))', 6, y, w=3, unit="percent",
              desc="Aggregate pool utilization.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 75}, {"color": "red", "value": 90}], graph=True),
-        stat("ARC Hit %", f'100 * avg(truenas_zfs_arc_hit_ratio{{instance=~"{I}"}})', 9, y, w=3, unit="percent",
-             desc="ZFS ARC cache hit ratio.", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}], graph=True),
+        stat("Data Hit %", f'100 * avg(truenas_zfs_demand_data_hit_ratio{{instance=~"{I}"}})', 9, y, w=3, unit="percent",
+             desc="ZFS ARC demand-data hit ratio.", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}], graph=True),
         stat("Load 1m", f'avg(truenas_host_load_average{{instance=~"{I}", window="1m"}})', 12, y, w=3,
              desc="1-minute load average.", graph=True),
         stat("NFS Clients", f'sum(truenas_nfs_client_count{{instance=~"{I}"}})', 15, y, w=3, desc="Active NFS clients.", graph=True),
-        stat("SMB Sessions", f'sum(truenas_smb_session_count{{instance=~"{I}"}})', 18, y, w=3, desc="Active SMB sessions.", graph=True),
+        stat("Update DL", f'max(truenas_update_download_progress_percent{{instance=~"{I}"}})', 18, y, w=3, unit="percent",
+             desc="Current update download progress.", graph=True),
         stat("Scrape Time", f'max(truenas_scrape_duration_seconds{{instance=~"{I}"}})', 21, y, w=3, unit="s",
              desc="Exporter scrape duration.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 10}, {"color": "red", "value": 30}], graph=True),
     ])
@@ -591,34 +592,32 @@ def build_dashboard():
         stat("Total RAM", f'truenas_memory_physical_total_bytes{{instance=~"{I}"}}', 0, y, w=4, unit="bytes", desc="Total physical RAM."),
         stat("Used RAM", f'truenas_memory_physical_used_bytes{{instance=~"{I}"}}', 4, y, w=4, unit="bytes", desc="Physical RAM in use."),
         stat("Available", f'truenas_memory_physical_available_bytes{{instance=~"{I}"}}', 8, y, w=4, unit="bytes", desc="Available RAM (free + reclaimable)."),
-        stat("Cached", f'truenas_memory_physical_cached_bytes{{instance=~"{I}"}}', 12, y, w=4, unit="bytes", desc="Page cache."),
-        stat("Swap Used", f'truenas_memory_swap_used_bytes{{instance=~"{I}"}}', 16, y, w=4, unit="bytes",
-             desc="Swap in use. Any swap usage may indicate memory pressure.",
-             thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 1073741824}]),
+        stat("ARC Free Memory", f'truenas_zfs_arc_free_memory_bytes{{instance=~"{I}"}}', 12, y, w=4, unit="bytes", desc="Memory the documented realtime event reports as free to the ZFS ARC."),
+        stat("RAM Used %", f'100 * truenas_memory_physical_used_bytes{{instance=~"{I}"}} / truenas_memory_physical_total_bytes{{instance=~"{I}"}}', 16, y, w=4, unit="percent",
+             desc="Derived from documented physical-memory total and available values.",
+             thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 80}, {"color": "red", "value": 95}]),
         stat("ECC", f'max(truenas_host_ecc_memory{{instance=~"{I}"}})', 20, y, w=4, desc="ECC memory present.", mappings=BOOL_MAP),
     ])
     y += 4
     panels.append(timeseries(
-        "Memory Composition Over Time",
+        "Documented Memory Capacity Over Time",
         [
-            tgt(f'truenas_memory_physical_used_bytes{{instance=~"{I}"}}', 'Used', 'A'),
-            tgt(f'truenas_memory_physical_cached_bytes{{instance=~"{I}"}}', 'Cached', 'B'),
-            tgt(f'truenas_memory_physical_buffers_bytes{{instance=~"{I}"}}', 'Buffers', 'C'),
-            tgt(f'truenas_memory_physical_free_bytes{{instance=~"{I}"}}', 'Free', 'D'),
-            tgt(f'truenas_zfs_arc_size_bytes{{instance=~"{I}"}}', 'ARC Size', 'E'),
+            tgt(f'truenas_memory_physical_total_bytes{{instance=~"{I}"}}', 'Total', 'A'),
+            tgt(f'truenas_memory_physical_used_bytes{{instance=~"{I}"}}', 'Used', 'B'),
+            tgt(f'truenas_memory_physical_available_bytes{{instance=~"{I}"}}', 'Available', 'C'),
         ],
         0, y, unit="bytes", stacked=False,
-        desc="Memory breakdown over time. ARC overlaps with cached — it's reclaimable.",
+        desc="Physical memory fields explicitly documented by reporting.realtime; used is total minus available.",
     ))
     panels.append(timeseries(
-        "Swap Usage Over Time",
+        "Documented ARC Memory Over Time",
         [
-            tgt(f'truenas_memory_swap_total_bytes{{instance=~"{I}"}}', 'Swap Total', 'A'),
-            tgt(f'truenas_memory_swap_used_bytes{{instance=~"{I}"}}', 'Swap Used', 'B'),
-            tgt(f'truenas_memory_swap_free_bytes{{instance=~"{I}"}}', 'Swap Free', 'C'),
+            tgt(f'truenas_zfs_arc_size_bytes{{instance=~"{I}"}}', 'ARC Size', 'A'),
+            tgt(f'truenas_zfs_arc_available_bytes{{instance=~"{I}"}}', 'ARC Available', 'B'),
+            tgt(f'truenas_zfs_arc_free_memory_bytes{{instance=~"{I}"}}', 'ARC Free', 'C'),
         ],
         12, y, unit="bytes",
-        desc="Swap space trends. Increasing swap usage is a red flag.",
+        desc="ARC memory fields explicitly documented by reporting.realtime.",
     ))
     y += 8
 
@@ -684,8 +683,10 @@ def build_dashboard():
         table_target(f'max by (pool) (truenas_pool_fragmentation_percent{{instance=~"{I}", pool=~"$pool"}})', 'D'),
         table_target(f'max by (pool) (truenas_pool_healthy{{instance=~"{I}", pool=~"$pool"}})', 'E'),
         table_target(f'100 * max by (pool) (truenas_pool_allocated_bytes{{instance=~"{I}", pool=~"$pool"}}) / clamp_min(max by (pool) (truenas_pool_size_bytes{{instance=~"{I}", pool=~"$pool"}}), 1)', 'F'),
-        table_target(f'max by (pool) (truenas_pool_dedup_ratio{{instance=~"{I}", pool=~"$pool"}})', 'G'),
         table_target(f'max by (pool) (truenas_pool_autotrim_enabled{{instance=~"{I}", pool=~"$pool"}})', 'H'),
+        table_target(f'max by (pool) (truenas_pool_dedup_table_size_bytes{{instance=~"{I}", pool=~"$pool"}})', 'I'),
+        table_target(f'max by (pool) (truenas_pool_expand_reflowed_bytes{{instance=~"{I}", pool=~"$pool"}})', 'K'),
+        table_target(f'max by (pool) (truenas_pool_expand_to_reflow_bytes{{instance=~"{I}", pool=~"$pool"}})', 'L'),
     ]
     pool_table_transforms = [
         outer_join('pool'),
@@ -694,9 +695,10 @@ def build_dashboard():
             'renameByName': {
                 'pool': 'Pool', 'Value #A': 'Size', 'Value #B': 'Allocated', 'Value #C': 'Free',
                 'Value #D': 'Frag %', 'Value #E': 'Healthy', 'Value #F': 'Used %',
-                'Value #G': 'Dedup Ratio', 'Value #H': 'Autotrim',
+                'Value #H': 'Autotrim', 'Value #I': 'DDT Size',
+                'Value #K': 'Reflowed', 'Value #L': 'To Reflow',
             },
-            'indexByName': {'Pool': 0, 'Used %': 1, 'Allocated': 2, 'Free': 3, 'Size': 4, 'Frag %': 5, 'Dedup Ratio': 6, 'Autotrim': 7, 'Healthy': 8},
+            'indexByName': {'Pool': 0, 'Used %': 1, 'Allocated': 2, 'Free': 3, 'Size': 4, 'Frag %': 5, 'DDT Size': 6, 'Reflowed': 7, 'To Reflow': 8, 'Autotrim': 9, 'Healthy': 10},
         }),
         tf('sortBy', {'fields': [{'displayName': 'Used %', 'desc': True}]}),
     ]
@@ -707,41 +709,20 @@ def build_dashboard():
         {"matcher": {"id": "byName", "options": "Size"}, "properties": [{"id": "unit", "value": "bytes"}]},
         {"matcher": {"id": "byName", "options": "Allocated"}, "properties": [{"id": "unit", "value": "bytes"}]},
         {"matcher": {"id": "byName", "options": "Free"}, "properties": [{"id": "unit", "value": "bytes"}]},
+        {"matcher": {"id": "byName", "options": "DDT Size"}, "properties": [{"id": "unit", "value": "bytes"}]},
+        {"matcher": {"id": "byName", "options": "Reflowed"}, "properties": [{"id": "unit", "value": "bytes"}]},
+        {"matcher": {"id": "byName", "options": "To Reflow"}, "properties": [{"id": "unit", "value": "bytes"}]},
     ]
     panels.append(table(
         "Pool Inventory", pool_table_targets, 0, y, h=10,
-        desc="Pool inventory with fill ratio, fragmentation, dedup ratio, autotrim, and health.",
+        desc="Pool capacity, health, dedup-table footprint, and active expansion progress.",
         overrides=pool_overrides, transforms=pool_table_transforms, sort_col='Used %',
     ))
     y += 10
-    # Vdev errors
-    vdev_error_targets = [
-        table_target(f'max by (pool, vdev) (truenas_pool_vdev_read_errors{{instance=~"{I}", pool=~"$pool"}})', 'A'),
-        table_target(f'max by (pool, vdev) (truenas_pool_vdev_write_errors{{instance=~"{I}", pool=~"$pool"}})', 'B'),
-        table_target(f'max by (pool, vdev) (truenas_pool_vdev_checksum_errors{{instance=~"{I}", pool=~"$pool"}})', 'C'),
-    ]
-    vdev_error_transforms = [
-        outer_join('pool'),
-        tf('organize', {
-            'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
-            'renameByName': {'pool': 'Pool', 'vdev': 'Vdev', 'Value #A': 'Read Errors', 'Value #B': 'Write Errors', 'Value #C': 'Checksum Errors'},
-            'indexByName': {'Pool': 0, 'Vdev': 1, 'Read Errors': 2, 'Write Errors': 3, 'Checksum Errors': 4},
-        }),
-    ]
-    vdev_error_overrides = [
-        {"matcher": {"id": "byName", "options": n}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "red", "value": 1}]}}]}
-        for n in ("Read Errors", "Write Errors", "Checksum Errors")
-    ]
-    panels.append(table(
-        "Pool Vdev Errors", vdev_error_targets, 0, y, h=8,
-        desc="Any non-zero error count warrants investigation.",
-        overrides=vdev_error_overrides, transforms=vdev_error_transforms,
-    ))
-    y += 8
     panels.append(timeseries(
-        "Pool Scrub ETA",
-        [tgt(f'truenas_pool_scan_seconds_remaining{{instance=~"{I}", pool=~"$pool"}}', '{{pool}}', 'A')],
-        0, y, unit="s", desc="Estimated seconds remaining for active pool scans.",
+        "Pool Expansion Progress",
+        [tgt(f'truenas_pool_expand_percent{{instance=~"{I}", pool=~"$pool"}}', '{{pool}}', 'A')],
+        0, y, unit="percent", desc="Completion percentage for active pool expansion reflow.",
     ))
     panels.append(timeseries(
         "Pool Realtime I/O",
@@ -757,46 +738,45 @@ def build_dashboard():
     panels.append(row("ZFS ARC & Cache", y))
     y += 1
     panels.extend([
-        stat("ARC Hit %", f'100 * truenas_zfs_arc_hit_ratio{{instance=~"{I}"}}', 0, y, w=3, unit="percent",
-             desc="ARC cache hit ratio.", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}], graph=True),
-        stat("ARC Size", f'truenas_zfs_arc_size_bytes{{instance=~"{I}"}}', 3, y, w=3, unit="bytes", desc="Current ARC size."),
-        stat("ARC Max", f'truenas_zfs_arc_max_size_bytes{{instance=~"{I}"}}', 6, y, w=3, unit="bytes", desc="Maximum ARC size."),
-        stat("ARC Min", f'truenas_zfs_arc_min_size_bytes{{instance=~"{I}"}}', 9, y, w=3, unit="bytes", desc="Minimum ARC size."),
-        stat("ARC Free", f'truenas_zfs_arc_free_memory_bytes{{instance=~"{I}"}}', 12, y, w=3, unit="bytes", desc="ARC free memory."),
-        stat("ARC Avail", f'truenas_zfs_arc_available_bytes{{instance=~"{I}"}}', 15, y, w=3, unit="bytes", desc="ARC available memory."),
-        stat("L2ARC Hit %", f'100 * truenas_zfs_l2arc_hit_ratio{{instance=~"{I}"}}', 18, y, w=3, unit="percent",
+        stat("ARC Size", f'truenas_zfs_arc_size_bytes{{instance=~"{I}"}}', 0, y, w=4, unit="bytes",
+             desc="Current documented ZFS ARC cache size.", graph=True),
+        stat("ARC Free", f'truenas_zfs_arc_free_memory_bytes{{instance=~"{I}"}}', 4, y, w=4, unit="bytes", desc="ARC-reported free memory."),
+        stat("ARC Avail", f'truenas_zfs_arc_available_bytes{{instance=~"{I}"}}', 8, y, w=4, unit="bytes", desc="ARC-reported available memory."),
+        stat("L2ARC Hit %", f'100 * truenas_zfs_l2arc_hit_ratio{{instance=~"{I}"}}', 12, y, w=4, unit="percent",
              desc="L2ARC hit ratio.", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 50}, {"color": "green", "value": 80}], graph=True),
-        stat("Data Hit %", f'100 * truenas_zfs_demand_data_hit_ratio{{instance=~"{I}"}}', 21, y, w=3, unit="percent",
+        stat("Data Hit %", f'100 * truenas_zfs_demand_data_hit_ratio{{instance=~"{I}"}}', 16, y, w=4, unit="percent",
              desc="Demand data hit ratio.", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}], graph=True),
+        stat("Meta Hit %", f'100 * truenas_zfs_demand_meta_hit_ratio{{instance=~"{I}"}}', 20, y, w=4, unit="percent",
+             desc="Demand metadata hit ratio.", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}], graph=True),
     ])
     y += 4
     panels.append(timeseries(
-        "ARC Hit & Miss Rates",
+        "Demand Hit & Miss Rates",
         [
-            tgt(f'truenas_zfs_arc_hits_per_second{{instance=~"{I}"}}', 'Hits/s', 'A'),
-            tgt(f'truenas_zfs_arc_misses_per_second{{instance=~"{I}"}}', 'Misses/s', 'B'),
+            tgt(f'truenas_zfs_demand_data_hits_per_second{{instance=~"{I}"}}', 'Data hits/s', 'A'),
+            tgt(f'truenas_zfs_demand_data_misses_per_second{{instance=~"{I}"}}', 'Data misses/s', 'B'),
+            tgt(f'truenas_zfs_demand_meta_hits_per_second{{instance=~"{I}"}}', 'Metadata hits/s', 'C'),
+            tgt(f'truenas_zfs_demand_meta_misses_per_second{{instance=~"{I}"}}', 'Metadata misses/s', 'D'),
         ],
         0, y, unit="ops",
-        desc="ARC hit and miss rates. A rising miss rate means the working set exceeds ARC.",
+        desc="Documented ARC demand-data and demand-metadata hit and miss rates.",
     ))
     panels.append(timeseries(
-        "ARC Size Over Time",
+        "ARC Memory Headroom",
         [
-            tgt(f'truenas_zfs_arc_size_bytes{{instance=~"{I}"}}', 'ARC Size', 'A'),
-            tgt(f'truenas_zfs_arc_min_size_bytes{{instance=~"{I}"}}', 'ARC Min', 'B'),
-            tgt(f'truenas_zfs_arc_max_size_bytes{{instance=~"{I}"}}', 'ARC Max', 'C'),
+            tgt(f'truenas_zfs_arc_free_memory_bytes{{instance=~"{I}"}}', 'Free', 'A'),
+            tgt(f'truenas_zfs_arc_available_bytes{{instance=~"{I}"}}', 'Available', 'B'),
         ],
         12, y, unit="bytes",
-        desc="ARC size with min/max bounds. ARC growing to max is normal.",
+        desc="Documented ARC free and available memory fields.",
     ))
     y += 8
     panels.append(timeseries(
-        "ARC & L2ARC Hit Ratios",
+        "Demand & L2ARC Hit Ratios",
         [
-            tgt(f'100 * truenas_zfs_arc_hit_ratio{{instance=~"{I}"}}', 'ARC hit %', 'A'),
-            tgt(f'100 * truenas_zfs_l2arc_hit_ratio{{instance=~"{I}"}}', 'L2ARC hit %', 'B'),
-            tgt(f'100 * truenas_zfs_demand_data_hit_ratio{{instance=~"{I}"}}', 'Data hit %', 'C'),
-            tgt(f'100 * truenas_zfs_demand_meta_hit_ratio{{instance=~"{I}"}}', 'Meta hit %', 'D'),
+            tgt(f'100 * truenas_zfs_l2arc_hit_ratio{{instance=~"{I}"}}', 'L2ARC hit %', 'A'),
+            tgt(f'100 * truenas_zfs_demand_data_hit_ratio{{instance=~"{I}"}}', 'Data hit %', 'B'),
+            tgt(f'100 * truenas_zfs_demand_meta_hit_ratio{{instance=~"{I}"}}', 'Meta hit %', 'C'),
         ],
         0, y, w=8, unit="percent",
         desc="Cache hit ratios — higher is better.",
@@ -827,18 +807,11 @@ def build_dashboard():
     panels.append(row("Disks & Temperatures", y))
     y += 1
     panels.extend([
-        stat("Disk Count", f'truenas_disk_count{{instance=~"{I}"}}', 0, y, w=4, desc="Number of disks."),
-        stat("Hottest Disk", f'max(truenas_disk_temperature_celsius{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 4, y, w=4, unit="celsius",
+        stat("Disk Count", f'truenas_disk_count{{instance=~"{I}"}}', 0, y, w=8, desc="Number of disks."),
+        stat("Hottest Disk", f'max(truenas_disk_temperature_celsius{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 8, y, w=8, unit="celsius",
              desc="Highest disk temperature.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 40}, {"color": "red", "value": 50}], graph=True),
-        stat("Avg Busy", f'avg(truenas_disk_busy_percent{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 8, y, w=4, unit="percent",
+        stat("Avg Busy", f'avg(truenas_disk_busy_percent{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 16, y, w=8, unit="percent",
              desc="Average disk busy %.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 60}, {"color": "red", "value": 85}], graph=True),
-        stat("Temp Alerts", f'sum(truenas_disk_temperature_alert_count{{instance=~"{I}"}})', 12, y, w=4,
-             desc="Disk temperature alerts.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
-        stat("SMART Tested", f'count(truenas_smart_test_last_timestamp_seconds{{instance=~"{I}", disk=~"$disk"}})', 16, y, w=4,
-             desc="Disks with a parseable SMART last-test timestamp."),
-        stat("SMART Failed", f'count(truenas_smart_test_last_result{{instance=~"{I}", disk=~"$disk"}} == 0)', 20, y, w=4,
-             desc="Disks whose latest SMART test result is not success.",
-             thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 2}]),
     ])
     y += 4
     panels.append(timeseries(
@@ -887,7 +860,7 @@ def build_dashboard():
         12, y, unit="bytes", transforms=disk_bar_transforms,
     ))
     y += 8
-    # Disk inventory table with SMART & rotational info
+    # Disk inventory table with documented performance and rotational fields.
     disk_table_targets = [
         table_target(f'max by (disk) (truenas_disk_size_bytes{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'A'),
         table_target(f'max by (disk) (truenas_disk_busy_percent{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'B'),
@@ -896,9 +869,7 @@ def build_dashboard():
         table_target(f'max by (disk) (truenas_disk_write_bytes_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'E'),
         table_target(f'max by (disk) (truenas_disk_read_ops_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'F'),
         table_target(f'max by (disk) (truenas_disk_write_ops_per_second{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'G'),
-        table_target(f'max by (disk) (truenas_smart_test_last_result{{instance=~"{I}", disk=~"$disk"}})', 'H'),
-        table_target(f'time() - max by (disk) (truenas_smart_test_last_timestamp_seconds{{instance=~"{I}", disk=~"$disk"}})', 'I'),
-        table_target(f'max by (disk) (truenas_disk_rotational{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'J'),
+        table_target(f'max by (disk) (truenas_disk_rotational{{instance=~"{I}", disk=~"$disk", disk!="total"}})', 'H'),
     ]
     disk_table_transforms = [
         outer_join('disk'),
@@ -907,9 +878,9 @@ def build_dashboard():
             'renameByName': {
                 'disk': 'Disk', 'Value #A': 'Size', 'Value #B': 'Busy %', 'Value #C': 'Temp C',
                 'Value #D': 'Read B/s', 'Value #E': 'Write B/s', 'Value #F': 'Read IOPS', 'Value #G': 'Write IOPS',
-                'Value #H': 'SMART Pass', 'Value #I': 'SMART Age', 'Value #J': 'HDD',
+                'Value #H': 'HDD',
             },
-            'indexByName': {'Disk': 0, 'Busy %': 1, 'Temp C': 2, 'Read B/s': 3, 'Write B/s': 4, 'Read IOPS': 5, 'Write IOPS': 6, 'SMART Age': 7, 'Size': 8, 'SMART Pass': 9, 'HDD': 10},
+            'indexByName': {'Disk': 0, 'Busy %': 1, 'Temp C': 2, 'Read B/s': 3, 'Write B/s': 4, 'Read IOPS': 5, 'Write IOPS': 6, 'Size': 7, 'HDD': 8},
         }),
         tf('sortBy', {'fields': [{'displayName': 'Busy %', 'desc': True}]}),
     ]
@@ -921,13 +892,11 @@ def build_dashboard():
         {"matcher": {"id": "byName", "options": "Write B/s"}, "properties": [{"id": "unit", "value": "Bps"}]},
         {"matcher": {"id": "byName", "options": "Read IOPS"}, "properties": [{"id": "unit", "value": "iops"}]},
         {"matcher": {"id": "byName", "options": "Write IOPS"}, "properties": [{"id": "unit", "value": "iops"}]},
-        {"matcher": {"id": "byName", "options": "SMART Pass"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
-        {"matcher": {"id": "byName", "options": "SMART Age"}, "properties": [{"id": "unit", "value": "s"}]},
         {"matcher": {"id": "byName", "options": "HDD"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": [{"type": "value", "options": {"0": {"color": "blue", "text": "SSD/NVMe"}, "1": {"color": "orange", "text": "HDD"}}}]}]},
     ]
     panels.append(table(
         "Disk Inventory", disk_table_targets, 0, y,
-        desc="Per-disk health, performance, SMART status, and type.",
+        desc="Per-disk capacity, performance, temperature, and media type.",
         overrides=disk_overrides, transforms=disk_table_transforms, sort_col='Busy %',
     ))
     y += 10
@@ -937,13 +906,12 @@ def build_dashboard():
     y += 1
     panels.extend([
         stat("Interfaces", f'truenas_interface_count{{instance=~"{I}"}}', 0, y, w=3, desc="Network interface count."),
-        stat("Gateway OK", f'min(truenas_network_gateway_reachable{{instance=~"{I}"}})', 3, y, w=3, desc="Default gateway reachable.", mappings=UP_MAP),
+        stat("Gateway Config", f'max(truenas_network_default_gateway_configured{{instance=~"{I}"}})', 3, y, w=3, desc="Applied default route is configured.", mappings=BOOL_MAP),
         stat("Nameservers", f'truenas_network_nameservers{{instance=~"{I}"}}', 6, y, w=3, desc="Configured nameservers."),
         stat("Default Routes", f'truenas_network_default_routes{{instance=~"{I}"}}', 9, y, w=3, desc="Number of default routes."),
         stat("DNS Resolvers", f'truenas_dns_resolver_count{{instance=~"{I}"}}', 12, y, w=3, desc="Configured DNS resolvers."),
         stat("Pending Changes", f'max(truenas_interface_has_pending_changes{{instance=~"{I}"}})', 15, y, w=3, desc="Unapplied network changes.", mappings=BOOL_MAP),
         stat("Checkin Wait", f'max(truenas_interface_checkin_waiting_seconds{{instance=~"{I}"}})', 18, y, w=3, unit="s", desc="Seconds until pending changes auto-rollback."),
-        stat("HTTP Proxy", f'max(truenas_network_httpproxy_configured{{instance=~"{I}"}})', 21, y, w=3, desc="HTTP proxy configured.", mappings=BOOL_MAP),
     ])
     y += 4
     panels.append(timeseries(
@@ -978,14 +946,14 @@ def build_dashboard():
         stat("Running", f'count(truenas_service_running{{instance=~"{I}", service=~"$service"}} == 1)', 2, y, w=2, desc="Running services."),
         stat("SMB Shares", f'sum(truenas_smb_share_count{{instance=~"{I}"}})', 4, y, w=2, desc="Configured SMB shares."),
         stat("NFS Shares", f'sum(truenas_nfs_share_count{{instance=~"{I}"}})', 6, y, w=2, desc="Configured NFS shares."),
-        stat("WebDAV", f'sum(truenas_webdav_share_count{{instance=~"{I}"}})', 8, y, w=2, desc="WebDAV shares."),
-        stat("iSCSI Tgts", f'sum(truenas_iscsi_target_count{{instance=~"{I}"}})', 10, y, w=2, desc="iSCSI targets."),
-        stat("SMB Sess", f'sum(truenas_smb_session_count{{instance=~"{I}"}})', 12, y, w=2, desc="Active SMB sessions.", graph=True),
-        stat("SMB Files", f'sum(truenas_smb_open_file_count{{instance=~"{I}"}})', 14, y, w=2, desc="Open SMB files.", graph=True),
-        stat("NFS v3", f'sum(truenas_nfs_v3_client_count{{instance=~"{I}"}})', 16, y, w=2, desc="NFSv3 clients.", graph=True),
-        stat("NFS v4", f'sum(truenas_nfs_v4_client_count{{instance=~"{I}"}})', 18, y, w=2, desc="NFSv4 clients.", graph=True),
-        stat("iSCSI Cli", f'sum(truenas_iscsi_client_count{{instance=~"{I}"}})', 20, y, w=2, desc="iSCSI clients.", graph=True),
-        stat("NVMe-oF", f'sum(truenas_nvmet_session_count{{instance=~"{I}"}})', 22, y, w=2, desc="NVMe-oF sessions.", graph=True),
+        stat("iSCSI Tgts", f'sum(truenas_iscsi_target_count{{instance=~"{I}"}})', 8, y, w=2, desc="iSCSI targets."),
+        stat("NFS v3", f'sum(truenas_nfs_v3_client_count{{instance=~"{I}"}})', 10, y, w=2, desc="NFSv3 clients.", graph=True),
+        stat("NFS v4", f'sum(truenas_nfs_v4_client_count{{instance=~"{I}"}})', 12, y, w=2, desc="NFSv4 clients.", graph=True),
+        stat("iSCSI Cli", f'sum(truenas_iscsi_client_count{{instance=~"{I}"}})', 14, y, w=2, desc="iSCSI clients.", graph=True),
+        stat("NVMe-oF", f'sum(truenas_nvmet_session_count{{instance=~"{I}"}})', 16, y, w=2, desc="NVMe-oF sessions.", graph=True),
+        stat("SMB1", f'max(truenas_smb1_enabled{{instance=~"{I}"}})', 18, y, w=2, desc="Legacy SMB1 protocol enabled.", mappings=BOOL_MAP),
+        stat("NTLMv1", f'max(truenas_smb_ntlmv1_auth_enabled{{instance=~"{I}"}})', 20, y, w=2, desc="Insecure NTLMv1 authentication enabled.", mappings=BOOL_MAP),
+        stat("NFS RDMA", f'max(truenas_nfs_rdma_enabled{{instance=~"{I}"}})', 22, y, w=2, desc="NFS over RDMA enabled.", mappings=BOOL_MAP),
     ])
     y += 4
     panels.append(state_timeline(
@@ -996,27 +964,17 @@ def build_dashboard():
     panels.append(piechart(
         "Protocol Activity Mix",
         [
-            tgt(f'sum(truenas_smb_connection_count{{instance=~"{I}"}})', 'SMB', 'A'),
-            tgt(f'sum(truenas_nfs_client_count{{instance=~"{I}"}})', 'NFS', 'B'),
-            tgt(f'sum(truenas_iscsi_client_count{{instance=~"{I}"}})', 'iSCSI', 'C'),
-            tgt(f'sum(truenas_nvmet_session_count{{instance=~"{I}"}})', 'NVMe-oF', 'D'),
+            tgt(f'sum(truenas_nfs_client_count{{instance=~"{I}"}})', 'NFS', 'A'),
+            tgt(f'sum(truenas_iscsi_client_count{{instance=~"{I}"}})', 'iSCSI', 'B'),
+            tgt(f'sum(truenas_nvmet_session_count{{instance=~"{I}"}})', 'NVMe-oF', 'C'),
         ],
         12, y, w=12, desc="Relative protocol activity.",
     ))
     y += 8
-    panels.append(timeseries(
-        "NFS Operations/s",
-        [tgt(f'truenas_nfs_server_ops_per_second{{instance=~"{I}"}}', 'NFS ops/s', 'A')],
-        0, y, unit="ops", desc="NFS server operations per second.",
-    ))
-    panels.append(timeseries(
-        "SMB Activity Over Time",
-        [
-            tgt(f'sum(truenas_smb_session_count{{instance=~"{I}"}})', 'Sessions', 'A'),
-            tgt(f'sum(truenas_smb_connection_count{{instance=~"{I}"}})', 'Connections', 'B'),
-            tgt(f'sum(truenas_smb_open_file_count{{instance=~"{I}"}})', 'Open Files', 'C'),
-        ],
-        12, y, unit="short", desc="SMB sessions, connections, and open files over time.",
+    panels.append(state_timeline(
+        "SMB Encryption Mode",
+        [tgt(f'truenas_smb_encryption_mode{{instance=~"{I}"}}', '{{mode}}', 'A')],
+        0, y, w=24, desc="Configured SMB transport-encryption mode.",
     ))
     y += 8
     # iSCSI detail stats
@@ -1075,13 +1033,13 @@ def build_dashboard():
         stat("Docker Up", f'max(truenas_docker_status{{instance=~"{I}", status="RUNNING"}})', 12, y, w=3, desc="Docker service running.", mappings=UP_MAP),
         stat("NVIDIA GPU", f'max(truenas_docker_nvidia_present{{instance=~"{I}"}})', 15, y, w=3, desc="NVIDIA GPU available.", mappings=BOOL_MAP),
         stat("Catalog Trains", f'truenas_catalog_train_count{{instance=~"{I}"}}', 18, y, w=3, desc="App catalog trains."),
-        stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}}) or vector(0)', 21, y, w=3, desc="Preferred catalog trains configured."),
+        stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}})', 21, y, w=3, desc="Preferred catalog trains configured."),
     ])
     y += 4
     panels.extend([
         stat(
             "DH RL Error",
-            f'max(truenas_app_dockerhub_rate_limit_error_present{{instance=~"{I}"}}) or vector(0)',
+            f'max(truenas_app_dockerhub_rate_limit_error_present{{instance=~"{I}"}})',
             0,
             y,
             w=4,
@@ -1100,19 +1058,19 @@ def build_dashboard():
             thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 20}, {"color": "green", "value": 50}],
             desc="DockerHub pull-limit budget remaining percentage.",
         ),
-        stat("DockerHub Rem", f'max(truenas_app_dockerhub_pull_limit_remaining{{instance=~"{I}"}}) or vector(0)', 9, y, w=5, desc="DockerHub pull requests remaining in current window."),
-        stat("DockerHub Limit", f'max(truenas_app_dockerhub_pull_limit_total{{instance=~"{I}"}}) or vector(0)', 14, y, w=5, desc="DockerHub pull limit window total requests."),
-        stat("DH Window", f'max(truenas_app_dockerhub_pull_limit_window_seconds{{instance=~"{I}"}}) or vector(0)', 19, y, w=5, unit="s", desc="DockerHub pull limit window duration."),
+        stat("DockerHub Rem", f'max(truenas_app_dockerhub_pull_limit_remaining{{instance=~"{I}"}})', 9, y, w=5, desc="DockerHub pull requests remaining in current window."),
+        stat("DockerHub Limit", f'max(truenas_app_dockerhub_pull_limit_total{{instance=~"{I}"}})', 14, y, w=5, desc="DockerHub pull limit window total requests."),
+        stat("DH Window Left", f'max(truenas_app_dockerhub_pull_limit_remaining_window_seconds{{instance=~"{I}"}})', 19, y, w=5, unit="s", desc="Seconds remaining in the current DockerHub pull-limit window."),
     ])
     y += 4
     panels.extend([
-        stat("App Upgrades", f'sum(truenas_app_upgrade_available{{instance=~"{I}", app=~"$app"}}) or vector(0)', 0, y, w=6,
+        stat("App Upgrades", f'sum(truenas_app_upgrade_available{{instance=~"{I}", app=~"$app"}})', 0, y, w=6,
              desc="Apps with a newer chart or package version available."),
-        stat("Custom Apps", f'sum(truenas_app_custom{{instance=~"{I}", app=~"$app"}}) or vector(0)', 6, y, w=6,
+        stat("Custom Apps", f'sum(truenas_app_custom{{instance=~"{I}", app=~"$app"}})', 6, y, w=6,
              desc="Apps deployed as custom apps."),
-        stat("Migrated Apps", f'sum(truenas_app_migrated{{instance=~"{I}", app=~"$app"}}) or vector(0)', 12, y, w=6,
+        stat("Migrated Apps", f'sum(truenas_app_migrated{{instance=~"{I}", app=~"$app"}})', 12, y, w=6,
              desc="Apps migrated from the older Kubernetes stack."),
-        stat("Img Updates", f'sum(truenas_app_image_updates_available{{instance=~"{I}", app=~"$app"}}) or vector(0)', 18, y, w=6,
+        stat("Img Updates", f'sum(truenas_app_image_updates_available{{instance=~"{I}", app=~"$app"}})', 18, y, w=6,
              desc="Apps with container image updates available."),
     ])
     y += 4
@@ -1208,9 +1166,9 @@ def build_dashboard():
     panels.extend([
         stat("VM Count", f'sum(truenas_vm_count{{instance=~"{I}"}})', 0, y, w=3, desc="Virtual machines."),
         stat("Virt Support", f'max(truenas_vm_supports_virtualization{{instance=~"{I}"}})', 3, y, w=3, desc="KVM/HW virt available.", mappings=BOOL_MAP),
-        stat("Virt Details", f'max(truenas_vm_virtualization_details_supported{{instance=~"{I}"}}) or vector(0)', 6, y, w=3,
+        stat("Virt Details", f'max(truenas_vm_virtualization_details_supported{{instance=~"{I}"}})', 6, y, w=3,
              desc="Virtualization support from vm.virtualization_details.", mappings=BOOL_MAP),
-        stat("Virt Error", f'max(truenas_vm_virtualization_details_error_present{{instance=~"{I}"}}) or vector(0)', 9, y, w=3,
+        stat("Virt Error", f'max(truenas_vm_virtualization_details_error_present{{instance=~"{I}"}})', 9, y, w=3,
              desc="vm.virtualization_details currently reports an error.", mappings=BOOL_MAP),
         stat("Max vCPUs", f'max(truenas_vm_maximum_supported_vcpus{{instance=~"{I}"}})', 12, y, w=3, desc="Maximum supported vCPUs."),
         stat("VM Avail RAM", f'sum(truenas_vm_available_memory_bytes{{instance=~"{I}"}})', 15, y, w=3, unit="bytes", desc="Available memory for VMs."),
@@ -1219,10 +1177,11 @@ def build_dashboard():
     ])
     y += 4
     panels.extend([
-        stat("Intel VMX", f'max(truenas_vm_flag_intel_vmx{{instance=~"{I}"}}) or vector(0)', 0, y, w=4, desc="Intel VT-x capability flag.", mappings=BOOL_MAP),
-        stat("AMD RVI", f'max(truenas_vm_flag_amd_rvi{{instance=~"{I}"}}) or vector(0)', 4, y, w=4, desc="AMD RVI/NPT capability flag.", mappings=BOOL_MAP),
-        stat("Unrestricted", f'max(truenas_vm_flag_unrestricted_guest{{instance=~"{I}"}}) or vector(0)', 8, y, w=4, desc="Unrestricted guest capability flag.", mappings=BOOL_MAP),
-        stat("AMD ASIDs", f'max(truenas_vm_flag_amd_asids{{instance=~"{I}"}}) or vector(0)', 12, y, w=4, desc="AMD ASID count if reported."),
+        stat("Intel VMX", f'max(truenas_vm_flag_intel_vmx{{instance=~"{I}"}})', 0, y, w=4, desc="Intel VT-x capability flag.", mappings=BOOL_MAP),
+        stat("AMD RVI", f'max(truenas_vm_flag_amd_rvi{{instance=~"{I}"}})', 4, y, w=4, desc="AMD RVI/NPT capability flag.", mappings=BOOL_MAP),
+        stat("Unrestricted", f'max(truenas_vm_flag_unrestricted_guest{{instance=~"{I}"}})', 8, y, w=4, desc="Unrestricted guest capability flag.", mappings=BOOL_MAP),
+        stat("AMD ASIDs", f'max(truenas_vm_flag_amd_asids_supported{{instance=~"{I}"}})', 12, y, w=4,
+             desc="AMD Address Space Identifiers are supported.", mappings=BOOL_MAP),
         stat("Incus Vols", f'sum(truenas_virt_volume_count{{instance=~"{I}"}})', 16, y, w=4, desc="Incus storage volumes."),
         stat("VM Mem Used", f'sum(truenas_vm_vmemory_in_use_bytes{{instance=~"{I}"}})', 20, y, w=4, unit="bytes", desc="VM memory in use."),
     ])
@@ -1244,12 +1203,7 @@ def build_dashboard():
     panels.append(timeseries(
         "Incus Instance Memory",
         [tgt(f'truenas_virt_instance_mem_bytes{{instance=~"{I}"}}', '{{name}}', 'A')],
-        0, y, unit="bytes", desc="Per-instance memory usage.",
-    ))
-    panels.append(bargauge(
-        "Incus Volume Sizes",
-        [tgt(f'truenas_virt_volume_size_bytes{{instance=~"{I}"}}', '{{name}} ({{pool}})', 'A')],
-        12, y, unit="bytes", desc="Incus storage volume sizes.",
+        0, y, w=24, unit="bytes", desc="Per-instance memory usage.",
     ))
     y += 8
 
@@ -1273,9 +1227,9 @@ def build_dashboard():
     panels.extend([
         stat("Dismissed", f'max(truenas_alert_dismissed_count{{instance=~"{I}"}})', 0, y, w=4, desc="Alerts dismissed but still present."),
         stat("One-Shot", f'max(truenas_alert_one_shot_count{{instance=~"{I}"}})', 4, y, w=4, desc="One-shot alerts requiring explicit handling."),
-        stat("Active Jobs", f'max(truenas_job_active_count{{instance=~"{I}"}}) or vector(0)', 8, y, w=4, desc="Jobs currently waiting or running."),
-        stat("Abortable", f'max(truenas_job_abortable_active_count{{instance=~"{I}"}}) or vector(0)', 12, y, w=4, desc="Active jobs that can be cancelled."),
-        stat("Transient", f'max(truenas_job_transient_active_count{{instance=~"{I}"}}) or vector(0)', 16, y, w=4, desc="Active transient jobs."),
+        stat("Active Jobs", f'max(truenas_job_active_count{{instance=~"{I}"}})', 8, y, w=4, desc="Jobs currently waiting or running."),
+        stat("Abortable", f'max(truenas_job_abortable_active_count{{instance=~"{I}"}})', 12, y, w=4, desc="Active jobs that can be cancelled."),
+        stat("Transient", f'max(truenas_job_transient_active_count{{instance=~"{I}"}})', 16, y, w=4, desc="Active transient jobs."),
         stat("Last Alert Activity", f'time() - clamp_min(max(truenas_alert_last_occurrence_timestamp_seconds{{instance=~"{I}"}}), 1)', 20, y, w=4, unit="s", desc="Age since the most recent alert occurrence."),
     ])
     y += 4
@@ -1291,7 +1245,7 @@ def build_dashboard():
     ]
     panels.append(barchart(
         "Tasks by Type",
-        [tgt(f'count by (task_type) (truenas_task_state{{instance=~"{I}", task_type=~"$task_type"}})', '{{task_type}}', 'A')],
+        [tgt(f'truenas_task_count{{instance=~"{I}", task_type=~"$task_type"}}', '{{task_type}}', 'A')],
         8, y, w=8, desc="Scheduled work breakdown.", transforms=task_type_transforms,
     ))
     panels.append(timeseries(
@@ -1378,28 +1332,24 @@ def build_dashboard():
         ],
     ))
     y += 10
-    # Task state detail table
+    # Task enablement detail table
     panels.append(table(
-        "Task State Detail",
+        "Task Enablement Detail",
         [
-            table_target(f'max by (name, task_type, state) (truenas_task_state{{instance=~"{I}", task_type=~"$task_type"}} == 1)', 'A'),
             table_target(f'max by (name) (truenas_task_enabled{{instance=~"{I}", task_type=~"$task_type"}})', 'B'),
-            table_target(f'time() - max by (name) (truenas_task_last_run_timestamp_seconds{{instance=~"{I}", task_type=~"$task_type"}})', 'C'),
         ],
-        0, y, desc="Task status, enablement, and last run age.",
+        0, y, desc="Task enablement from documented task query fields.",
         transforms=[
             outer_join('name'),
             tf('organize', {
                 'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
-                'renameByName': {'name': 'Task', 'task_type': 'Type', 'state': 'State', 'Value #A': 'Active', 'Value #B': 'Enabled', 'Value #C': 'Last Run Age'},
-                'indexByName': {'Task': 0, 'Type': 1, 'State': 2, 'Enabled': 3, 'Last Run Age': 4, 'Active': 5},
+                'renameByName': {'name': 'Task', 'task_type': 'Type', 'Value #B': 'Enabled'},
+                'indexByName': {'Task': 0, 'Type': 1, 'Enabled': 2},
             }),
             tf('sortBy', {'fields': [{'displayName': 'Task', 'desc': False}]}),
         ],
         overrides=[
-            {"matcher": {"id": "byName", "options": "Active"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": UP_MAP}]},
             {"matcher": {"id": "byName", "options": "Enabled"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
-            {"matcher": {"id": "byName", "options": "Last Run Age"}, "properties": [{"id": "unit", "value": "s"}]},
         ],
         sort_col='Task', sort_desc=False,
     ))
@@ -1409,63 +1359,58 @@ def build_dashboard():
     panels.append(row("Security & Platform", y))
     y += 1
     panels.extend([
-        stat("2FA", f'max(truenas_2fa_enabled{{instance=~"{I}"}})', 0, y, w=3, desc="Two-factor auth.", mappings=BOOL_MAP),
-        stat("SSH", f'max(truenas_ssh_enabled{{instance=~"{I}"}})', 3, y, w=3, desc="SSH service.", mappings=BOOL_MAP),
-        stat("SSH Passwd", f'max(truenas_ssh_password_auth{{instance=~"{I}"}})', 6, y, w=3, desc="SSH password auth.", mappings=BOOL_MAP),
-        stat("FTP", f'max(truenas_ftp_enabled{{instance=~"{I}"}})', 9, y, w=3, desc="FTP enabled.", mappings=BOOL_MAP),
-        stat("SNMP", f'max(truenas_snmp_enabled{{instance=~"{I}"}})', 12, y, w=3, desc="SNMP enabled.", mappings=BOOL_MAP),
-        stat("FIPS", f'max(truenas_fips_enabled{{instance=~"{I}"}})', 15, y, w=3, desc="FIPS mode.", mappings=BOOL_MAP),
-        stat("KMIP", f'max(truenas_kmip_enabled{{instance=~"{I}"}})', 18, y, w=3, desc="KMIP key management.", mappings=BOOL_MAP),
-        stat("UPS", f'max(truenas_ups_configured{{instance=~"{I}"}})', 21, y, w=3, desc="UPS configured.", mappings=BOOL_MAP),
+        stat("2FA", f'max(truenas_2fa_enabled{{instance=~"{I}"}})', 0, y, w=4, desc="Two-factor auth.", mappings=BOOL_MAP),
+        stat("SSH", f'max(truenas_ssh_enabled{{instance=~"{I}"}})', 4, y, w=4, desc="SSH service enabled at boot.", mappings=BOOL_MAP),
+        stat("FTP", f'max(truenas_ftp_enabled{{instance=~"{I}"}})', 8, y, w=4, desc="FTP service enabled at boot.", mappings=BOOL_MAP),
+        stat("SNMP", f'max(truenas_snmp_enabled{{instance=~"{I}"}})', 12, y, w=4, desc="SNMP service enabled at boot.", mappings=BOOL_MAP),
+        stat("FIPS", f'max(truenas_fips_enabled{{instance=~"{I}"}})', 16, y, w=4, desc="FIPS mode.", mappings=BOOL_MAP),
+        stat("Sessions", f'max(truenas_auth_sessions_active{{instance=~"{I}"}})', 20, y, w=4, desc="Active API sessions."),
     ])
     y += 4
     panels.extend([
-        stat("Production", f'max(truenas_is_production{{instance=~"{I}"}})', 0, y, w=3, desc="Marked as production.", mappings=BOOL_MAP),
-        stat("iX Hardware", f'max(truenas_is_ix_hardware{{instance=~"{I}"}})', 3, y, w=3, desc="iXsystems hardware.", mappings=BOOL_MAP),
-        stat("TN Connect", f'max(truenas_tn_connect_enabled{{instance=~"{I}"}})', 6, y, w=3, desc="TrueNAS Connect.", mappings=BOOL_MAP),
-        stat("TrueCommand", f'max(truenas_managed_by_truecommand{{instance=~"{I}"}})', 9, y, w=3, desc="Managed by TrueCommand.", mappings=BOOL_MAP),
-        stat("Mail Conf", f'max(truenas_mail_configured{{instance=~"{I}"}})', 12, y, w=3, desc="Email configured.", mappings=BOOL_MAP),
-        stat("Support A+E", f'max(truenas_support_available_and_enabled{{instance=~"{I}"}}) or vector(0)', 15, y, w=3,
+        stat("Production", f'max(truenas_is_production{{instance=~"{I}"}})', 0, y, w=4, desc="Marked as production.", mappings=BOOL_MAP),
+        stat("iX Hardware", f'max(truenas_is_ix_hardware{{instance=~"{I}"}})', 4, y, w=4, desc="iXsystems hardware.", mappings=BOOL_MAP),
+        stat("Support A+E", f'max(truenas_support_available_and_enabled{{instance=~"{I}"}})', 8, y, w=4,
              desc="Support available and enabled.", mappings=BOOL_MAP),
-        stat("Support Cfg", f'max(truenas_support_config_enabled{{instance=~"{I}"}}) or vector(0)', 18, y, w=3,
-             desc="Support config enabled flag.", mappings=BOOL_MAP),
-        stat("Sessions", f'max(truenas_auth_sessions_active{{instance=~"{I}"}})', 21, y, w=3, desc="Active API sessions."),
+        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 12, y, w=4, desc="Directory services healthy.", mappings=UP_MAP),
+        stat("Dir Svc Cfg", f'max(truenas_directoryservices_config_enabled{{instance=~"{I}"}})', 16, y, w=4, desc="Directory service detected by status.", mappings=BOOL_MAP),
+        stat("Dir Faults", f'sum(truenas_directoryservices_fault_present{{instance=~"{I}"}})', 20, y, w=4,
+             desc="Enabled directory services reporting a fault.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
     ])
     y += 4
     panels.extend([
-        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 0, y, w=3, desc="Directory services healthy.", mappings=UP_MAP),
-        stat("Dir Svc Cfg", f'max(truenas_directoryservices_config_enabled{{instance=~"{I}"}}) or vector(0)', 3, y, w=3, desc="Directoryservices configuration enabled.", mappings=BOOL_MAP),
-        stat("Dir Kerberos", f'max(truenas_directoryservices_kerberos_configured{{instance=~"{I}"}}) or vector(0)', 6, y, w=3, desc="Directoryservices kerberos configuration present.", mappings=BOOL_MAP),
-        stat("Security FIPS", f'max(truenas_system_security_fips_configured{{instance=~"{I}"}}) or vector(0)', 9, y, w=3, desc="System security FIPS configured.", mappings=BOOL_MAP),
-        stat("GPOS STIG", f'max(truenas_system_security_gpos_stig{{instance=~"{I}"}}) or vector(0)', 12, y, w=3, desc="GPOS STIG policy enabled.", mappings=BOOL_MAP),
+        stat("Security FIPS", f'max(truenas_system_security_fips_configured{{instance=~"{I}"}})', 0, y, w=4, desc="System security FIPS configured.", mappings=BOOL_MAP),
+        stat("GPOS STIG", f'max(truenas_system_security_gpos_stig{{instance=~"{I}"}})', 4, y, w=4, desc="GPOS STIG policy enabled.", mappings=BOOL_MAP),
         stat(
             "Pwd Min Len",
-            f'max(truenas_system_security_password_min_length{{instance=~"{I}"}}) or vector(0)',
-            15,
+            f'max(truenas_system_security_password_min_length{{instance=~"{I}"}})',
+            8,
             y,
-            w=3,
+            w=4,
             thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 10}, {"color": "green", "value": 14}],
             desc="Minimum password length policy.",
         ),
         stat(
             "Pwd Max Age",
-            f'max(truenas_system_security_password_max_age_days{{instance=~"{I}"}}) or vector(0)',
-            18,
+            f'max(truenas_system_security_password_max_age_days{{instance=~"{I}"}})',
+            12,
             y,
-            w=3,
+            w=4,
             unit="d",
             thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 90}, {"color": "red", "value": 180}],
             desc="Maximum password age in days.",
         ),
         stat(
             "Pwd History",
-            f'max(truenas_system_security_password_history_count{{instance=~"{I}"}}) or vector(0)',
-            21,
+            f'max(truenas_system_security_password_history_count{{instance=~"{I}"}})',
+            16,
             y,
-            w=3,
+            w=4,
             thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 3}, {"color": "green", "value": 5}],
             desc="Password history retention count.",
         ),
+        stat("FIPS Avail", f'max(truenas_fips_available{{instance=~"{I}"}})', 20, y, w=4,
+             desc="FIPS capability is available on this system.", mappings=BOOL_MAP),
     ])
     y += 4
     panels.append(table(
@@ -1495,18 +1440,25 @@ def build_dashboard():
     ))
     panels.append(table(
         "Certificate Expiry",
-        [table_target(f'truenas_certificate_days_to_expiry{{instance=~"{I}"}}', 'A')],
+        [
+            table_target(f'floor((truenas_certificate_expiry_timestamp_seconds{{instance=~"{I}"}} - time()) / 86400)', 'A'),
+            table_target(f'1000 * truenas_certificate_expiry_timestamp_seconds{{instance=~"{I}"}}', 'B'),
+        ],
         12, y, w=12, h=10,
-        desc="Days until certificate expires. Negative = already expired.",
+        desc="Certificate expiry in operator-friendly relative and absolute forms.",
         transforms=[
+            outer_join('name'),
             tf('organize', {
                 'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
-                'renameByName': {'name': 'Certificate', 'Value': 'Days to Expiry'},
-                'indexByName': {'Certificate': 0, 'Days to Expiry': 1},
+                'renameByName': {'name': 'Certificate', 'Value #A': 'Days to Expiry', 'Value #B': 'Expires At'},
+                'indexByName': {'Certificate': 0, 'Days to Expiry': 1, 'Expires At': 2},
             }),
             tf('sortBy', {'fields': [{'displayName': 'Days to Expiry', 'desc': False}]}),
         ],
-        overrides=[{"matcher": {"id": "byName", "options": "Days to Expiry"}, "properties": [{"id": "unit", "value": "short"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "red", "value": None}, {"color": "yellow", "value": 14}, {"color": "green", "value": 30}]}}]}],
+        overrides=[
+            {"matcher": {"id": "byName", "options": "Days to Expiry"}, "properties": [{"id": "unit", "value": "short"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "red", "value": None}, {"color": "yellow", "value": 14}, {"color": "green", "value": 30}]}}]},
+            {"matcher": {"id": "byName", "options": "Expires At"}, "properties": [{"id": "unit", "value": "dateTimeAsIso"}]},
+        ],
         sort_col='Days to Expiry', sort_desc=False,
     ))
     y += 10
@@ -1521,8 +1473,9 @@ def build_dashboard():
         stat("Boot Disks", f'truenas_boot_pool_disk_count{{instance=~"{I}"}}', 9, by, w=3),
         stat("Boot Envs", f'truenas_boot_env_count{{instance=~"{I}"}}', 12, by, w=3),
         stat("Active BEs", f'truenas_boot_env_active_count{{instance=~"{I}"}}', 15, by, w=3),
-        stat("Keep BEs", f'truenas_boot_env_keep_count{{instance=~"{I}"}}', 18, by, w=3),
-        stat("Scan %", f'truenas_boot_pool_scan_percent{{instance=~"{I}"}}', 21, by, w=3, unit="percent"),
+        stat("Activated BEs", f'truenas_boot_env_activated_count{{instance=~"{I}"}}', 18, by, w=3,
+             desc="Boot environments selected for the next boot."),
+        stat("Keep BEs", f'truenas_boot_env_keep_count{{instance=~"{I}"}}', 21, by, w=3),
     ])
     by += 4
     boot_panels.append(gauge(
@@ -1531,9 +1484,9 @@ def build_dashboard():
         0, by, w=6, desc="Boot pool fill ratio.",
     ))
     boot_panels.append(bargauge(
-        "Boot Environment Sizes",
-        [tgt(f'truenas_boot_env_size_bytes{{instance=~"{I}"}}', '{{name}}', 'A')],
-        6, by, w=18, unit="bytes", desc="Size per boot environment.",
+        "Boot Environment Used Space",
+        [tgt(f'truenas_boot_environment_used_bytes{{instance=~"{I}"}}', '{{name}}', 'A')],
+        6, by, w=18, unit="bytes", desc="Bytes used by each boot environment.",
     ))
     by += 8
     panels.append(row("Boot Environment", y, collapsed=True, panels=boot_panels))
@@ -1560,9 +1513,11 @@ def build_dashboard():
     hw_panels.extend([
         stat("SEL Entries", f'truenas_ipmi_sel_entry_count{{instance=~"{I}"}}', 0, hy, w=4),
         stat("SEL Free", f'truenas_ipmi_sel_free_space_bytes{{instance=~"{I}"}}', 4, hy, w=4, unit="bytes"),
-        stat("ECC Memory", f'max(truenas_host_ecc_memory{{instance=~"{I}"}})', 8, hy, w=4, mappings=BOOL_MAP),
-        stat("Phys Cores", f'max(truenas_host_physical_cpu_cores{{instance=~"{I}"}})', 12, hy, w=4, desc="Physical CPU cores (no HT)."),
-        stat("UPS Status", f'count(truenas_ups_status{{instance=~"{I}"}})', 16, hy, w=4),
+        stat("GPU Host Avail", f'sum(truenas_gpu_available_to_host{{instance=~"{I}"}})', 8, hy, w=4,
+             desc="GPUs available to the TrueNAS host."),
+        stat("GPU Critical", f'sum(truenas_gpu_uses_system_critical_devices{{instance=~"{I}"}})', 12, hy, w=4,
+             desc="GPUs using system-critical PCI devices.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
+        stat("ECC Memory", f'max(truenas_host_ecc_memory{{instance=~"{I}"}})', 16, hy, w=4, mappings=BOOL_MAP),
         stat("Resilver On", f'max(truenas_pool_resilver_enabled{{instance=~"{I}"}})', 20, hy, w=4, mappings=BOOL_MAP),
     ])
     hy += 4
@@ -1584,17 +1539,6 @@ def build_dashboard():
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}]),
     ])
     py += 4
-    proto_panels.append(timeseries(
-        "FC Port Status",
-        [tgt(f'truenas_fc_port_online{{instance=~"{I}"}}', '{{port}}', 'A')],
-        0, py, desc="Fibre Channel port online status.",
-    ))
-    proto_panels.append(timeseries(
-        "FC Port Speed",
-        [tgt(f'truenas_fc_port_speed_gbit{{instance=~"{I}"}}', '{{port}}', 'A')],
-        12, py, unit="short", desc="FC port link speed in Gbit/s.",
-    ))
-    py += 8
     panels.append(row("Advanced Protocols (NVMe-oF / FC / HA)", y, collapsed=True, panels=proto_panels))
     y += 1
 
@@ -1604,10 +1548,19 @@ def build_dashboard():
     audit_panels.extend([
         stat("Audit Used", f'truenas_audit_dataset_used_bytes{{instance=~"{I}"}}', 0, ay, w=4, unit="bytes"),
         stat("Audit Avail", f'truenas_audit_dataset_available_bytes{{instance=~"{I}"}}', 4, ay, w=4, unit="bytes"),
-        stat("Warn Fill %", f'truenas_audit_quota_fill_warning_percent{{instance=~"{I}"}}', 8, ay, w=4, unit="percent"),
-        stat("Crit Fill %", f'truenas_audit_quota_fill_critical_percent{{instance=~"{I}"}}', 12, ay, w=4, unit="percent"),
-        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 16, ay, w=4, mappings=UP_MAP),
-        stat("Dir Faults", f'count(truenas_directoryservices_fault_reason{{instance=~"{I}"}})', 20, ay, w=4,
+        stat("Audit Quota", f'truenas_audit_quota_bytes{{instance=~"{I}"}}', 8, ay, w=4, unit="bytes"),
+        stat("Audit Reserve", f'truenas_audit_reservation_bytes{{instance=~"{I}"}}', 12, ay, w=4, unit="bytes"),
+        stat("Warn Fill %", f'truenas_audit_quota_fill_warning_percent{{instance=~"{I}"}}', 16, ay, w=4, unit="percent"),
+        stat("Crit Fill %", f'truenas_audit_quota_fill_critical_percent{{instance=~"{I}"}}', 20, ay, w=4, unit="percent"),
+    ])
+    ay += 4
+    audit_panels.extend([
+        stat("Retention", f'truenas_audit_retention_days{{instance=~"{I}"}}', 0, ay, w=6, unit="d",
+             desc="Configured local audit retention."),
+        stat("Remote Log", f'max(truenas_audit_remote_logging_enabled{{instance=~"{I}"}})', 6, ay, w=6,
+             desc="Remote audit logging enabled.", mappings=BOOL_MAP),
+        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 12, ay, w=6, mappings=UP_MAP),
+        stat("Dir Faults", f'sum(truenas_directoryservices_fault_present{{instance=~"{I}"}})', 18, ay, w=6,
              thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
     ])
     ay += 4
@@ -1618,48 +1571,41 @@ def build_dashboard():
     cfg_panels = []
     cy = y + 1
     cfg_panels.extend([
-        stat("Console Menu", f'max(truenas_consolemenu_enabled{{instance=~"{I}"}})', 0, cy, w=3, mappings=BOOL_MAP),
-        stat("Serial Cons", f'max(truenas_serialconsole_enabled{{instance=~"{I}"}})', 3, cy, w=3, mappings=BOOL_MAP),
-        stat("HTTPS Port", f'truenas_ui_https_port{{instance=~"{I}"}}', 6, cy, w=3),
-        stat("Reporting On", f'max(truenas_reporting_enabled{{instance=~"{I}"}})', 9, cy, w=3, mappings=BOOL_MAP),
-        stat("Exporters", f'truenas_reporting_exporter_count{{instance=~"{I}"}}', 12, cy, w=3),
-        stat("Static Routes", f'truenas_static_route_count{{instance=~"{I}"}}', 15, cy, w=3),
-        stat("Tunables", f'truenas_tunable_count{{instance=~"{I}"}}', 18, cy, w=3),
-        stat("Init Scripts", f'truenas_initshutdownscript_count{{instance=~"{I}"}}', 21, cy, w=3),
+        stat("HTTPS Port", f'truenas_ui_https_port{{instance=~"{I}"}}', 0, cy, w=4),
+        stat("Reporting On", f'max(truenas_reporting_enabled{{instance=~"{I}"}})', 4, cy, w=4, mappings=BOOL_MAP),
+        stat("Exporters", f'truenas_reporting_exporter_count{{instance=~"{I}"}}', 8, cy, w=4),
+        stat("Static Routes", f'truenas_static_route_count{{instance=~"{I}"}}', 12, cy, w=4),
+        stat("Tunables", f'truenas_tunable_count{{instance=~"{I}"}}', 16, cy, w=4),
+        stat("Init Scripts", f'truenas_initshutdownscript_count{{instance=~"{I}"}}', 20, cy, w=4),
     ])
     cy += 4
     cfg_panels.extend([
-        stat("Upd AutoChk", f'max(truenas_update_autocheck_enabled{{instance=~"{I}"}}) or vector(0)', 0, cy, w=3, mappings=BOOL_MAP,
+        stat("Upd AutoChk", f'max(truenas_update_autocheck_enabled{{instance=~"{I}"}})', 0, cy, w=4, mappings=BOOL_MAP,
              desc="Automatic update checks enabled."),
-        stat("Upd Profile", f'clamp_max(count(truenas_update_profile_info{{instance=~"{I}"}}), 1)', 3, cy, w=3, mappings=BOOL_MAP,
+        stat("Upd Profile", f'clamp_max(count(truenas_update_profile_info{{instance=~"{I}"}}), 1)', 4, cy, w=4, mappings=BOOL_MAP,
              desc="Update profile information present."),
-        stat("NTP Servers", f'max(truenas_ntp_server_count{{instance=~"{I}"}}) or vector(0)', 6, cy, w=3,
+        stat("NTP Servers", f'max(truenas_ntp_server_count{{instance=~"{I}"}})', 8, cy, w=4,
              desc="Configured NTP servers."),
-        stat("NTP Reach %", f'100 * max(truenas_ntp_server_reachable_count{{instance=~"{I}"}}) / clamp_min(max(truenas_ntp_server_count{{instance=~"{I}"}}), 1)', 9, cy, w=3,
-             unit="percent", thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 70}, {"color": "green", "value": 95}],
-             desc="Percent of configured NTP servers currently reachable."),
-        stat("NTP Reachable", f'max(truenas_ntp_server_reachable_count{{instance=~"{I}"}}) or vector(0)', 12, cy, w=3,
-             desc="NTP servers currently reachable."),
-        stat("Tier0 Days", f'max(truenas_reporting_tier0_retention_days{{instance=~"{I}"}}) or vector(0)', 15, cy, w=3, unit="d",
+        stat("Tier0 Days", f'max(truenas_reporting_tier0_retention_days{{instance=~"{I}"}})', 12, cy, w=4, unit="d",
              desc="Reporting tier0 retention period."),
-        stat("Tier1 Days", f'max(truenas_reporting_tier1_retention_days{{instance=~"{I}"}}) or vector(0)', 18, cy, w=3, unit="d",
+        stat("Tier1 Days", f'max(truenas_reporting_tier1_retention_days{{instance=~"{I}"}})', 16, cy, w=4, unit="d",
              desc="Reporting tier1 retention period."),
-        stat("Tier1 Int", f'max(truenas_reporting_tier1_update_interval_seconds{{instance=~"{I}"}}) or vector(0)', 21, cy, w=3, unit="s",
+        stat("Tier1 Int", f'max(truenas_reporting_tier1_update_interval_seconds{{instance=~"{I}"}})', 20, cy, w=4, unit="s",
              desc="Reporting tier1 update interval."),
     ])
     cy += 4
     cfg_panels.extend([
-        stat("Catalog Cfg", f'max(truenas_catalog_config_present{{instance=~"{I}"}}) or vector(0)', 0, cy, w=4, mappings=BOOL_MAP,
+        stat("Catalog Cfg", f'max(truenas_catalog_config_present{{instance=~"{I}"}})', 0, cy, w=4, mappings=BOOL_MAP,
              desc="Catalog config payload present."),
-        stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}}) or vector(0)', 4, cy, w=4,
+        stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}})', 4, cy, w=4,
              desc="Preferred catalog trains configured."),
-        stat("NTP Burst", f'max(truenas_ntp_server_burst_count{{instance=~"{I}"}}) or vector(0)', 8, cy, w=4,
+        stat("NTP Burst", f'max(truenas_ntp_server_burst_count{{instance=~"{I}"}})', 8, cy, w=4,
              desc="NTP servers with burst enabled."),
-        stat("NTP Iburst", f'max(truenas_ntp_server_iburst_count{{instance=~"{I}"}}) or vector(0)', 12, cy, w=4,
+        stat("NTP Iburst", f'max(truenas_ntp_server_iburst_count{{instance=~"{I}"}})', 12, cy, w=4,
              desc="NTP servers with iburst enabled."),
-        stat("NTP Min Poll", f'max(truenas_ntp_server_min_poll_minutes{{instance=~"{I}"}}) or vector(0)', 16, cy, w=4,
+        stat("NTP Min Poll", f'max(truenas_ntp_server_min_poll_minutes{{instance=~"{I}"}})', 16, cy, w=4,
              desc="Minimum configured NTP poll interval (minutes)."),
-        stat("NTP Max Poll", f'max(truenas_ntp_server_max_poll_minutes{{instance=~"{I}"}}) or vector(0)', 20, cy, w=4,
+        stat("NTP Max Poll", f'max(truenas_ntp_server_max_poll_minutes{{instance=~"{I}"}})', 20, cy, w=4,
              desc="Maximum configured NTP poll interval (minutes)."),
     ])
     cy += 4
@@ -1670,9 +1616,9 @@ def build_dashboard():
     ds_panels = []
     dy = y + 1
     ds_panels.append(bargauge(
-        "Top Datasets by Referenced Bytes",
-        [tgt(f'topk(15, truenas_dataset_referenced_bytes{{instance=~"{I}", dataset=~"$dataset"}})', '{{dataset}}', 'A')],
-        0, dy, unit="bytes", desc="Datasets by referenced data size.",
+        "Top Datasets by Used Bytes",
+        [tgt(f'topk(15, truenas_dataset_used_bytes{{instance=~"{I}", dataset=~"$dataset"}})', '{{dataset}}', 'A')],
+        0, dy, unit="bytes", desc="Datasets by documented used-space value.",
     ))
     ds_panels.append(bargauge(
         "Datasets by Available Space (Bottom 15)",
@@ -1801,21 +1747,21 @@ def build_dashboard():
              thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 95}, {"color": "green", "value": 99}], graph=True),
         stat("API Errors", f'sum(truenas_api_call_errors_total{{instance=~"{I}"}})', 12, apy, w=3,
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 10}], graph=True),
-        stat("Coll Errors", f'sum(truenas_collector_errors_total{{instance=~"{I}"}}) or vector(0)', 15, apy, w=3,
+        stat("Coll Errors", f'sum(truenas_collector_errors_total{{instance=~"{I}"}})', 15, apy, w=3,
              thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
         stat("Scrape Age", f'time() - max(truenas_last_scrape_timestamp_seconds{{instance=~"{I}"}})', 18, apy, w=3, unit="s", desc="Seconds since last successful scrape."),
-        stat("Features On", f'sum(truenas_feature_enabled{{instance=~"{I}"}}) or vector(0)', 21, apy, w=3, desc="Enabled platform feature flags."),
+        stat("Features On", f'sum(truenas_feature_enabled{{instance=~"{I}"}})', 21, apy, w=3, desc="Enabled platform feature flags."),
     ])
     apy += 4
     api_panels.extend([
         stat("Oldest Alert Age", f'time() - clamp_min(max(truenas_alert_oldest_timestamp_seconds{{instance=~"{I}"}}), 1)', 0, apy, w=3, unit="s", desc="Age of the oldest active alert."),
-        stat("Repl Parallel", f'max(truenas_replication_max_parallel{{instance=~"{I}"}}) or vector(0)', 3, apy, w=3, desc="Configured maximum replication parallelism."),
-        stat("Boot Env Active", f'sum(truenas_boot_env_active{{instance=~"{I}"}}) or vector(0)', 6, apy, w=3, desc="Boot environments marked active."),
-        stat("Boot Env Keep", f'sum(truenas_boot_env_keep{{instance=~"{I}"}}) or vector(0)', 9, apy, w=3, desc="Boot environments marked keep."),
-        stat("Demand Access/s", f'max(truenas_zfs_demand_accesses_per_second{{instance=~"{I}"}}) or vector(0)', 12, apy, w=3, unit="ops", desc="Total ARC demand accesses per second."),
-        stat("Data IO Hit %", f'100 * avg(truenas_zfs_demand_data_io_hit_ratio{{instance=~"{I}"}}) or vector(0)', 15, apy, w=3, unit="percent", desc="Demand data I/O hit ratio."),
-        stat("Meta IO Hit %", f'100 * avg(truenas_zfs_demand_metadata_io_hit_ratio{{instance=~"{I}"}}) or vector(0)', 18, apy, w=3, unit="percent", desc="Demand metadata I/O hit ratio."),
-        stat("L2ARC Miss %", f'100 * avg(truenas_zfs_l2arc_miss_ratio{{instance=~"{I}"}}) or vector(0)', 21, apy, w=3, unit="percent", desc="L2ARC miss ratio."),
+        stat("Repl Parallel", f'max(truenas_replication_max_parallel{{instance=~"{I}"}})', 3, apy, w=3, desc="Configured maximum replication parallelism."),
+        stat("Boot Env Active", f'sum(truenas_boot_env_active{{instance=~"{I}"}})', 6, apy, w=3, desc="Boot environments active now."),
+        stat("Boot Env Next", f'sum(truenas_boot_env_activated{{instance=~"{I}"}})', 9, apy, w=3, desc="Boot environments selected for the next boot."),
+        stat("Demand Access/s", f'max(truenas_zfs_demand_accesses_per_second{{instance=~"{I}"}})', 12, apy, w=3, unit="ops", desc="Total ARC demand accesses per second."),
+        stat("Data IO Hit %", f'100 * avg(truenas_zfs_demand_data_io_hit_ratio{{instance=~"{I}"}})', 15, apy, w=3, unit="percent", desc="Demand data I/O hit ratio."),
+        stat("Meta IO Hit %", f'100 * avg(truenas_zfs_demand_metadata_io_hit_ratio{{instance=~"{I}"}})', 18, apy, w=3, unit="percent", desc="Demand metadata I/O hit ratio."),
+        stat("L2ARC Miss %", f'100 * avg(truenas_zfs_l2arc_miss_ratio{{instance=~"{I}"}})', 21, apy, w=3, unit="percent", desc="L2ARC miss ratio."),
     ])
     apy += 4
     api_panels.append(timeseries(
@@ -1823,7 +1769,7 @@ def build_dashboard():
         [
             tgt(f'truenas_up{{instance=~"{I}"}}', 'Exporter up', 'A'),
             tgt(f'truenas_event_stream_up{{instance=~"{I}"}}', 'Event stream up', 'B'),
-            tgt(f'sum(truenas_collector_errors_total{{instance=~"{I}"}}) or vector(0)', 'Collector errors', 'C'),
+            tgt(f'sum(truenas_collector_errors_total{{instance=~"{I}"}})', 'Collector errors', 'C'),
         ],
         0, apy, desc="Telemetry collection health.",
     ))
@@ -1902,24 +1848,26 @@ def build_dashboard():
         "Boot Environment Flags",
         [
             table_target(f'max by (name) (truenas_boot_env_active{{instance=~"{I}"}})', 'A'),
-            table_target(f'max by (name) (truenas_boot_env_keep{{instance=~"{I}"}})', 'B'),
+            table_target(f'max by (name) (truenas_boot_env_activated{{instance=~"{I}"}})', 'B'),
+            table_target(f'max by (name) (truenas_boot_env_keep{{instance=~"{I}"}})', 'C'),
         ],
         12, apy, w=12, h=8,
-        desc="Per-boot-environment active/keep flags for rollback planning.",
+        desc="Current, next-boot, and retention flags for rollback planning.",
         transforms=[
             outer_join('name'),
             tf('organize', {
                 'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
-                'renameByName': {'name': 'Boot Environment', 'Value #A': 'Active', 'Value #B': 'Keep'},
-                'indexByName': {'Boot Environment': 0, 'Active': 1, 'Keep': 2},
+                'renameByName': {'name': 'Boot Environment', 'Value #A': 'Active Now', 'Value #B': 'Next Boot', 'Value #C': 'Keep'},
+                'indexByName': {'Boot Environment': 0, 'Active Now': 1, 'Next Boot': 2, 'Keep': 3},
             }),
-            tf('sortBy', {'fields': [{'displayName': 'Active', 'desc': True}]}),
+            tf('sortBy', {'fields': [{'displayName': 'Active Now', 'desc': True}]}),
         ],
         overrides=[
-            {"matcher": {"id": "byName", "options": "Active"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": UP_MAP}]},
+            {"matcher": {"id": "byName", "options": "Active Now"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": UP_MAP}]},
+            {"matcher": {"id": "byName", "options": "Next Boot"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
             {"matcher": {"id": "byName", "options": "Keep"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
         ],
-        sort_col='Active',
+        sort_col='Active Now',
     ))
     apy += 8
     api_table_targets = [
@@ -1964,7 +1912,7 @@ def build_dashboard():
         ),
         "tags": ["truenas", "storage", "operations", "zfs", "exporter"],
         "schemaVersion": 42,
-        "version": 9,
+        "version": 10,
         "refresh": "30s",
         "timezone": "browser",
         "graphTooltip": 1,
@@ -2012,7 +1960,7 @@ def build_dashboard():
                 qvar("interface", "Interface", f'label_values(truenas_interface_link_up{{instance=~"{I}"}}, interface)'),
                 qvar("service", "Service", f'label_values(truenas_service_running{{instance=~"{I}"}}, service)'),
                 qvar("app", "App", f'label_values(truenas_app_cpu_percent{{instance=~"{I}"}}, app)'),
-                qvar("task_type", "Task Type", f'label_values(truenas_task_state{{instance=~"{I}"}}, task_type)'),
+                qvar("task_type", "Task Type", f'label_values(truenas_task_count{{instance=~"{I}"}}, task_type)'),
                 qvar("level", "Alert Level", f'label_values(truenas_alert_count_by_level{{instance=~"{I}"}}, level)'),
                 qvar("method", "API Method", f'label_values(truenas_api_call_duration_seconds{{instance=~"{I}"}}, method)'),
             ]
