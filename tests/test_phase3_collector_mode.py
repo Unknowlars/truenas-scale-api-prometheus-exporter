@@ -121,6 +121,30 @@ def test_start_http_server_collector_uses_custom_registry_without_lock(monkeypat
     assert lock.enter_count == 0
 
 
+def test_http_auxiliary_endpoints_without_socket_binding(monkeypatch):
+    captured = _capture_http_stack(monkeypatch)
+    ready = {"value": False}
+    exporter_module._start_http_server(
+        9108,
+        _CountingLock(),
+        readiness_check=lambda: ready["value"],
+    )
+
+    def request(path):
+        responses = []
+        body = captured["http_app"](
+            {"PATH_INFO": path},
+            lambda status, headers: responses.append((status, headers)),
+        )
+        return responses[0][0], body
+
+    assert request("/") == ("200 OK", [http_module._LANDING_PAGE])
+    assert request("/healthz") == ("200 OK", [b"ok\n"])
+    assert request("/readyz") == ("503 Service Unavailable", [b"not ready\n"])
+    ready["value"] = True
+    assert request("/readyz") == ("200 OK", [b"ready\n"])
+
+
 def test_full_parity_collector_exposes_declared_metric_families(monkeypatch):
     from scripts.generate_metric_contract import build_contract
 

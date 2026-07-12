@@ -9,8 +9,8 @@ evidence is produced locally.
 
 | Phase | Document | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | [Reliability](01-reliability.md) | Complete | 72 tests pass in the unrestricted local gate; zero, expiry, deadline, config, readiness, and transport regressions covered |
-| 2 | [Architecture](02-architecture.md) | In progress | Collector convergence, owned specs, and package boundaries are complete; coverage is advancing toward the 85% completion target |
+| 1 | [Reliability](01-reliability.md) | Complete | 100 tests pass in the unrestricted local gate; zero, expiry, deadline, config, readiness, and transport regressions covered |
+| 2 | [Architecture](02-architecture.md) | Complete | Collector convergence, owned specs, package boundaries, and the 85% branch-coverage gate are complete |
 | 3 | [Public release](03-public-release.md) | Complete | README, policies, MIT license, Compose, dashboard, and generated API docs validated |
 | 4 | [Validation and release](04-validation-release.md) | Complete | Local gate, Python 3.12-3.14 matrix, image build, dependency audit, and dry-run release verified |
 | 5 | [Review findings and handover](05-handover.md) | Complete | Eight findings fixed with fixture regressions; request-time API scraping removed |
@@ -33,18 +33,18 @@ A phase is complete only when every checkbox in its document is checked and the
 listed local verification commands pass. Partial work remains marked in
 progress; roadmap documentation must not claim completion early.
 
-Current branch coverage is 77.87%. Configuration is at 100%, transport at 95%,
-and metric declarations at 100%. Raising total branch coverage to 85% remains
-part of the architecture migration because the legacy coordinator still holds
-most untested domain branches.
+Current branch coverage is 85.07%, enforced by `./scripts/validate.sh` with a
+`--cov-fail-under=85` gate. Configuration is at 100%, transport at 95%, metric
+declarations at 99%, collection parsing at 99%, and HTTP serving at 100%.
 
-## Handover
+## Completion state
 
-Next agent: start at [05-handover.md](05-handover.md) — fix the checked-off
-review findings first, then follow the "Remaining work queue" in
-[02-architecture.md](02-architecture.md). All work is verified through
-`./scripts/validate.sh` and the metric-contract check; the working tree is
-uncommitted at handover, so create a checkpoint commit before changing code.
+All five modernization phases are complete. The midway findings in
+[05-handover.md](05-handover.md) and the convergence queue in
+[02-architecture.md](02-architecture.md) are retained as historical design and
+review evidence. Future changes remain subject to `./scripts/validate.sh`, the
+generated metric-contract check, the read-only API policy, and the prohibition
+on hosted CI.
 
 ## Verification evidence
 
@@ -57,5 +57,10 @@ uncommitted at handover, so create a checkpoint commit before changing code.
   branch coverage is 77.87% and the enforced floor is 77%. Ruff, mypy,
   generated assets, Compose validation, the Python 3.14 production image, and
   the container version smoke test pass.
-- The Docker test matrix passes on Python 3.12, 3.13, and 3.14 with 83 tests on
+- The Docker test matrix passes on Python 3.12, 3.13, and 3.14 with 100 tests on
   each interpreter. Live smoke remains optional and was not run without a key.
+- 2026-07-12 Phase 2 completion: 100 tests pass in the unrestricted deterministic
+  local suite; branch coverage is 85.07% and the enforced floor is 85%. Lifecycle,
+  event-stream recovery, discovery safety, generic extraction, HTTP readiness,
+  and collector/legacy startup branches have fixture-based regressions. Live
+  smoke remains optional and was not run without a read-only key.

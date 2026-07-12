@@ -12,7 +12,7 @@
 - [x] Reach dedicated-metric and dashboard parity with legacy mode.
 - [x] Make collector mode the default only after parity; retain legacy mode for
   one compatibility release.
-- [ ] Raise total branch coverage from 78% to the 85% completion target with
+- [x] Raise total branch coverage from 78% to the 85% completion target with
   fixture-driven domain branch tests.
 
 ## Acceptance

@@ -15,7 +15,7 @@ python3 -m pytest -q -p no:cacheprovider \
   --cov=src/truenas_exporter \
   --cov-branch \
   --cov-report=term \
-  --cov-fail-under=77
+  --cov-fail-under=85
 python3 scripts/generate_metric_contract.py --check
 python3 scripts/generate_truenas_dashboard.py --check
 python3 scripts/validate_dashboard.py

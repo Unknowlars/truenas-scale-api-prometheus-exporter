@@ -1,11 +1,15 @@
 # Phase 5: Midway Review Findings and Handover
 
+> Historical record: all findings and cleanup items in this handover are now
+> complete. The current completion status and verification evidence live in
+> [README.md](README.md).
+
 Written 2026-07-12 after a multi-angle midway code review of the uncommitted
 modernization working tree (monolith → `src/truenas_exporter/` package).
-This document is the entry point for the next agent: fix the findings below,
-then finish Phase 2 per [02-architecture.md](02-architecture.md).
+The findings and queue below describe the review baseline and are retained to
+show what was fixed while completing Phase 2.
 
-## State at handover
+## Historical state at handover
 
 - The entire modernization is **uncommitted** working-tree state on `main`.
   Commit a checkpoint before further changes.
