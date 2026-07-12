@@ -67,12 +67,12 @@ It is designed to be easy to run publicly and easy to operate:
 
 - single-file Python exporter with minimal runtime dependencies
 - Docker and Docker Compose friendly out of the box
-- broad metric coverage across storage, hardware, services, tasks, and alerts
+- documentation-audited metric coverage across storage, hardware, services, tasks, and alerts
 - event-driven realtime updates for streams such as `reporting.realtime`, `app.stats`, and `virt.instance.metrics`
 - bundled Grafana dashboard JSON and dashboard generator source
 - conservative defaults that keep higher-cardinality options disabled unless you opt in
 
-See [`docs/modernization/README.md`](docs/modernization/README.md) for the tracked reliability and architecture roadmap.
+See [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md) for the complete 25.10.2 method/field audit and [`docs/modernization/README.md`](docs/modernization/README.md) for the reliability roadmap.
 
 > [!IMPORTANT]
 > This exporter is currently maintained against TrueNAS SCALE `25.10.2`. Nearby versions may work, but collector coverage and default event subscriptions are tuned for that release.
@@ -80,11 +80,33 @@ See [`docs/modernization/README.md`](docs/modernization/README.md) for the track
 ## What You Get
 
 - system identity, version, uptime, readiness, update, and reboot state
-- pools, datasets, snapshots, scrub and resilver progress, and vdev errors
-- CPU, memory, swap, disks, temperatures, network throughput, and ZFS ARC/L2ARC metrics
+- pools, datasets, snapshots, scrub schedules, resilver configuration, expansion progress, and capacity
+- documented physical-memory and ZFS ARC/L2ARC demand metrics, plus compatibility parsing for opaque CPU, disk-I/O, interface, and pool event objects
 - SMB, NFS, iSCSI, NVMe-oF, services, apps, VMs, jobs, replication, and alerts
-- dedicated coverage for DockerHub pull limits, VM capability flags, directory services config, security posture, support state, update profiles, NTP health rollups, catalog preferences, iSCSI session features, and reporting retention
+- dedicated coverage for DockerHub pull limits, VM capability flags, directory-service health, SMB/NFS security posture, audit retention/capacity, update profiles/downloads, NTP configuration rollups, iSCSI session features, and reporting retention
 - exporter health signals such as API call failures and collector error counters
+
+## TrueNAS 25.10.2 API Parity
+
+The committed API snapshot is audited exhaustively, not sampled: 1,011 Markdown documents, 767 methods across 114 method namespaces, and 63 event sources are inventoried in [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md). The runtime catalog contains 398 documentation-classified reads and 112 telemetry candidates. Generic discovery additionally blocks 60 sensitive full responses and 43 non-secret raw, opaque, identity-bearing, or configuration-heavy responses; only the three schema-owned event streams are subscribable.
+
+The exporter exposes 405 contract-owned metrics. Generic method/event extraction remains an opt-in diagnostic feature and is not treated as semantic telemetry coverage. Numeric values under password, token, secret, private-key, and credential paths are suppressed even when generic extraction is enabled.
+
+### Compatibility replacements and unavailable legacy metrics
+
+Existing metric names, types, help text, and label sets remain intact. Where the documented API proved an old metric name or source wrong, use the replacement below; the legacy series is retained as a compatibility alias or becomes unavailable instead of reporting a fabricated zero.
+
+| Legacy metric | Use instead | Compatibility behavior |
+| --- | --- | --- |
+| `truenas_pool_dedup_ratio` | `truenas_pool_dedup_table_size_bytes` | Legacy metric continues to carry the byte-valued `dedup_table_size` field. |
+| `truenas_pool_expand_size_bytes` | `truenas_pool_expand_reflowed_bytes`, `truenas_pool_expand_to_reflow_bytes`, `truenas_pool_expand_percent` | Legacy metric aliases `bytes_to_reflow`; replacements expose the exact documented fields. |
+| `truenas_network_gateway_reachable` | `truenas_network_default_gateway_configured` | The API response proves route presence, not reachability; the old metric remains an alias for configured route presence. |
+| `truenas_boot_env_size_bytes` | `truenas_boot_environment_used_bytes` | Legacy metric aliases documented `used_bytes`. |
+| `truenas_vm_flag_amd_asids` | `truenas_vm_flag_amd_asids_supported` | The API field is boolean; the old metric retains its 0/1 representation. |
+| `truenas_certificate_days_to_expiry{name,issuer}` | `truenas_certificate_expiry_timestamp_seconds{name}` | The API does not document issuer data, so the legacy `issuer` label is `unknown`. |
+| `truenas_directoryservices_fault_reason` | `truenas_directoryservices_fault_present` | The free-text fault message is redacted from the legacy label. |
+
+The following legacy families are intentionally absent/NaN on 25.10.2 because no safe documented source exists: dataset referenced bytes; physical-memory free/cache/buffer and swap detail; per-disk temperature-alert counts; SMART result/enabled metrics; pool scrub last-run/state; generic task state/last-run and cloud-backup state; vdev error detail; SMB session/open-file/connection counts; NFS operation rate; FC port speed/online detail; virtual-volume size/global state; console-menu/serial-console flags; UPS live status; TrueNAS Connect/TrueCommand config status; and ARC aggregate max/min/hit counters. Secret- or PII-bearing configuration reads are also not used for SSH password-auth, KMIP, mail, proxy, support-contact, directory-service configuration-detail, or advanced-system configuration metrics. The generated dashboard does not reference these unavailable families or replace them with `or vector(0)`.
 
 ## Quick Start
 
@@ -181,7 +203,7 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 | `DATASET_SNAPSHOT_FALLBACK_LIMIT` | no | Max per-dataset `snapshot_count` fallback API calls; `0` disables fallback (default) |
 
 > [!NOTE]
-> Higher-cardinality and discovery-heavy options are intentionally conservative by default. Review `.env.example` before enabling settings such as `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, `ENABLE_GENERIC_METHOD_METRICS`, `ENABLE_GENERIC_EVENT_METRICS`, or filesystem list operations in production.
+> Higher-cardinality and discovery-heavy options are intentionally conservative by default. `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, and `EXTRA_METHODS` cannot bypass the documentation-derived read/candidate/sensitive-method policy. Review `.env.example` before enabling generic extraction or filesystem list operations in production.
 
 ## Architecture Modes
 
@@ -249,6 +271,9 @@ The repository includes a ready-to-import dashboard in `grafana-dashboard/operat
 | `grafana-dashboard/operations-center-dashboard.json` | Importable Grafana dashboard |
 | `scripts/generate_truenas_dashboard.py` | Dashboard generator source |
 | `scripts/convert_truenas_api_docs_to_markdown.py` | Offline API docs converter |
+| `scripts/generate_api_exporter_parity.py` | Exhaustive API/exporter parity inventory generator |
+| `docs/api-exporter-parity.md` | Human-readable method, event, namespace, and field audit |
+| `docs/api-exporter-parity.json` | Machine-readable exhaustive parity audit |
 | `docs/metrics-contract.json` | Machine-readable Prometheus metric contract |
 | `docs/modernization/README.md` | Tracked reliability and architecture roadmap |
 | `tests/` | Unit tests for collector and event behavior |
@@ -272,8 +297,8 @@ Not all configuration options produce the same number of Prometheus time series.
 | --- | --- | --- |
 | `ENABLE_GENERIC_METHOD_METRICS` | `false` | **High** — generates `METHOD_*` series with `[method, path]` labels. Can produce 50k–500k+ series with discovery enabled. |
 | `ENABLE_GENERIC_EVENT_METRICS` | `false` | **High** — generates `EVENT_*` series with `[event, path]` labels. Grows with event payload complexity. |
-| `AUTO_DISCOVER_METHODS` | `false` | **High** — discovers every available API method and feeds results through generic extraction. |
-| `SCRAPE_ALL_METRICS` | `false` | **High** — calls all known methods regardless of base-method filtering. |
+| `AUTO_DISCOVER_METHODS` | `false` | **High** — discovers only documentation-classified telemetry candidates and feeds safe, non-sensitive results through generic extraction. |
+| `SCRAPE_ALL_METRICS` | `false` | **High** — adds reviewed telemetry candidates beyond the base set; mutation/action, credential, and entity-specific methods remain blocked. |
 | `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `0` | **Medium** — each non-zero value adds up to N extra API calls per scrape for per-dataset snapshot counts. |
 | `ENABLE_FILESYSTEM_LISTDIR` | `false` | **Medium** — adds per-path directory listing metrics with generic extraction. |
 | `ENABLE_DATASET_METRICS` | `true` | **Low–Medium** — one set of labelled gauges per dataset. Grows linearly with dataset count. |

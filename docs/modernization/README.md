@@ -9,7 +9,7 @@ evidence is produced locally.
 
 | Phase | Document | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | [Reliability](01-reliability.md) | Complete | 100 tests pass in the unrestricted local gate; zero, expiry, deadline, config, readiness, and transport regressions covered |
+| 1 | [Reliability](01-reliability.md) | Complete | 150 tests pass in the unrestricted local gate; zero, expiry, deadline, config, readiness, transport, and API-parity regressions covered |
 | 2 | [Architecture](02-architecture.md) | Complete | Collector convergence, owned specs, package boundaries, and the 85% branch-coverage gate are complete |
 | 3 | [Public release](03-public-release.md) | Complete | README, policies, MIT license, Compose, dashboard, and generated API docs validated |
 | 4 | [Validation and release](04-validation-release.md) | Complete | Local gate, Python 3.12-3.14 matrix, image build, dependency audit, and dry-run release verified |
@@ -33,9 +33,9 @@ A phase is complete only when every checkbox in its document is checked and the
 listed local verification commands pass. Partial work remains marked in
 progress; roadmap documentation must not claim completion early.
 
-Current branch coverage is 85.07%, enforced by `./scripts/validate.sh` with a
+Current branch coverage is 90.09%, enforced by `./scripts/validate.sh` with a
 `--cov-fail-under=85` gate. Configuration is at 100%, transport at 95%, metric
-declarations at 99%, collection parsing at 99%, and HTTP serving at 100%.
+declarations at 99%, collection parsing at 96%, and HTTP serving at 100%.
 
 ## Completion state
 
@@ -46,7 +46,37 @@ review evidence. Future changes remain subject to `./scripts/validate.sh`, the
 generated metric-contract check, the read-only API policy, and the prohibition
 on hosted CI.
 
+The 2026-07-12 API/exporter parity implementation is complete in the working
+tree, but its current Docker image and Python 3.13/3.14 matrix verification is
+not complete in this host session because user `aeva` cannot access the
+root-owned `docker` socket. This host-level verification blocker is recorded
+below; it is not treated as a code or test pass.
+
 ## Verification evidence
+
+- 2026-07-12 exhaustive API parity: 1,012 files checked against manifest
+  aggregate `377d24c74fa0836d43505f6c4db1f9ca12c105219abfeda34b6ac7d63c3f2cda`;
+  767 method rows, 63 event rows, 114 method namespaces, and 405 field/metric
+  mappings generated. The partitions are 398 documented reads, 325 mutations,
+  44 unsafe/session workflows, 60 sensitive full responses, 43 additional
+  generic-response exclusions, 3 allowed/60 prohibited events, 326 active
+  dedicated metrics, 7 deprecated compatibility metrics, and 52 unavailable
+  compatibility declarations.
+- Current unrestricted deterministic gate: 150 tests passed on Python 3.12.3
+  with 90.09% branch coverage; Ruff and mypy passed. Metric contract, API-doc
+  manifest, exhaustive parity, dashboard generation, and dashboard validation
+  checks passed. The dashboard has 313 panels and 287 unique contract metric
+  references, with zero unavailable or deprecated references.
+- `./scripts/validate.sh` passed compile, lint, type, tests/coverage, all
+  generated-asset checks, dashboard validation, and both Compose configuration
+  checks, then stopped before image build with `permission denied while trying
+  to connect to the docker API at unix:///var/run/docker.sock`.
+- `./scripts/test_python_matrix.sh` stopped on its first Python 3.12 Docker build
+  with the same socket permission error; the current changes have therefore not
+  been verified on Python 3.13 or 3.14 in this session. Socket permissions are
+  `srw-rw---- root docker`, while user `aeva` is not in group `docker` and
+  non-interactive sudo is unavailable.
+- Live smoke was not run because no read-only TrueNAS API key was provided.
 
 - 2026-07-12 review fixes: 78 passed, 1 skipped; branch coverage 49.26%; Ruff,
   mypy, metric-contract, dashboard, and fixture checks passed through the local
