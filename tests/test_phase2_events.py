@@ -1,44 +1,9 @@
 import time
 
 import pytest
+from conftest import make_config
 
 import truenas_exporter as exporter_module
-
-
-def make_config(**overrides):
-    values = {
-        "ws_url": "wss://truenas.example/api/current",
-        "api_key": "test-key",
-        "interval_seconds": 30,
-        "timeout_seconds": 20,
-        "verify_tls": True,
-        "exporter_port": 9108,
-        "auto_discover_methods": False,
-        "query_limit": 200,
-        "max_method_calls": 250,
-        "max_list_items": 200,
-        "max_depth": 6,
-        "max_entity_calls": 50,
-        "max_datasets": 100,
-        "extra_methods": [],
-        "exclude_methods": [],
-        "filesystem_paths": ["/mnt"],
-        "enable_filesystem_listdir": False,
-        "enable_event_streams": True,
-        "enable_dataset_metrics": True,
-        "enable_task_metrics": True,
-        "enable_ipmi_metrics": True,
-        "event_interval_seconds": 2,
-        "event_read_timeout_seconds": 60,
-        "event_subscriptions": ["reporting.realtime", "app.stats", "virt.instance.metrics"],
-        "scrape_all_metrics": False,
-        "enable_generic_method_metrics": False,
-        "enable_generic_event_metrics": False,
-        "dataset_snapshot_fallback_limit": 0,
-        "exporter_mode": "legacy",
-    }
-    values.update(overrides)
-    return exporter_module.Config(**values)
 
 
 def reset_metric(metric):
@@ -95,20 +60,20 @@ def test_load_config_defaults_include_documented_event_streams(monkeypatch):
 
 
 def test_event_subscription_formatting_handles_documented_interval_events():
-    exporter = exporter_module.TrueNASExporter(make_config(event_interval_seconds=7))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", event_interval_seconds=7))
 
     assert exporter._format_event_subscription("reporting.realtime") == 'reporting.realtime:{"interval": 7}'
     assert exporter._format_event_subscription("app.stats") == 'app.stats:{"interval": 7}'
     assert exporter._format_event_subscription("virt.instance.metrics") == 'virt.instance.metrics:{"interval": 7}'
     assert exporter._format_event_subscription("pool.query") == "pool.query"
 
-    clamped = exporter_module.TrueNASExporter(make_config(event_interval_seconds=1))
+    clamped = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", event_interval_seconds=1))
     assert clamped._event_interval_seconds() == 2
     assert clamped._format_event_subscription("virt.instance.metrics") == "virt.instance.metrics"
 
 
-def test_dispatch_routes_virt_instance_metrics_to_dedicated_handler(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_event_metrics=True))
+def test_dispatch_routes_virt_instance_metrics_to_single_cache_sink(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_generic_event_metrics=True))
     calls = []
 
     def fake_handle(payload):
@@ -117,7 +82,7 @@ def test_dispatch_routes_virt_instance_metrics_to_dedicated_handler(monkeypatch)
     def fake_extract(event, payload):
         calls.append(("generic", event, payload))
 
-    monkeypatch.setattr(exporter, "_handle_virt_metrics_event", fake_handle)
+    monkeypatch.setattr(exporter, "_cache_virt_metrics_event", fake_handle)
     monkeypatch.setattr(exporter, "_replace_generic_event_metrics", fake_extract)
 
     payload = {"fields": [{"name": "vm1", "cpu_usage": 12.5}]}
@@ -132,9 +97,9 @@ def test_dispatch_routes_virt_instance_metrics_to_dedicated_handler(monkeypatch)
 
 
 def test_app_stats_event_removes_stale_app_and_interface_series():
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
-    exporter._handle_app_stats_event(
+    exporter._dispatch_event("app.stats", 
         {
             "fields": [
                 {
@@ -158,7 +123,7 @@ def test_app_stats_event_removes_stale_app_and_interface_series():
     assert labeled_value(exporter_module.APP_CPU_PERCENT, "plex") == 12.5
     assert labeled_value(exporter_module.APP_NET_RX_BYTES_RATE, "nextcloud", "eth1") == 50
 
-    exporter._handle_app_stats_event(
+    exporter._dispatch_event("app.stats", 
         {
             "fields": [
                 {
@@ -181,9 +146,9 @@ def test_app_stats_event_removes_stale_app_and_interface_series():
 
 
 def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
-    exporter._handle_realtime_event(
+    exporter._dispatch_event("reporting.realtime", 
         {
             "cpu": {
                 "cpu": {"per_cpu": [10.0, 20.0]},
@@ -206,7 +171,7 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
     assert labeled_value(exporter_module.NETWORK_RX_BYTES_RATE, "eth0") == 100.0
     assert labeled_value(exporter_module.POOL_REALTIME_READ_BYTES, "tank") == 300.0
 
-    exporter._handle_realtime_event(
+    exporter._dispatch_event("reporting.realtime", 
         {
             "cpu": {
                 "cpu": {"per_cpu": [30.0]},
@@ -234,9 +199,9 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
 
 
 def test_realtime_event_accepts_alternative_cpu_core_and_temperature_shapes():
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
-    exporter._handle_realtime_event(
+    exporter._dispatch_event("reporting.realtime", 
         {
             "cpu": {
                 "cpu": {

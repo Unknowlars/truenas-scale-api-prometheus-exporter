@@ -54,6 +54,9 @@ exclude = ["docs/truenas-api"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+"scripts/generate_truenas_dashboard.py" = ["E741"]
+
 [tool.mypy]
 python_version = "3.12"
 check_untyped_defs = true

@@ -63,9 +63,11 @@ def test_transport_raises_jsonrpc_error(monkeypatch):
     ])
     monkeypatch.setattr(transport, "create_connection", lambda *_args, **_kwargs: socket)
 
-    with transport.JsonRpcWsClient("ws://nas.example/api/current", 5, True) as client:
-        with pytest.raises(transport.JsonRpcError, match="system.info failed"):
-            client.call("system.info")
+    with (
+        transport.JsonRpcWsClient("ws://nas.example/api/current", 5, True) as client,
+        pytest.raises(transport.JsonRpcError, match="system.info failed"),
+    ):
+        client.call("system.info")
 
 
 def test_transport_tls_verification_can_be_explicitly_disabled(monkeypatch):
@@ -121,9 +123,11 @@ def test_transport_bounds_stray_messages(monkeypatch):
     socket = FakeWebSocket(responses)
     monkeypatch.setattr(transport, "create_connection", lambda *_args, **_kwargs: socket)
 
-    with transport.JsonRpcWsClient("ws://nas.example/api/current", 5, True) as client:
-        with pytest.raises(transport.JsonRpcError, match="response not received"):
-            client.call("system.info")
+    with (
+        transport.JsonRpcWsClient("ws://nas.example/api/current", 5, True) as client,
+        pytest.raises(transport.JsonRpcError, match="response not received"),
+    ):
+        client.call("system.info")
 
 
 def test_transport_authenticate_accepts_session_and_rejects_falsy():

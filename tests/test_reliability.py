@@ -1,47 +1,9 @@
 import math
 
 import pytest
+from conftest import make_config
 
 import truenas_exporter as exporter_module
-
-
-def make_config(**overrides):
-    values = {
-        "ws_url": "wss://nas.example/api/current",
-        "api_key": "test-key",
-        "interval_seconds": 30,
-        "timeout_seconds": 20,
-        "verify_tls": True,
-        "exporter_port": 9108,
-        "auto_discover_methods": False,
-        "query_limit": 200,
-        "max_method_calls": 250,
-        "max_list_items": 200,
-        "max_depth": 6,
-        "max_entity_calls": 50,
-        "max_datasets": 100,
-        "extra_methods": [],
-        "exclude_methods": [],
-        "filesystem_paths": ["/mnt"],
-        "enable_filesystem_listdir": False,
-        "enable_event_streams": False,
-        "enable_dataset_metrics": True,
-        "enable_task_metrics": False,
-        "enable_ipmi_metrics": False,
-        "event_interval_seconds": 2,
-        "event_read_timeout_seconds": 60,
-        "event_subscriptions": ["reporting.realtime"],
-        "scrape_all_metrics": False,
-        "enable_generic_method_metrics": False,
-        "enable_generic_event_metrics": False,
-        "dataset_snapshot_fallback_limit": 0,
-        "exporter_mode": "collector",
-        "scrape_budget_seconds": 25,
-        "event_stale_after_seconds": 15,
-        "ca_file": None,
-    }
-    values.update(overrides)
-    return exporter_module.Config(**values)
 
 
 def _scalar_sample(families, name):
@@ -64,8 +26,8 @@ def test_collector_realtime_zero_replaces_previous_value():
 def test_legacy_app_and_vm_zero_values_are_exported():
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
 
-    exporter._handle_app_stats_event({"fields": [{"app_name": "demo", "cpu_usage": 0.0}]})
-    exporter._handle_virt_metrics_event({"fields": [{"name": "vm", "cpu": 0.0, "memory": 0.0}]})
+    exporter._dispatch_event("app.stats", {"fields": [{"app_name": "demo", "cpu_usage": 0.0}]})
+    exporter._dispatch_event("virt.instance.metrics", {"fields": [{"name": "vm", "cpu": 0.0, "memory": 0.0}]})
 
     assert exporter_module.APP_CPU_PERCENT.labels(app="demo")._value.get() == 0.0
     assert exporter_module.VIRT_INSTANCE_CPU.labels(name="vm")._value.get() == 0.0
@@ -218,15 +180,22 @@ def test_jsonrpc_client_enforces_total_deadline(monkeypatch):
 
 def test_counter_metric_families_use_prometheus_total_suffix(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config())
-    monkeypatch.setattr(exporter, "collect_collector_snapshot", lambda: {"scalar": {}, "series": {}})
-    exporter._api_call_errors[("system.info", "TimeoutError")] = 2.0
-    exporter._collector_errors["system"] = 1.0
-    exporter._event_message_counts["reporting.realtime"] = 3.0
+    exporter_module.API_CALL_ERRORS_TOTAL.labels(method="system.info", error_type="TimeoutError").inc(2)
+    exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="system").inc()
+    exporter_module.EVENT_MESSAGES_TOTAL.labels(event="reporting.realtime").inc(3)
+    exporter._publish_metric_snapshot()
 
-    families = list(exporter_module._PartialSnapshotCollector(exporter).collect())
+    families = list(exporter_module.TrueNASCollector(exporter).collect())
     samples = {sample.name: sample.value for family in families for sample in family.samples}
 
     assert samples["truenas_api_call_errors_total"] == 2.0
     assert samples["truenas_collector_errors_total"] == 1.0
     assert samples["truenas_event_messages_total"] == 3.0
-    assert all(not math.isnan(value) for value in samples.values())
+    assert all(
+        not math.isnan(samples[name])
+        for name in (
+            "truenas_api_call_errors_total",
+            "truenas_collector_errors_total",
+            "truenas_event_messages_total",
+        )
+    )

@@ -3,15 +3,17 @@
 ## Tasks
 
 - [x] Add package metadata and a `src/truenas_exporter` package.
-- [ ] Separate configuration, transport, method safety, metrics, events,
+- [x] Separate configuration, transport, method safety, metrics, events,
   collection, HTTP serving, and CLI startup.
-- [ ] Replace private prometheus-client attribute access with owned metric specs.
+- [x] Replace private prometheus-client attribute access with owned metric specs.
 - [x] Make collectors produce fresh snapshots and publish them atomically.
 - [x] Export operational counters from the same registry as collector metrics.
 - [x] Add a generated metric-contract manifest and compatibility test.
 - [x] Reach dedicated-metric and dashboard parity with legacy mode.
 - [x] Make collector mode the default only after parity; retain legacy mode for
   one compatibility release.
+- [ ] Raise total branch coverage from 78% to the 85% completion target with
+  fixture-driven domain branch tests.
 
 ## Acceptance
 
@@ -22,13 +24,13 @@
 
 ## Current migration boundary
 
-Configuration, transport, metric declarations, CLI, and versioning are separate
-modules. Collector mode exposes the complete metric contract through
-`FullParityCollector`, but non-core domains still call the legacy coordinator.
-The remaining tasks intentionally remove that bridge before changing the
-default mode in a later compatibility release.
+Configuration, transport, method-safety policy, metric declarations, event
+metadata, fixture-friendly collection parsers, HTTP serving, CLI, and versioning
+are separate modules. `TrueNASCollector` exposes the last complete background
+snapshot; the duplicate partial collector and `FullParityCollector` bridge have
+been removed. Legacy mode remains available for this compatibility release.
 
-## Remaining work queue (recommended order)
+## Completed convergence queue
 
 The midway review ([05-handover.md](05-handover.md)) confirmed that
 `FullParityCollector` is the wrong convergence point: it runs the full API
@@ -37,27 +39,17 @@ the mutable global registry. The unregistered `TrueNASCollector` snapshot
 design (`runtime.py:6279`) is the correct mechanism — collect into immutable
 metric families under the lock, expose outside it.
 
-1. **Atomic snapshot exposition.** Run `scrape_once` on a background interval
-   loop in collector mode too; have the registered collector serve the last
-   complete snapshot (single-flight, no per-request scrape). This also fixes
-   handover findings 1 (healthcheck blocking) and 6 (readiness deadlock).
-2. **Generalize `TrueNASCollector` to full parity and delete
-   `FullParityCollector`.** Derive the collector metric sets from the metric
-   declarations instead of the hand-maintained
-   `_COLLECTOR_SCALAR_METRICS`/`_COLLECTOR_SERIES_METRICS` tuples; remove the
-   duplicated `collect_collector_snapshot` extraction path so exactly one
-   extraction pipeline exists.
-3. **Single event sink.** Collapse the `_is_collector_mode()` branches at
-   every event write site: always write the `_collector_event_*` cache dicts;
-   legacy mode publishes the cache to the default registry via the existing
-   `_publish_cached_events_to_default_registry`.
-4. **Decompose `runtime.py`** into events, domain collection, HTTP serving,
-   and method-safety modules, extracting domain parsers as pure functions
-   over fixture payloads (this is where coverage rises toward 85%; raise the
-   `--cov-fail-under` gate in `scripts/validate.sh` as it does).
-5. **Owned metric specs.** Replace `metric._name` / `._documentation` /
-   `._labelnames` access with a spec dataclass; derive the contract manifest
-   from the specs instead of ast-parsing `metrics.py`.
-6. **Default flip.** Make collector mode the default, retain legacy for one
-   compatibility release, and write CHANGELOG/README migration notes
-   (entrypoint change, strict config validation).
+1. **Atomic snapshot exposition — complete.** Collector mode runs a background
+   single-flight scrape and serves only the last complete snapshot.
+2. **Collector convergence — complete.** `TrueNASCollector` has full parity;
+   the partial scraper, `FullParityCollector`, and hand-maintained metric tuples
+   are removed.
+3. **Single event sink — complete.** Both modes write the shared event cache;
+   legacy mode projects that cache into the default registry.
+4. **Package boundaries — complete.** Event metadata, pure collection parsers,
+   HTTP serving, and method-safety policy live in dedicated modules. Further
+   domain-parser extraction continues alongside coverage work.
+5. **Owned metric specs — complete.** Metric names, types, help, and labels are
+   owned metadata, and the contract generator consumes those specs directly.
+6. **Default flip — complete.** Collector mode is the default, legacy remains
+   available for this compatibility release, and migration notes are published.

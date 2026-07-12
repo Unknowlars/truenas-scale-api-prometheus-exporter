@@ -8,6 +8,11 @@ import hashlib
 import json
 from pathlib import Path
 
+try:
+    from .tooling import TRUENAS_API_VERSION, check_or_write
+except ImportError:  # direct script execution
+    from tooling import TRUENAS_API_VERSION, check_or_write
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_ROOT = REPO_ROOT / "docs" / "truenas-api"
 OUTPUT = DOCS_ROOT / "MANIFEST.json"
@@ -27,7 +32,7 @@ def build_manifest() -> dict[str, object]:
         files.append({"path": relative, "sha256": digest, "bytes": len(data)})
     return {
         "schema_version": 1,
-        "truenas_version": "25.10.2",
+        "truenas_version": TRUENAS_API_VERSION,
         "source": "offline TrueNAS API documentation snapshot (not redistributed)",
         "generator": "scripts/convert_truenas_api_docs_to_markdown.py",
         "file_count": len(files),
@@ -41,13 +46,8 @@ def main() -> None:
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     rendered = json.dumps(build_manifest(), indent=2, sort_keys=True) + "\n"
-    if args.check:
-        if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != rendered:
-            raise SystemExit(f"API docs manifest is out of date: run {Path(__file__).name}")
-        return
-    OUTPUT.write_text(rendered, encoding="utf-8")
+    check_or_write(OUTPUT, rendered, check=args.check, description="API docs manifest")
 
 
 if __name__ == "__main__":
     main()
-

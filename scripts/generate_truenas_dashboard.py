@@ -3,6 +3,11 @@ import copy
 import json
 from pathlib import Path
 
+try:
+    from .tooling import check_or_write
+except ImportError:  # direct script execution
+    from tooling import check_or_write
+
 
 DS = {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}
 PLUGIN_VERSION = "12.4.0"
@@ -2035,9 +2040,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dashboard = build_dashboard()
     rendered = json.dumps(dashboard, indent=2) + "\n"
-    if args.check:
-        if not OUT.exists() or OUT.read_text(encoding="utf-8") != rendered:
-            raise SystemExit(f"Dashboard is out of date: run {Path(__file__).name}")
-    else:
+    if not args.check:
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        OUT.write_text(rendered, encoding="utf-8")
+    check_or_write(OUT, rendered, check=args.check, description="Dashboard")

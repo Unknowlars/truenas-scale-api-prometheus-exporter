@@ -236,19 +236,40 @@ import logging
 import os
 import re
 import signal
-import socketserver
 import threading
 import time
-from collections.abc import Callable
-from datetime import UTC, datetime
 from typing import Any
-from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
-from prometheus_client import REGISTRY, CollectorRegistry, Gauge, make_wsgi_app
-from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
+from prometheus_client import REGISTRY, CollectorRegistry
 from websocket import WebSocketTimeoutException
 
+from .collection import (
+    _as_bool,
+    _as_float,
+    _cert_days_to_expiry,
+    _extract_labeled_numeric_series,
+    _first_not_none,
+    _link_is_up,
+    _parse_ts,
+    _str_label,
+)
 from .config import Config, load_config
+from .events import (
+    _EVENT_METRICS,
+    _EVENT_SOURCE_BY_METRIC_NAME,
+    _INTERVAL_EVENT_SUBSCRIPTIONS,
+    _REALTIME_EVENT_SCALAR_METRICS,
+)
+from .http import _LANDING_PAGE  # noqa: F401 - compatibility re-export
+from .http import start_http_server as _start_http_server
+from .method_safety import (
+    _AUTO_SKIP_ERROR_PATTERNS,
+    BASE_METHODS,
+    DENY_NAMESPACE_PREFIXES,
+    REQUIRES_ENTITY_PARAM,
+    SAFE_ALLOW_RE,
+    SAFE_DENY_RE,
+)
 from .metrics import (
     ALERT_COUNT,
     ALERT_COUNT_BY_CLASS,
@@ -384,7 +405,6 @@ from .metrics import (
     EVENT_NUMERIC_VALUE,
     EVENT_STATUS_VALUE,
     EVENT_STREAM_UP,
-    EXPORTER_INFO,
     FAILOVER_DISABLED_REASON,
     FAILOVER_DISABLED_REASON_COUNT,
     FC_HOST_COUNT,
@@ -602,34 +622,8 @@ from .metrics import (
     VM_VMEMORY_IN_USE_BYTES,
     ZFS_ARC_AVAILABLE_BYTES,
     ZFS_ARC_FREE_MEMORY_BYTES,
-    ZFS_ARC_HIT_RATIO,
-    ZFS_ARC_HITS_RATE,
-    ZFS_ARC_MAX_SIZE_BYTES,
-    ZFS_ARC_MIN_SIZE_BYTES,
-    ZFS_ARC_MISSES_RATE,
     ZFS_ARC_SIZE_BYTES,
-    ZFS_DEMAND_ACCESSES_RATE,
-    ZFS_DEMAND_DATA_ACCESSES_RATE,
-    ZFS_DEMAND_DATA_HIT_RATIO,
-    ZFS_DEMAND_DATA_HITS_RATE,
-    ZFS_DEMAND_DATA_IO_HIT_RATIO,
-    ZFS_DEMAND_DATA_IO_HITS_RATE,
-    ZFS_DEMAND_DATA_MISS_RATIO,
-    ZFS_DEMAND_DATA_MISSES_RATE,
-    ZFS_DEMAND_META_ACCESSES_RATE,
-    ZFS_DEMAND_META_HIT_RATIO,
-    ZFS_DEMAND_META_HITS_RATE,
-    ZFS_DEMAND_META_IO_HIT_RATIO,
-    ZFS_DEMAND_META_IO_HITS_RATE,
-    ZFS_DEMAND_META_MISS_RATIO,
-    ZFS_DEMAND_META_MISSES_RATE,
-    ZFS_L2ARC_ACCESSES_RATE,
-    ZFS_L2ARC_HIT_RATIO,
-    ZFS_L2ARC_HITS_RATE,
-    ZFS_L2ARC_MISS_RATIO,
-    ZFS_L2ARC_MISSES_RATE,
-    ZFS_L2ARC_READ_BYTES_RATE,
-    ZFS_L2ARC_WRITE_BYTES_RATE,
+    metric_name,
 )
 from .transport import JsonRpcError, JsonRpcWsClient  # noqa: F401 - compatibility re-export
 from .version import __version__
@@ -644,686 +638,11 @@ _PATH_NORMALIZE_RE = re.compile(r"[^a-zA-Z0-9_./\-]")
 # Maximum number of out-of-order / unsolicited messages the recv loop will skip
 # before giving up, to prevent an infinite spin if the server sends unexpected pushes.
 
-_INTERVAL_EVENT_SUBSCRIPTIONS = {
-    "reporting.realtime",
-    "app.stats",
-    "virt.instance.metrics",
-}
-
 
 
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
-
-def _as_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return 1.0 if value else 0.0
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
-        try:
-            return float(value)
-        except ValueError:
-            return None
-    if isinstance(value, dict):
-        for key in ("value", "parsed", "rawvalue"):
-            nested = _as_float(value.get(key))
-            if nested is not None:
-                return nested
-    return None
-
-
-def _first_not_none(*values: Any) -> Any:
-    """Return the first present value without discarding valid zero/false values."""
-    for value in values:
-        if value is not None:
-            return value
-    return None
-
-
-def _as_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return value != 0
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on", "running", "up"}
-    # A non-empty dict or list is truthy — handles session objects returned by
-    # auth.login_with_api_key in TrueNAS 25.x
-    if isinstance(value, (dict, list)):
-        return bool(value)
-    return False
-
-
-def _link_is_up(value: Any) -> bool:
-    if isinstance(value, str):
-        normalized = value.strip().upper()
-        if normalized == "LINK_STATE_UP":
-            return True
-        if normalized == "LINK_STATE_DOWN":
-            return False
-    return _as_bool(value)
-
-
-def _str_label(value: Any, fallback: str = "unknown") -> str:
-    if value is None:
-        return fallback
-    text = str(value).strip()
-    return text or fallback
-
-
-def _normalize_core_label(value: Any) -> str:
-    text = _str_label(value)
-    match = re.search(r"(\d+)$", text)
-    return match.group(1) if match else text
-
-
-def _extract_labeled_numeric_series(
-    payload: Any,
-    *,
-    label_keys: tuple[str, ...] = ("core", "cpu", "id", "name"),
-    value_keys: tuple[str, ...] = ("value",),
-    normalize_label: bool = False,
-) -> dict[tuple[str, ...], float]:
-    series: dict[tuple[str, ...], float] = {}
-
-    if isinstance(payload, list):
-        for idx, item in enumerate(payload):
-            if isinstance(item, dict):
-                label = None
-                for label_key in label_keys:
-                    candidate = item.get(label_key)
-                    if candidate is not None:
-                        label = candidate
-                        break
-                if label is None:
-                    label = idx
-
-                value = None
-                for value_key in value_keys:
-                    value = _as_float(item.get(value_key))
-                    if value is not None:
-                        break
-            else:
-                label = idx
-                value = _as_float(item)
-
-            if value is None:
-                continue
-
-            label_text = _normalize_core_label(label) if normalize_label else _str_label(label)
-            series[(label_text,)] = value
-        return series
-
-    if isinstance(payload, dict):
-        for raw_label, raw_value in payload.items():
-            value = None
-            if isinstance(raw_value, dict):
-                for value_key in value_keys:
-                    value = _as_float(raw_value.get(value_key))
-                    if value is not None:
-                        break
-            if value is None:
-                value = _as_float(raw_value)
-            if value is None:
-                continue
-
-            label_text = _normalize_core_label(raw_label) if normalize_label else _str_label(raw_label)
-            series[(label_text,)] = value
-
-    return series
-
-
-def _parse_ts(value: Any) -> float | None:
-    """Convert various TrueNAS datetime representations to a Unix timestamp."""
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, dict):
-        # {"$date": milliseconds_since_epoch}
-        ms = value.get("$date")
-        if ms is not None:
-            try:
-                return float(ms) / 1000.0
-            except (TypeError, ValueError):
-                pass
-    if isinstance(value, str):
-        if value in {"Never", "N/A", "None", ""}:
-            return None
-        try:
-            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=UTC)
-            return dt.timestamp()
-        except ValueError:
-            pass
-    return None
-
-
-def _cert_days_to_expiry(until: Any) -> int | None:
-    """Return days until certificate expiry; negative means already expired."""
-    ts = _parse_ts(until)
-    if ts is None:
-        return None
-    try:
-        expiry_dt = datetime.fromtimestamp(ts, tz=UTC)
-        delta = expiry_dt - datetime.now(tz=UTC)
-        return delta.days
-    except Exception:
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Method safety filters
-# ---------------------------------------------------------------------------
-
-SAFE_ALLOW_RE = re.compile(
-    r"(\.query$|\.status$|\.config$|\.info$|\.summary$|\.version$|\.state$"
-    r"|\.choices$|\.graphs$|\.temperatures$|\.sessions$|\.client_count$"
-    r"|\.get_data$|\.get_|\.list$|\.list_|\.available$|\.available_"
-    r"|\.is_|\.has_|\.feature_|\.nvidia_present$|\.licensed$|\.flags$"
-    r"|\.details$|\.reachable$)"
-)
-SAFE_DENY_RE = re.compile(
-    r"(^|\.)(create|update|delete|destroy|remove|start|stop|restart|reboot"
-    r"|shutdown|wipe|run|sync|upload|download|set|reset|attach|detach|replace"
-    r"|promote|rollback|clone|import|export|unlock|lock|change_key|restore"
-    r"|control|clear|abort|renew|terminate|save|commit|checkin|leave|reapply"
-    r"|test|convert|pull|redeploy|upgrade|manual|accept|setup|send"
-    r"|get_instance)(\.|$)"   # get_instance ALWAYS requires a mandatory entity ID
-)
-
-_AUTO_SKIP_ERROR_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"missing required (positional )?argument", re.IGNORECASE),
-    re.compile(r"takes .* positional argument", re.IGNORECASE),
-    re.compile(r"method .* not found", re.IGNORECASE),
-    re.compile(r"method does not exist", re.IGNORECASE),
-)
-
-# Methods that require mandatory params (entity ID, credentials, path, etc.).
-# These are NEVER called via auto-discovery.  This is the exhaustive blocklist
-# derived from observed JsonRpcError failures; extend as needed.
-REQUIRES_ENTITY_PARAM: set[str] = {
-    # ── VM per-entity (handled in _collect_vm_metrics with real IDs) ──
-    "vm.status",
-    "vm.get_instance",
-    "vm.get_memory_usage",
-    "vm.get_vm_memory_info",
-    "vm.get_console",            # requires vm_id
-    "vm.get_display_devices",    # requires vm_id
-    "vm.get_display_web_uri",    # requires vm_id
-    "virt.global.get_network",   # requires explicit virt network identifier
-    # ── App per-entity ──
-    "app.config",                # requires app name
-    "app.get_instance",
-    "app.outdated_docker_images",
-    "app.rollback_versions",
-    # ── Catalog ──
-    "catalog.get_app_details",   # requires catalog item name
-    # ── Cloud Backup — require backup task ID ──
-    "cloud_backup.list_snapshot_directory",
-    "cloud_backup.list_snapshots",
-    # ── CloudSync — require credential ID or path ──
-    "cloudsync.list_buckets",
-    "cloudsync.list_directory",
-    # ── Device ──
-    "device.get_info",           # requires device type dict (e.g. {"type": "DISK"})
-    # ── Disk — require disk name list (disk.temperatures works; these don't) ──
-    "disk.temperature_agg",      # requires explicit list of disk names
-    "disk.temperature_alerts",   # requires explicit list of disk names
-    # ── Filesystem ──
-    "filesystem.statfs",         # requires a path argument
-    # ── Group ──
-    "group.get_group_obj",       # requires group identifier
-    "group.has_password_enabled_user",  # requires group id
-    # ── IPMI ──
-    "ipmi.lan.query",            # requires channel number
-    # ── iSCSI per-entity ──
-    "iscsi.extent.disk_choices",
-    # ── Pool ──
-    "pool.is_upgraded",          # requires pool id
-    "pool.dataset.get_quota",    # requires dataset path + quota type
-    # ── FC per-entity ──
-    "fc.fc_host.get_instance",
-    "fcport.get_instance",
-    # ── NVMe-oF per-entity ──
-    "nvmet.host.get_instance",
-    "nvmet.namespace.get_instance",
-    "nvmet.port.get_instance",
-    "nvmet.subsys.get_instance",
-    "nvmet.host_subsys.get_instance",
-    "nvmet.port_subsys.get_instance",
-    # ── Replication ──
-    "replication.list_datasets", # requires replication task id
-    # ── Reporting (need explicit graph name list) ──
-    "reporting.get_data",
-    "reporting.netdata_get_data",
-    # ── Route ──
-    "route.ipv4gw_reachable",    # failing on this TrueNAS version (API changed)
-    # ── System ──
-    "system.feature_enabled",    # requires feature name string
-    "system.security.info",      # method removed/renamed in this TrueNAS version
-    # ── TN Connect ──
-    "tn_connect.get_registration_uri",  # requires params
-    # ── Audit ──
-    "audit.query",               # requires specific filter params; can return huge data
-    # ── User ──
-    "user.get_user_obj",         # requires username/uid
-    # ── VMware ──
-    "vmware.get_datastores",
-    "vmware.get_instance",
-    "vmware.match_datastores_with_snapshots",
-    # ── VM device ──
-    "vm.device.get_instance",    # requires device id
-    "vm.device.convert",         # requires device id
-}
-
-# Entire API namespaces that require external credentials or licensed features.
-# Any method whose dotted prefix matches is skipped by _is_safe_read_method().
-DENY_NAMESPACE_PREFIXES: tuple[str, ...] = (
-    "vmware.",   # requires VMware vCenter credentials in TrueNAS
-    "ec2.",      # AWS/cloud integrations
-)
-
-BASE_METHODS: list[str] = [
-    # System — state/info/ready are called explicitly in scrape_once and their
-    # results are injected into the result cache; listing them here still lets
-    # the generic extractor walk the full response tree.
-    "system.state",
-    "system.info",
-    "system.ready",
-    # system.security.info intentionally omitted — it is in REQUIRES_ENTITY_PARAM
-    # (method removed/renamed on TrueNAS 25.x) so it would always be blocked by
-    # _is_safe_read_method(); keeping it here was dead, misleading code.
-    "system.reboot.info",               # pending reboot detection
-    # Network
-    "network.general.summary",
-    # route.ipv4gw_reachable removed — API returns JsonRpcError on this TrueNAS version
-    "route.system_routes",
-    # Updates
-    "update.status",
-    # Pools & disks
-    "pool.query",
-    "disk.query",
-    "disk.details",                     # serial, model, bus, etc.
-    "disk.temperatures",
-    # disk.temperature_agg and disk.temperature_alerts require a list of disk names
-    # as a mandatory param — they are called correctly in _collect_disk_metrics()
-    # with actual disk names from disk.query. Do NOT put them here.
-    # Interfaces
-    "interface.query",
-    # Services
-    "service.query",
-    # Alerts
-    "alert.list",
-    # Jobs — limit param is now applied in _auto_params to prevent huge payloads
-    "core.get_jobs",
-    # NFS
-    "nfs.client_count",
-    "nfs.get_nfs3_clients",
-    "nfs.get_nfs4_clients",
-    # iSCSI
-    "iscsi.global.client_count",
-    "iscsi.global.sessions",
-    # Docker / Apps
-    "docker.status",
-    "docker.config",
-    "docker.list_backups",
-    "docker.nvidia_present",
-    "docker.network.query",
-    "app.query",
-    "app.image.dockerhub_rate_limit",
-    "vm.flags",
-    "directoryservices.config",
-    "system.security.config",
-    "support.is_available_and_enabled",
-    "support.config",
-    "update.config",
-    "system.ntpserver.query",
-    "catalog.config",
-    # Hardware
-    "hardware.virtualization.variant",
-    # Reporting (sampled via dedicated method, listed here for discovery)
-    "reporting.graphs",
-    "reporting.netdata_graphs",
-    # VMs
-    "vm.query",
-    "vm.get_available_memory",
-    "vm.get_vmemory_in_use",
-    # ZFS resources (ARC, quota, etc.)
-    "zfs.resource.query",
-    # TrueNAS identity
-    "truenas.is_production",
-    "truenas.is_ix_hardware",
-    "truenas.managed_by_truecommand",       # fleet management context
-    # HA failover (no-op on non-Enterprise; returns empty list)
-    "failover.disabled.reasons",
-    # Directory services
-    "directoryservices.status",
-    # System extras
-    "system.product_type",                  # SCALE / ENTERPRISE / CORE
-    "system.version_short",                 # clean "25.10.2" version string
-    "system.host_id",                       # stable UUID across reboots
-    "system.boot_id",                       # changes each boot — exporter tracks changes
-    # Update extras
-    "update.available_versions",            # actual version names available to upgrade to
-    # Boot environments
-    "boot.environment.query",               # BE count, active, keep flags
-    # VM/Virtualization extras
-    "vm.supports_virtualization",           # KVM/hardware virt gate
-    "vm.maximum_supported_vcpus",           # capacity planning
-    "vm.virtualization_details",            # CPU flags, nested virt
-    # iSCSI protocol feature flags
-    "iscsi.global.alua_enabled",            # ALUA (HA iSCSI) status
-    "iscsi.global.iser_enabled",            # iSER/RDMA high-perf iSCSI
-    # Fibre Channel (already succeeds per CSV data)
-    "fcport.status",                        # FC port operational status
-    "fc.fc_host.query",                     # FC HBA adapter inventory
-    # NVMe-oF (already succeeds per CSV data)
-    "nvmet.global.sessions",               # active NVMe-oF session count
-    "nvmet.global.config",                 # NVMe-oF global config
-    "nvmet.subsys.query",                  # NVMe-oF subsystem inventory
-    "nvmet.port.query",                    # NVMe-oF port inventory
-    # App extras
-    "app.available_space",                  # bytes available for new app installs
-    # sharing.webshare.query excluded — only exists when WebShare is configured;
-    # returns JsonRpcError on systems where it hasn't been set up. The dedicated
-    # _collect_app_extras() already handles it gracefully with try/except.
-    # Network extras
-    "interface.has_pending_changes",        # uncommitted network config flag
-    "interface.checkin_waiting",            # seconds until auto-rollback
-    # Pool extras
-    "pool.get_disks",                      # which disks belong to which pool
-    # IPMI extras
-    "ipmi.lan.channels",                   # IPMI LAN channel list
-    # UPS
-    "ups.config",                          # UPS config (mode, driver, battery status)
-    # Catalog
-    "catalog.trains",                      # app catalog train health
-    # v4 additions - Security / FIPS
-    "system.security.info.fips_available",  # FIPS availability (v25+)
-    "system.security.info.fips_enabled",   # FIPS enabled status (v25+)
-    # v4 additions - TrueNAS identity
-    "truenas.get_chassis_hardware",        # chassis model string
-    # v4 additions - Cloud management
-    "tn_connect.config",                   # TrueNAS Connect (cloud management) status
-    "truecommand.config",                  # TrueCommand full status enum
-    # v4 additions - Audit
-    "audit.config",                        # Audit dataset space and quotas
-    # ── v5 additions ──
-    # Scrub scheduling
-    "pool.scrub.query",                    # scrub task inventory + state
-    # Snapshots (NOTE: can be large — limited by query_limit)
-    "pool.snapshot.query",                 # global snapshot inventory
-    # Resilver config
-    "pool.resilver.config",                # resilver priority scheduling
-    # Cloud backup tasks
-    "cloud_backup.query",                  # cloud backup task inventory
-    # Cron jobs
-    "cronjob.query",                       # cron job inventory
-    # Disk usage
-    "disk.get_used",                       # which disks are in use
-    # DNS
-    "dns.query",                           # DNS resolver config
-    # Protocol configs
-    "smb.config",                          # SMB server config
-    "nfs.config",                          # NFS server config
-    "ssh.config",                          # SSH daemon config
-    "ftp.config",                          # FTP config
-    "snmp.config",                         # SNMP agent config
-    # System configs
-    "system.advanced.config",              # advanced system settings
-    "system.general.config",               # UI/general settings
-    "system.global.id",                    # system global unique ID
-    # KMIP / support
-    "kmip.config",                         # KMIP key management
-    "support.is_available",                # proactive support availability
-    # System dataset
-    "systemdataset.config",                # system dataset pool assignment
-    # User / group / privilege
-    "user.query",                          # local user inventory
-    "group.query",                         # local group inventory
-    "privilege.query",                     # RBAC privilege entries
-    # Routes / tunables
-    "staticroute.query",                   # static routes
-    "tunable.query",                       # kernel tunables
-    # iSCSI inventory
-    "iscsi.target.query",                  # iSCSI targets
-    "iscsi.portal.query",                  # iSCSI portals
-    "iscsi.extent.query",                  # iSCSI extents
-    "iscsi.initiator.query",               # iSCSI initiator groups
-    # NVMe-oF extended
-    "nvmet.host.query",                    # NVMe-oF allowed hosts
-    "nvmet.namespace.query",               # NVMe-oF namespaces
-    # Network config
-    "network.configuration.config",        # hostname, domain, proxy
-    # Docker images
-    "app.image.query",                     # Docker image inventory
-    # Replication / reporting config
-    "replication.config.config",           # replication global config
-    "reporting.exporters.query",           # reporting exporter plugins
-    "reporting.config",                    # reporting/netdata config
-    # Security posture
-    "auth.twofactor.config",               # 2FA configuration
-    # Email / alert services
-    "mail.config",                         # outgoing email config
-    "alertservice.query",                  # alert notification services
-    "alertclasses.config",                 # alert class policies
-    # Init/shutdown scripts
-    "initshutdownscript.query",            # init/shutdown scripts
-    # Keychain credentials
-    "keychaincredential.query",            # SSH keypairs / credentials
-    # Kerberos
-    "kerberos.config",                     # kerberos realm config
-    # Dataset details (richer than pool.dataset.query)
-    "pool.dataset.details",                # extended dataset info
-]
-
-
-_COLLECTOR_SCALAR_METRICS: tuple[Gauge, ...] = (
-    SCRAPE_SUCCESS,
-    LAST_SCRAPE_TS,
-    SCRAPE_DURATION,
-    SYSTEM_READY,
-    HOST_UPTIME_SECONDS,
-    HOST_PHYSICAL_MEMORY_BYTES,
-    HOST_CPU_CORES,
-    HOST_PHYSICAL_CPU_CORES,
-    POOL_COUNT,
-    DATASET_COUNT,
-    SERVICE_COUNT,
-    ALERT_COUNT,
-    ALERT_DISMISSED_COUNT,
-    ALERT_ONE_SHOT_COUNT,
-    ALERT_OLDEST_TS,
-    MEMORY_PHYSICAL_TOTAL_BYTES,
-    MEMORY_PHYSICAL_AVAILABLE_BYTES,
-    MEMORY_PHYSICAL_FREE_BYTES,
-    MEMORY_PHYSICAL_CACHED_BYTES,
-    MEMORY_PHYSICAL_BUFFERS_BYTES,
-    MEMORY_PHYSICAL_USED_BYTES,
-    MEMORY_SWAP_TOTAL_BYTES,
-    MEMORY_SWAP_FREE_BYTES,
-    MEMORY_SWAP_USED_BYTES,
-    CPU_USAGE_PERCENT,
-    CPU_USER_PERCENT,
-    CPU_SYSTEM_PERCENT,
-    CPU_IOWAIT_PERCENT,
-    CPU_IDLE_PERCENT,
-    CPU_INTERRUPT_PERCENT,
-    ZFS_ARC_SIZE_BYTES,
-    ZFS_ARC_MAX_SIZE_BYTES,
-    ZFS_ARC_MIN_SIZE_BYTES,
-    ZFS_ARC_HIT_RATIO,
-    ZFS_ARC_HITS_RATE,
-    ZFS_ARC_MISSES_RATE,
-    ZFS_ARC_FREE_MEMORY_BYTES,
-    ZFS_ARC_AVAILABLE_BYTES,
-    ZFS_DEMAND_ACCESSES_RATE,
-    ZFS_DEMAND_DATA_ACCESSES_RATE,
-    ZFS_DEMAND_DATA_HITS_RATE,
-    ZFS_DEMAND_DATA_MISSES_RATE,
-    ZFS_DEMAND_DATA_HIT_RATIO,
-    ZFS_DEMAND_DATA_IO_HITS_RATE,
-    ZFS_DEMAND_DATA_IO_HIT_RATIO,
-    ZFS_DEMAND_DATA_MISS_RATIO,
-    ZFS_DEMAND_META_ACCESSES_RATE,
-    ZFS_DEMAND_META_HITS_RATE,
-    ZFS_DEMAND_META_MISSES_RATE,
-    ZFS_DEMAND_META_HIT_RATIO,
-    ZFS_DEMAND_META_IO_HITS_RATE,
-    ZFS_DEMAND_META_IO_HIT_RATIO,
-    ZFS_DEMAND_META_MISS_RATIO,
-    ZFS_L2ARC_HITS_RATE,
-    ZFS_L2ARC_MISSES_RATE,
-    ZFS_L2ARC_HIT_RATIO,
-    ZFS_L2ARC_MISS_RATIO,
-    ZFS_L2ARC_READ_BYTES_RATE,
-    ZFS_L2ARC_WRITE_BYTES_RATE,
-    ZFS_L2ARC_ACCESSES_RATE,
-)
-
-_COLLECTOR_SERIES_METRICS: tuple[Gauge, ...] = (
-    EXPORTER_INFO,
-    API_CALL_SUCCESS,
-    API_CALL_DURATION,
-    SYSTEM_STATE,
-    HOST_INFO,
-    HOST_LOAD_AVERAGE,
-    POOL_HEALTHY,
-    POOL_WARNING,
-    POOL_STATUS,
-    POOL_SIZE_BYTES,
-    POOL_ALLOCATED_BYTES,
-    POOL_FREE_BYTES,
-    POOL_SCAN_PERCENT,
-    POOL_FRAGMENTATION,
-    DATASET_USED_BYTES,
-    DATASET_AVAILABLE_BYTES,
-    DATASET_REFERENCED_BYTES,
-    DATASET_QUOTA_BYTES,
-    DATASET_REFQUOTA_BYTES,
-    DATASET_SNAPSHOT_COUNT,
-    SERVICE_ENABLED,
-    SERVICE_RUNNING,
-    ALERT_COUNT_BY_LEVEL,
-    ALERT_COUNT_BY_SOURCE,
-    ALERT_COUNT_BY_CLASS,
-    ALERT_COUNT_BY_NODE,
-    ALERT_LAST_OCCURRENCE_TS,
-    TASK_COUNT,
-    TASK_ENABLED,
-    TASK_STATE,
-    TASK_LAST_RUN_TS,
-    EVENT_STREAM_UP,
-    EVENT_LAST_MESSAGE_TS,
-    CPU_CORE_USAGE_PERCENT,
-    CPU_TEMPERATURE_C,
-    DISK_READ_BYTES_RATE,
-    DISK_WRITE_BYTES_RATE,
-    DISK_READ_OPS_RATE,
-    DISK_WRITE_OPS_RATE,
-    DISK_BUSY_PERCENT,
-    NETWORK_RX_BYTES_RATE,
-    NETWORK_TX_BYTES_RATE,
-    POOL_REALTIME_READ_BYTES,
-    POOL_REALTIME_WRITE_BYTES,
-    APP_CPU_PERCENT,
-    APP_MEMORY_BYTES,
-    APP_NET_RX_BYTES_RATE,
-    APP_NET_TX_BYTES_RATE,
-    APP_BLKIO_READ_BYTES,
-    APP_BLKIO_WRITE_BYTES,
-    VIRT_INSTANCE_CPU,
-    VIRT_INSTANCE_MEM,
-)
-
-_COLLECTOR_EVENT_SCALAR_NAMES = {metric._name for metric in _COLLECTOR_SCALAR_METRICS}
-_COLLECTOR_EVENT_SERIES_NAMES = {metric._name for metric in _COLLECTOR_SERIES_METRICS}
-_COLLECTOR_METRICS_BY_NAME = {
-    metric._name: metric for metric in (*_COLLECTOR_SCALAR_METRICS, *_COLLECTOR_SERIES_METRICS)
-}
-
-_REALTIME_EVENT_SCALAR_METRICS: tuple[Gauge, ...] = (
-    CPU_USAGE_PERCENT,
-    CPU_USER_PERCENT,
-    CPU_SYSTEM_PERCENT,
-    CPU_IOWAIT_PERCENT,
-    CPU_IDLE_PERCENT,
-    CPU_INTERRUPT_PERCENT,
-    MEMORY_PHYSICAL_TOTAL_BYTES,
-    MEMORY_PHYSICAL_AVAILABLE_BYTES,
-    MEMORY_PHYSICAL_FREE_BYTES,
-    MEMORY_PHYSICAL_CACHED_BYTES,
-    MEMORY_PHYSICAL_BUFFERS_BYTES,
-    MEMORY_PHYSICAL_USED_BYTES,
-    MEMORY_SWAP_TOTAL_BYTES,
-    MEMORY_SWAP_FREE_BYTES,
-    MEMORY_SWAP_USED_BYTES,
-    ZFS_ARC_SIZE_BYTES,
-    ZFS_ARC_MAX_SIZE_BYTES,
-    ZFS_ARC_MIN_SIZE_BYTES,
-    ZFS_ARC_HIT_RATIO,
-    ZFS_ARC_HITS_RATE,
-    ZFS_ARC_MISSES_RATE,
-    ZFS_ARC_FREE_MEMORY_BYTES,
-    ZFS_ARC_AVAILABLE_BYTES,
-    ZFS_DEMAND_ACCESSES_RATE,
-    ZFS_DEMAND_DATA_ACCESSES_RATE,
-    ZFS_DEMAND_DATA_HITS_RATE,
-    ZFS_DEMAND_DATA_MISSES_RATE,
-    ZFS_DEMAND_DATA_HIT_RATIO,
-    ZFS_DEMAND_DATA_IO_HITS_RATE,
-    ZFS_DEMAND_DATA_IO_HIT_RATIO,
-    ZFS_DEMAND_DATA_MISS_RATIO,
-    ZFS_DEMAND_META_ACCESSES_RATE,
-    ZFS_DEMAND_META_HITS_RATE,
-    ZFS_DEMAND_META_MISSES_RATE,
-    ZFS_DEMAND_META_HIT_RATIO,
-    ZFS_DEMAND_META_IO_HITS_RATE,
-    ZFS_DEMAND_META_IO_HIT_RATIO,
-    ZFS_DEMAND_META_MISS_RATIO,
-    ZFS_L2ARC_HITS_RATE,
-    ZFS_L2ARC_MISSES_RATE,
-    ZFS_L2ARC_HIT_RATIO,
-    ZFS_L2ARC_MISS_RATIO,
-    ZFS_L2ARC_READ_BYTES_RATE,
-    ZFS_L2ARC_WRITE_BYTES_RATE,
-    ZFS_L2ARC_ACCESSES_RATE,
-)
-
-_EVENT_METRICS: dict[str, tuple[Gauge, ...]] = {
-    "reporting.realtime": _REALTIME_EVENT_SCALAR_METRICS + (
-        CPU_CORE_USAGE_PERCENT,
-        CPU_TEMPERATURE_C,
-        DISK_READ_BYTES_RATE,
-        DISK_WRITE_BYTES_RATE,
-        DISK_READ_OPS_RATE,
-        DISK_WRITE_OPS_RATE,
-        DISK_BUSY_PERCENT,
-        NETWORK_RX_BYTES_RATE,
-        NETWORK_TX_BYTES_RATE,
-        POOL_REALTIME_READ_BYTES,
-        POOL_REALTIME_WRITE_BYTES,
-    ),
-    "app.stats": (
-        APP_CPU_PERCENT,
-        APP_MEMORY_BYTES,
-        APP_NET_RX_BYTES_RATE,
-        APP_NET_TX_BYTES_RATE,
-        APP_BLKIO_READ_BYTES,
-        APP_BLKIO_WRITE_BYTES,
-    ),
-    "virt.instance.metrics": (VIRT_INSTANCE_CPU, VIRT_INSTANCE_MEM),
-}
-_EVENT_SOURCE_BY_METRIC_NAME = {
-    metric._name: event for event, metrics in _EVENT_METRICS.items() for metric in metrics
-}
-
 
 # ---------------------------------------------------------------------------
 # Main exporter class
@@ -1333,7 +652,7 @@ class TrueNASExporter:
     def __init__(self, config: Config) -> None:
         self.config = config
         self.exporter_mode = config.exporter_mode
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._event_thread: threading.Thread | None = None
         self._all_methods_discovered = False
         self._event_metric_series: dict[Any, set[tuple[str, ...]]] = {}
@@ -1372,44 +691,24 @@ class TrueNASExporter:
     def _is_collector_mode(self) -> bool:
         return self.exporter_mode == "collector"
 
-    def _snapshot_set_scalar(
-        self,
-        snapshot: dict[str, dict[str, Any]],
-        metric: Gauge,
-        value: float,
-    ) -> None:
-        snapshot["scalar"][metric._name] = float(value)
-
-    def _snapshot_set_series(
-        self,
-        snapshot: dict[str, dict[str, Any]],
-        metric: Gauge,
-        labels: tuple[str, ...],
-        value: float,
-    ) -> None:
-        metric_name = metric._name
-        if metric_name not in snapshot["series"]:
-            snapshot["series"][metric_name] = {}
-        snapshot["series"][metric_name][labels] = float(value)
-
     def _merge_event_snapshot(self, snapshot: dict[str, dict[str, Any]]) -> None:
         with self._lock:
-            for metric_name, value in self._collector_event_scalars.items():
-                source = _EVENT_SOURCE_BY_METRIC_NAME.get(metric_name)
+            for name, value in self._collector_event_scalars.items():
+                source = _EVENT_SOURCE_BY_METRIC_NAME.get(name)
                 if source is not None and not self._event_is_fresh(source):
                     continue
-                snapshot["scalar"][metric_name] = value
-            for metric_name, series in self._collector_event_series.items():
-                source = _EVENT_SOURCE_BY_METRIC_NAME.get(metric_name)
+                snapshot["scalar"][name] = value
+            for name, series in self._collector_event_series.items():
+                source = _EVENT_SOURCE_BY_METRIC_NAME.get(name)
                 if source is not None and not self._event_is_fresh(source):
                     continue
-                snapshot["series"][metric_name] = dict(series)
+                snapshot["series"][name] = dict(series)
             if self._collector_event_messages:
-                snapshot["series"][EVENT_LAST_MESSAGE_TS._name] = {
+                snapshot["series"][metric_name(EVENT_LAST_MESSAGE_TS)] = {
                     (event,): value for event, value in self._collector_event_messages.items()
                 }
             if self._collector_event_stream_up:
-                snapshot["series"][EVENT_STREAM_UP._name] = {
+                snapshot["series"][metric_name(EVENT_STREAM_UP)] = {
                     (event,): value for event, value in self._collector_event_stream_up.items()
                 }
 
@@ -1443,15 +742,15 @@ class TrueNASExporter:
             for event, metrics in _EVENT_METRICS.items():
                 fresh = self._event_is_fresh(event)
                 for metric in metrics:
-                    metric_name = metric._name
+                    name = metric_name(metric)
                     if metric in _REALTIME_EVENT_SCALAR_METRICS:
-                        value = self._collector_event_scalars.get(metric_name)
+                        value = self._collector_event_scalars.get(name)
                         metric.set(value if fresh and value is not None else float("nan"))
                         continue
                     metric.clear()
                     if not fresh:
                         continue
-                    for labels, value in self._collector_event_series.get(metric_name, {}).items():
+                    for labels, value in self._collector_event_series.get(name, {}).items():
                         metric.labels(*labels).set(value)
 
             EVENT_LAST_MESSAGE_TS.clear()
@@ -1522,11 +821,6 @@ class TrueNASExporter:
         series: dict[tuple[str, ...], float],
         series_key: Any | None = None,
     ) -> None:
-        if self._is_collector_mode() and getattr(metric, "_name", None) in _COLLECTOR_EVENT_SERIES_NAMES:
-            with self._lock:
-                self._collector_event_series[metric._name] = dict(series)
-            return
-
         key = metric if series_key is None else series_key
         previous = self._event_metric_series.get(key, set())
         current = set(series)
@@ -1535,7 +829,7 @@ class TrueNASExporter:
             try:
                 metric.remove(*label_values)
             except Exception:
-                LOG.debug("Failed removing stale event series from %s", getattr(metric, "_name", metric), exc_info=True)
+                LOG.debug("Failed removing stale event series from %s", metric_name(metric), exc_info=True)
 
         for label_values, value in series.items():
             metric.labels(*label_values).set(value)
@@ -2080,523 +1374,6 @@ class TrueNASExporter:
     # Dedicated realtime event handlers
     # ------------------------------------------------------------------
 
-    def _handle_app_stats_event(self, payload: dict[str, Any]) -> None:
-        """Parse app.stats event payload into per-app Prometheus metrics.
-
-        TrueNAS pushes this event for each app container with CPU, memory,
-        network I/O, and block I/O stats. The payload contains a 'fields'
-        array with one entry per app.
-        """
-        fields = payload.get("fields")
-        if not isinstance(fields, list):
-            return
-
-        app_cpu: dict[tuple[str, ...], float] = {}
-        app_memory: dict[tuple[str, ...], float] = {}
-        app_net_rx: dict[tuple[str, ...], float] = {}
-        app_net_tx: dict[tuple[str, ...], float] = {}
-        app_blkio_read: dict[tuple[str, ...], float] = {}
-        app_blkio_write: dict[tuple[str, ...], float] = {}
-
-        for app_data in fields:
-            if not isinstance(app_data, dict):
-                continue
-            app_name = _str_label(app_data.get("app_name") or app_data.get("app"), "unknown")
-
-            cpu = _as_float(_first_not_none(app_data.get("cpu_usage"), app_data.get("cpu")))
-            if cpu is not None:
-                app_cpu[(app_name,)] = cpu
-
-            mem = _as_float(app_data.get("memory"))
-            if mem is not None:
-                app_memory[(app_name,)] = mem
-
-            networks = app_data.get("networks")
-            if isinstance(networks, list):
-                for net in networks:
-                    if not isinstance(net, dict):
-                        continue
-                    iface = net.get("interface_name", "unknown")
-                    rx = _as_float(net.get("rx_bytes"))
-                    tx = _as_float(net.get("tx_bytes"))
-                    if rx is not None:
-                        app_net_rx[(app_name, _str_label(iface))] = rx
-                    if tx is not None:
-                        app_net_tx[(app_name, _str_label(iface))] = tx
-
-            blkio = app_data.get("blkio")
-            if isinstance(blkio, dict):
-                blkio_read = _as_float(blkio.get("read"))
-                if blkio_read is not None:
-                    app_blkio_read[(app_name,)] = blkio_read
-
-                blkio_write = _as_float(blkio.get("write"))
-                if blkio_write is not None:
-                    app_blkio_write[(app_name,)] = blkio_write
-
-        self._replace_event_metric_series(APP_CPU_PERCENT, app_cpu)
-        self._replace_event_metric_series(APP_MEMORY_BYTES, app_memory)
-        self._replace_event_metric_series(APP_NET_RX_BYTES_RATE, app_net_rx)
-        self._replace_event_metric_series(APP_NET_TX_BYTES_RATE, app_net_tx)
-        self._replace_event_metric_series(APP_BLKIO_READ_BYTES, app_blkio_read)
-        self._replace_event_metric_series(APP_BLKIO_WRITE_BYTES, app_blkio_write)
-
-    def _handle_virt_metrics_event(self, payload: dict[str, Any]) -> None:
-        """Parse virt.instance.metrics event payload into per-instance Prometheus metrics.
-
-        TrueNAS pushes this event for Incus/LXD instances with live CPU and memory stats.
-        """
-        fields = payload.get("fields")
-        if not isinstance(fields, list):
-            return
-
-        virt_cpu: dict[tuple[str, ...], float] = {}
-        virt_mem: dict[tuple[str, ...], float] = {}
-
-        for inst_data in fields:
-            if not isinstance(inst_data, dict):
-                continue
-            inst_name = _str_label(inst_data.get("name") or inst_data.get("instance"), "unknown")
-
-            cpu = _as_float(_first_not_none(inst_data.get("cpu"), inst_data.get("cpu_usage")))
-            if cpu is not None:
-                virt_cpu[(inst_name,)] = cpu
-
-            mem = _as_float(_first_not_none(inst_data.get("memory"), inst_data.get("memory_usage")))
-            if mem is not None:
-                virt_mem[(inst_name,)] = mem
-
-        self._replace_event_metric_series(VIRT_INSTANCE_CPU, virt_cpu)
-        self._replace_event_metric_series(VIRT_INSTANCE_MEM, virt_mem)
-
-    def _handle_realtime_event(self, payload: dict[str, Any]) -> None:
-        """Parse reporting.realtime event payload into dedicated Prometheus metrics.
-
-        TrueNAS pushes this event ~every second with CPU, memory, disk I/O,
-        network I/O, and ZFS ARC data. The structure varies slightly between
-        TrueNAS versions but the keys below are stable across 24.x and 25.x.
-        All access is defensive (.get()) so unknown payload shapes are silently
-        skipped rather than crashing the event loop.
-        """
-        # ── CPU ──────────────────────────────────────────────────────────────
-        cpu_section = payload.get("cpu") or {}
-        cpu_data = cpu_section.get("cpu") or {}
-
-        total_cpu_percent: float | None = None
-        user_cpu_percent: float | None = None
-        idle_cpu_percent: float | None = None
-
-        cpu_percent_fields = (
-            (CPU_USAGE_PERCENT, ("percent", "usage_percent", "usage")),
-            (CPU_USER_PERCENT, ("user", "user_percent", "user_usage")),
-            (CPU_SYSTEM_PERCENT, ("system", "system_percent", "sys")),
-            (CPU_IOWAIT_PERCENT, ("iowait", "io_wait", "wait", "iowait_percent")),
-            (CPU_IDLE_PERCENT, ("idle", "idle_percent")),
-            (CPU_INTERRUPT_PERCENT, ("interrupt", "interrupt_percent", "irq", "softirq")),
-        )
-
-        for gauge, keys in cpu_percent_fields:
-            val = None
-            for container in (cpu_data, cpu_section):
-                if not isinstance(container, dict):
-                    continue
-                for key in keys:
-                    val = _as_float(container.get(key))
-                    if val is not None:
-                        break
-                if val is not None:
-                    break
-            if val is None:
-                continue
-            gauge.set(val)
-            if gauge is CPU_USAGE_PERCENT:
-                total_cpu_percent = val
-            elif gauge is CPU_USER_PERCENT:
-                user_cpu_percent = val
-            elif gauge is CPU_IDLE_PERCENT:
-                idle_cpu_percent = val
-
-        # TrueNAS 25.x reporting.realtime commonly exposes only aggregate
-        # `cpu.usage` plus per-core usage/temperature (cpu0..cpuN). If a
-        # detailed user/system split is unavailable, populate user with total
-        # usage so dashboards still reflect live host load.
-        if user_cpu_percent is None and total_cpu_percent is not None:
-            CPU_USER_PERCENT.set(total_cpu_percent)
-
-        # Likewise, when explicit idle is absent, infer it from total usage.
-        if idle_cpu_percent is None and total_cpu_percent is not None:
-            CPU_IDLE_PERCENT.set(max(0.0, 100.0 - total_cpu_percent))
-
-        # Per-core CPU data is not stable across TrueNAS builds. Prefer the
-        # documented per_cpu shape, but also accept common alternates seen in
-        # Netdata-backed payloads where cores are emitted as cpu0/core1 dicts or
-        # lists of {core, percent} objects.
-        cpu_core_usage: dict[tuple[str, ...], float] = {}
-        for per_cpu_candidate in (
-            cpu_data.get("per_cpu"),
-            cpu_section.get("per_cpu"),
-            cpu_data.get("usage"),
-            cpu_data.get("usage_percent"),
-            cpu_section.get("usage"),
-            cpu_section.get("usage_percent"),
-            cpu_section.get("cores"),
-        ):
-            cpu_core_usage = _extract_labeled_numeric_series(
-                per_cpu_candidate,
-                value_keys=("percent", "usage", "value"),
-                normalize_label=True,
-            )
-            if cpu_core_usage:
-                break
-        if not cpu_core_usage and isinstance(cpu_section, dict):
-            for core_name, core_payload in cpu_section.items():
-                if not isinstance(core_payload, dict):
-                    continue
-                if not re.fullmatch(r"cpu\d+", str(core_name)):
-                    continue
-                usage_val = _as_float(_first_not_none(
-                    core_payload.get("usage"),
-                    core_payload.get("percent"),
-                    core_payload.get("value"),
-                ))
-                if usage_val is not None:
-                    cpu_core_usage[(_normalize_core_label(core_name),)] = usage_val
-        self._replace_event_metric_series(CPU_CORE_USAGE_PERCENT, cpu_core_usage)
-
-        # Per-core temperatures are even less consistent: some systems expose
-        # temperature, others temperatures/temp, and labels may be 0/1, cpu0,
-        # or core1.
-        cpu_temps: dict[tuple[str, ...], float] = {}
-        for temp_candidate in (
-            cpu_section.get("temperature"),
-            cpu_section.get("temperatures"),
-            cpu_data.get("temperature"),
-            cpu_data.get("temperatures"),
-            cpu_section.get("temp"),
-            cpu_data.get("temp"),
-        ):
-            cpu_temps = _extract_labeled_numeric_series(
-                temp_candidate,
-                value_keys=("temperature", "temp", "celsius", "value"),
-                normalize_label=True,
-            )
-            if cpu_temps:
-                break
-        if not cpu_temps and isinstance(cpu_section, dict):
-            for core_name, core_payload in cpu_section.items():
-                if not isinstance(core_payload, dict):
-                    continue
-                if not re.fullmatch(r"cpu\d+", str(core_name)):
-                    continue
-                temp_val = _as_float(_first_not_none(
-                    core_payload.get("temp"),
-                    core_payload.get("temperature"),
-                    core_payload.get("celsius"),
-                    core_payload.get("value"),
-                ))
-                if temp_val is not None:
-                    cpu_temps[(_normalize_core_label(core_name),)] = temp_val
-        self._replace_event_metric_series(CPU_TEMPERATURE_C, cpu_temps)
-
-        # ── Memory ───────────────────────────────────────────────────────────
-        mem = payload.get("memory") or {}
-
-        # TrueNAS 24.x / 25.x field names (may vary; try both)
-        total = _as_float(_first_not_none(mem.get("physical_memory_total"), mem.get("total")))
-        avail = _as_float(_first_not_none(mem.get("physical_memory_available"), mem.get("available"), mem.get("avail")))
-        free = _as_float(_first_not_none(mem.get("physical_memory_free"), mem.get("free")))
-        cached = _as_float(_first_not_none(mem.get("physical_memory_cached"), mem.get("cached")))
-        buffers = _as_float(_first_not_none(mem.get("physical_memory_buffers"), mem.get("buffers")))
-        swap_total = _as_float(mem.get("swap_total"))
-        swap_free  = _as_float(mem.get("swap_free"))
-
-        # FreeBSD-style 'classes' sub-dict (older TrueNAS builds)
-        classes = mem.get("classes")
-        if isinstance(classes, dict):
-            if total is None:
-                # Sum all non-free classes as a proxy
-                total = _as_float(sum(v for v in classes.values() if isinstance(v, (int, float))))
-            if free is None:
-                free = _as_float(classes.get("free"))
-            if cached is None:
-                cached = _as_float(classes.get("cache"))
-
-        # Swap may be nested under "swap" key
-        swap_obj = mem.get("swap")
-        if isinstance(swap_obj, dict):
-            if swap_total is None:
-                swap_total = _as_float(swap_obj.get("total"))
-            if swap_free is None:
-                # Try "free" key first; if absent, compute from total - used
-                swap_free_raw = _as_float(swap_obj.get("free"))
-                if swap_free_raw is not None:
-                    swap_free = swap_free_raw
-                else:
-                    swap_used_raw = _as_float(swap_obj.get("used"))
-                    if swap_used_raw is not None and swap_total is not None:
-                        swap_free = swap_total - swap_used_raw
-
-        for val, gauge in (
-            (total,      MEMORY_PHYSICAL_TOTAL_BYTES),
-            (avail,      MEMORY_PHYSICAL_AVAILABLE_BYTES),
-            (free,       MEMORY_PHYSICAL_FREE_BYTES),
-            (cached,     MEMORY_PHYSICAL_CACHED_BYTES),
-            (buffers,    MEMORY_PHYSICAL_BUFFERS_BYTES),
-            (swap_total, MEMORY_SWAP_TOTAL_BYTES),
-            (swap_free,  MEMORY_SWAP_FREE_BYTES),
-        ):
-            if val is not None:
-                gauge.set(val)
-
-        if total is not None and avail is not None:
-            MEMORY_PHYSICAL_USED_BYTES.set(total - avail)
-        if swap_total is not None and swap_free is not None:
-            MEMORY_SWAP_USED_BYTES.set(swap_total - swap_free)
-
-        # ── Disk I/O ─────────────────────────────────────────────────────────
-        # In v25.10.2 the API schema names this key "disls" (confirmed in the
-        # reporting.realtime event schema). Fall back to "disks" for backward
-        # compatibility with v24.x deployments.
-        #
-        # v25.10.2 schema: disls = {busy, read_bytes, write_bytes, read_ops, write_ops}
-        #   — aggregate across all disks, NOT a per-disk mapping.
-        # v24.x / some builds: disls = {disk_name: {busy, read_bytes, ...}}
-        #   — per-disk mapping.
-        # We detect which format we have by checking whether the first value is a dict.
-        disks = _first_not_none(payload.get("disls"), payload.get("disks"))
-        disk_read_bytes: dict[tuple[str, ...], float] = {}
-        disk_write_bytes: dict[tuple[str, ...], float] = {}
-        disk_read_ops: dict[tuple[str, ...], float] = {}
-        disk_write_ops: dict[tuple[str, ...], float] = {}
-        disk_busy: dict[tuple[str, ...], float] = {}
-        if isinstance(disks, dict):
-            _disk_keys = (
-                ("read_bytes", disk_read_bytes),
-                ("write_bytes", disk_write_bytes),
-                ("read_ops", disk_read_ops),
-                ("write_ops", disk_write_ops),
-                ("busy", disk_busy),
-            )
-            first_val = next(iter(disks.values()), None)
-            if isinstance(first_val, dict):
-                # Per-disk format: {disk_name: {busy: float, ...}}
-                for disk_name, disk_data in disks.items():
-                    if not isinstance(disk_data, dict):
-                        continue
-                    dn = _str_label(disk_name)
-                    for key, bucket in _disk_keys:
-                        v = _as_float(disk_data.get(key))
-                        if v is not None:
-                            bucket[(dn,)] = v
-            else:
-                # Aggregate format (v25.10.2): {busy: float, read_bytes: float, ...}
-                for key, bucket in _disk_keys:
-                    v = _as_float(disks.get(key))
-                    if v is not None:
-                        bucket[("total",)] = v
-
-        self._replace_event_metric_series(DISK_READ_BYTES_RATE, disk_read_bytes)
-        self._replace_event_metric_series(DISK_WRITE_BYTES_RATE, disk_write_bytes)
-        self._replace_event_metric_series(DISK_READ_OPS_RATE, disk_read_ops)
-        self._replace_event_metric_series(DISK_WRITE_OPS_RATE, disk_write_ops)
-        self._replace_event_metric_series(DISK_BUSY_PERCENT, disk_busy)
-
-        # ── Network I/O ───────────────────────────────────────────────────────
-        interfaces = payload.get("interfaces")
-        network_rx: dict[tuple[str, ...], float] = {}
-        network_tx: dict[tuple[str, ...], float] = {}
-        if isinstance(interfaces, dict):
-            for iface_name, iface_data in interfaces.items():
-                if not isinstance(iface_data, dict):
-                    continue
-                iface = _str_label(iface_name)
-                for key, gauge in (
-                    ("received_bytes",        NETWORK_RX_BYTES_RATE),
-                    ("sent_bytes",            NETWORK_TX_BYTES_RATE),
-                    ("received_bytes_rate",   NETWORK_RX_BYTES_RATE),   # prefer rate keys
-                    ("sent_bytes_rate",       NETWORK_TX_BYTES_RATE),
-                ):
-                    v = _as_float(iface_data.get(key))
-                    if v is not None:
-                        bucket = network_rx if gauge is NETWORK_RX_BYTES_RATE else network_tx
-                        bucket[(iface,)] = v
-
-        self._replace_event_metric_series(NETWORK_RX_BYTES_RATE, network_rx)
-        self._replace_event_metric_series(NETWORK_TX_BYTES_RATE, network_tx)
-
-        # ── ZFS ARC (v24.x fallback) ────────────────────────────────────────
-        # May appear as payload["zfs"] or payload["virtual_memory"]
-        for zfs_key in ("zfs", "arc"):
-            zfs = payload.get(zfs_key)
-            if isinstance(zfs, dict):
-                for key, gauge in (
-                    ("arc_size",             ZFS_ARC_SIZE_BYTES),
-                    ("arc_max_size",         ZFS_ARC_MAX_SIZE_BYTES),
-                    ("arc_min_size",         ZFS_ARC_MIN_SIZE_BYTES),
-                    ("cache_hit_ratio",      ZFS_ARC_HIT_RATIO),
-                    ("arc_hit_ratio",        ZFS_ARC_HIT_RATIO),
-                    ("arc_hits",             ZFS_ARC_HITS_RATE),
-                    ("arc_misses",           ZFS_ARC_MISSES_RATE),
-                ):
-                    v = _as_float(zfs.get(key))
-                    if v is not None:
-                        gauge.set(v)
-
-        # ── ZFS ARC v25+ (from memory section) ──────────────────────────────
-        # In v25, arc_size, arc_free_memory, arc_available_memory moved to memory section
-        mem = payload.get("memory")
-        if isinstance(mem, dict):
-            arc_size = _as_float(mem.get("arc_size"))
-            if arc_size is not None:
-                ZFS_ARC_SIZE_BYTES.set(arc_size)
-            arc_free = _as_float(mem.get("arc_free_memory"))
-            if arc_free is not None:
-                ZFS_ARC_FREE_MEMORY_BYTES.set(arc_free)
-            arc_avail = _as_float(mem.get("arc_available_memory"))
-            if arc_avail is not None:
-                ZFS_ARC_AVAILABLE_BYTES.set(arc_avail)
-
-        # ── ZFS v25+ demand data/metadata stats ─────────────────────────────
-        zfs_v25 = payload.get("zfs")
-        if isinstance(zfs_v25, dict):
-            # ── Total demand accesses (data + metadata combined) ─────────────
-            demand_accesses = _as_float(zfs_v25.get("demand_accesses_per_second"))
-            if demand_accesses is not None:
-                ZFS_DEMAND_ACCESSES_RATE.set(demand_accesses)
-
-            # ── Demand data stats ────────────────────────────────────────────
-            data_hits = _as_float(zfs_v25.get("demand_data_hits_per_second"))
-            if data_hits is not None:
-                ZFS_DEMAND_DATA_HITS_RATE.set(data_hits)
-            data_misses = _as_float(zfs_v25.get("demand_data_misses_per_second"))
-            if data_misses is not None:
-                ZFS_DEMAND_DATA_MISSES_RATE.set(data_misses)
-            data_accesses = _as_float(zfs_v25.get("demand_data_accesses_per_second"))
-            if data_accesses is not None:
-                ZFS_DEMAND_DATA_ACCESSES_RATE.set(data_accesses)
-
-            # Prefer API-provided hit/miss percentages over computed ratios —
-            # they account for prefetch hits that aren't in the hits+misses sum.
-            data_hit_pct = _as_float(zfs_v25.get("demand_data_hit_percentage"))
-            if data_hit_pct is not None:
-                ZFS_DEMAND_DATA_HIT_RATIO.set(data_hit_pct / 100.0)
-            elif data_hits is not None and data_misses is not None:
-                data_total = data_hits + data_misses
-                if data_total > 0:
-                    ZFS_DEMAND_DATA_HIT_RATIO.set(data_hits / data_total)
-
-            data_miss_pct = _as_float(zfs_v25.get("demand_data_miss_percentage"))
-            if data_miss_pct is not None:
-                ZFS_DEMAND_DATA_MISS_RATIO.set(data_miss_pct / 100.0)
-            elif data_hits is not None and data_misses is not None:
-                data_total = data_hits + data_misses
-                if data_total > 0:
-                    ZFS_DEMAND_DATA_MISS_RATIO.set(data_misses / data_total)
-
-            # Demand data I/O hits (raw rate + percentage)
-            data_io_hits = _as_float(zfs_v25.get("demand_data_io_hits_per_second"))
-            if data_io_hits is not None:
-                ZFS_DEMAND_DATA_IO_HITS_RATE.set(data_io_hits)
-            io_hit_pct = _as_float(zfs_v25.get("demand_data_io_hit_percentage"))
-            if io_hit_pct is not None:
-                ZFS_DEMAND_DATA_IO_HIT_RATIO.set(io_hit_pct / 100.0)
-
-            # ── Demand metadata stats ────────────────────────────────────────
-            meta_hits = _as_float(zfs_v25.get("demand_metadata_hits_per_second"))
-            if meta_hits is not None:
-                ZFS_DEMAND_META_HITS_RATE.set(meta_hits)
-            meta_misses = _as_float(zfs_v25.get("demand_metadata_misses_per_second"))
-            if meta_misses is not None:
-                ZFS_DEMAND_META_MISSES_RATE.set(meta_misses)
-            meta_accesses = _as_float(zfs_v25.get("demand_metadata_accesses_per_second"))
-            if meta_accesses is not None:
-                ZFS_DEMAND_META_ACCESSES_RATE.set(meta_accesses)
-
-            meta_hit_pct = _as_float(zfs_v25.get("demand_metadata_hit_percentage"))
-            if meta_hit_pct is not None:
-                ZFS_DEMAND_META_HIT_RATIO.set(meta_hit_pct / 100.0)
-            elif meta_hits is not None and meta_misses is not None:
-                meta_total = meta_hits + meta_misses
-                if meta_total > 0:
-                    ZFS_DEMAND_META_HIT_RATIO.set(meta_hits / meta_total)
-
-            meta_miss_pct = _as_float(zfs_v25.get("demand_metadata_miss_percentage"))
-            if meta_miss_pct is not None:
-                ZFS_DEMAND_META_MISS_RATIO.set(meta_miss_pct / 100.0)
-
-            meta_io_hits = _as_float(zfs_v25.get("demand_metadata_io_hits_per_second"))
-            if meta_io_hits is not None:
-                ZFS_DEMAND_META_IO_HITS_RATE.set(meta_io_hits)
-            meta_io_hit_pct = _as_float(zfs_v25.get("demand_metadata_io_hit_percentage"))
-            if meta_io_hit_pct is not None:
-                ZFS_DEMAND_META_IO_HIT_RATIO.set(meta_io_hit_pct / 100.0)
-
-            # ── Global ARC hit ratio (computed from data + metadata) ─────────
-            if data_hits is not None and meta_hits is not None and data_misses is not None and meta_misses is not None:
-                total_hits = data_hits + meta_hits
-                total_misses = data_misses + meta_misses
-                total_accesses = total_hits + total_misses
-                if total_accesses > 0:
-                    ZFS_ARC_HIT_RATIO.set(total_hits / total_accesses)
-                ZFS_ARC_HITS_RATE.set(total_hits)
-                ZFS_ARC_MISSES_RATE.set(total_misses)
-
-            # ── L2ARC stats ──────────────────────────────────────────────────
-            l2_hits = _as_float(zfs_v25.get("l2arc_hits_per_second"))
-            if l2_hits is not None:
-                ZFS_L2ARC_HITS_RATE.set(l2_hits)
-            l2_misses = _as_float(zfs_v25.get("l2arc_misses_per_second"))
-            if l2_misses is not None:
-                ZFS_L2ARC_MISSES_RATE.set(l2_misses)
-            l2_accesses = _as_float(zfs_v25.get("total_l2arc_accesses_per_second"))
-            if l2_accesses is not None:
-                ZFS_L2ARC_ACCESSES_RATE.set(l2_accesses)
-
-            l2_hit_pct = _as_float(zfs_v25.get("l2arc_access_hit_percentage"))
-            if l2_hit_pct is not None:
-                ZFS_L2ARC_HIT_RATIO.set(l2_hit_pct / 100.0)
-            elif l2_hits is not None and l2_misses is not None:
-                l2_total = l2_hits + l2_misses
-                if l2_total > 0:
-                    ZFS_L2ARC_HIT_RATIO.set(l2_hits / l2_total)
-
-            l2_miss_pct = _as_float(zfs_v25.get("l2arc_miss_percentage"))
-            if l2_miss_pct is not None:
-                ZFS_L2ARC_MISS_RATIO.set(l2_miss_pct / 100.0)
-
-            for key, gauge in (
-                ("bytes_read_per_second_from_the_l2arc", ZFS_L2ARC_READ_BYTES_RATE),
-                ("bytes_written_per_second_to_the_l2arc", ZFS_L2ARC_WRITE_BYTES_RATE),
-            ):
-                v = _as_float(zfs_v25.get(key))
-                if v is not None:
-                    gauge.set(v)
-
-        # ── Pool real-time I/O (v25+ pools section) ──────────────────────────
-        # The reporting.realtime event includes a "pools" object with per-pool
-        # I/O statistics. Exact field names may vary; extract defensively.
-        pools_rt = payload.get("pools")
-        pool_read: dict[tuple[str, ...], float] = {}
-        pool_write: dict[tuple[str, ...], float] = {}
-        if isinstance(pools_rt, dict):
-            for pool_name, pool_stats in pools_rt.items():
-                if not isinstance(pool_stats, dict):
-                    continue
-                pn = _str_label(pool_name)
-                read_bytes = _as_float(_first_not_none(
-                    pool_stats.get("read_bytes"), pool_stats.get("read_bytes_per_second")
-                ))
-                if read_bytes is not None:
-                    pool_read[(pn,)] = read_bytes
-                write_bytes = _as_float(_first_not_none(
-                    pool_stats.get("write_bytes"), pool_stats.get("write_bytes_per_second")
-                ))
-                if write_bytes is not None:
-                    pool_write[(pn,)] = write_bytes
-
-        self._replace_event_metric_series(POOL_REALTIME_READ_BYTES, pool_read)
-        self._replace_event_metric_series(POOL_REALTIME_WRITE_BYTES, pool_write)
-
     def _cache_app_stats_event(self, payload: dict[str, Any]) -> None:
         fields = payload.get("fields")
         if not isinstance(fields, list):
@@ -2644,12 +1421,12 @@ class TrueNASExporter:
                 if blkio_write is not None:
                     app_blkio_write[(app_name,)] = blkio_write
 
-        self._collector_event_series[APP_CPU_PERCENT._name] = app_cpu
-        self._collector_event_series[APP_MEMORY_BYTES._name] = app_memory
-        self._collector_event_series[APP_NET_RX_BYTES_RATE._name] = app_net_rx
-        self._collector_event_series[APP_NET_TX_BYTES_RATE._name] = app_net_tx
-        self._collector_event_series[APP_BLKIO_READ_BYTES._name] = app_blkio_read
-        self._collector_event_series[APP_BLKIO_WRITE_BYTES._name] = app_blkio_write
+        self._collector_event_series[metric_name(APP_CPU_PERCENT)] = app_cpu
+        self._collector_event_series[metric_name(APP_MEMORY_BYTES)] = app_memory
+        self._collector_event_series[metric_name(APP_NET_RX_BYTES_RATE)] = app_net_rx
+        self._collector_event_series[metric_name(APP_NET_TX_BYTES_RATE)] = app_net_tx
+        self._collector_event_series[metric_name(APP_BLKIO_READ_BYTES)] = app_blkio_read
+        self._collector_event_series[metric_name(APP_BLKIO_WRITE_BYTES)] = app_blkio_write
 
     def _cache_virt_metrics_event(self, payload: dict[str, Any]) -> None:
         fields = payload.get("fields")
@@ -2672,8 +1449,8 @@ class TrueNASExporter:
             if mem is not None:
                 virt_mem[(inst_name,)] = mem
 
-        self._collector_event_series[VIRT_INSTANCE_CPU._name] = virt_cpu
-        self._collector_event_series[VIRT_INSTANCE_MEM._name] = virt_mem
+        self._collector_event_series[metric_name(VIRT_INSTANCE_CPU)] = virt_cpu
+        self._collector_event_series[metric_name(VIRT_INSTANCE_MEM)] = virt_mem
 
     def _cache_realtime_event(self, payload: dict[str, Any]) -> None:
         cpu_section = payload.get("cpu") or {}
@@ -2687,7 +1464,7 @@ class TrueNASExporter:
             cpu_section.get("percent") if isinstance(cpu_section, dict) else None,
         ))
         if total_cpu_percent is not None:
-            self._collector_event_scalars[CPU_USAGE_PERCENT._name] = total_cpu_percent
+            self._collector_event_scalars[metric_name(CPU_USAGE_PERCENT)] = total_cpu_percent
 
         user_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("user"), cpu_section.get("user") if isinstance(cpu_section, dict) else None
@@ -2695,13 +1472,13 @@ class TrueNASExporter:
         if user_cpu_percent is None:
             user_cpu_percent = total_cpu_percent
         if user_cpu_percent is not None:
-            self._collector_event_scalars[CPU_USER_PERCENT._name] = user_cpu_percent
+            self._collector_event_scalars[metric_name(CPU_USER_PERCENT)] = user_cpu_percent
 
         system_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("system"), cpu_section.get("system") if isinstance(cpu_section, dict) else None
         ))
         if system_cpu_percent is not None:
-            self._collector_event_scalars[CPU_SYSTEM_PERCENT._name] = system_cpu_percent
+            self._collector_event_scalars[metric_name(CPU_SYSTEM_PERCENT)] = system_cpu_percent
 
         idle_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("idle"), cpu_section.get("idle") if isinstance(cpu_section, dict) else None
@@ -2709,19 +1486,19 @@ class TrueNASExporter:
         if idle_cpu_percent is None and total_cpu_percent is not None:
             idle_cpu_percent = max(0.0, 100.0 - total_cpu_percent)
         if idle_cpu_percent is not None:
-            self._collector_event_scalars[CPU_IDLE_PERCENT._name] = idle_cpu_percent
+            self._collector_event_scalars[metric_name(CPU_IDLE_PERCENT)] = idle_cpu_percent
 
         iowait_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("iowait"), cpu_section.get("iowait") if isinstance(cpu_section, dict) else None
         ))
         if iowait_cpu_percent is not None:
-            self._collector_event_scalars[CPU_IOWAIT_PERCENT._name] = iowait_cpu_percent
+            self._collector_event_scalars[metric_name(CPU_IOWAIT_PERCENT)] = iowait_cpu_percent
 
         interrupt_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("interrupt"), cpu_section.get("interrupt") if isinstance(cpu_section, dict) else None
         ))
         if interrupt_cpu_percent is not None:
-            self._collector_event_scalars[CPU_INTERRUPT_PERCENT._name] = interrupt_cpu_percent
+            self._collector_event_scalars[metric_name(CPU_INTERRUPT_PERCENT)] = interrupt_cpu_percent
 
         cpu_core_usage: dict[tuple[str, ...], float] = {}
         for per_cpu_candidate in (
@@ -2737,7 +1514,7 @@ class TrueNASExporter:
             )
             if cpu_core_usage:
                 break
-        self._collector_event_series[CPU_CORE_USAGE_PERCENT._name] = cpu_core_usage
+        self._collector_event_series[metric_name(CPU_CORE_USAGE_PERCENT)] = cpu_core_usage
 
         cpu_temps: dict[tuple[str, ...], float] = {}
         for temp_candidate in (
@@ -2753,7 +1530,7 @@ class TrueNASExporter:
             )
             if cpu_temps:
                 break
-        self._collector_event_series[CPU_TEMPERATURE_C._name] = cpu_temps
+        self._collector_event_series[metric_name(CPU_TEMPERATURE_C)] = cpu_temps
 
         mem = payload.get("memory")
         if isinstance(mem, dict):
@@ -2766,33 +1543,33 @@ class TrueNASExporter:
             swap_free = _as_float(mem.get("swap_free"))
 
             if total is not None:
-                self._collector_event_scalars[MEMORY_PHYSICAL_TOTAL_BYTES._name] = total
+                self._collector_event_scalars[metric_name(MEMORY_PHYSICAL_TOTAL_BYTES)] = total
             if avail is not None:
-                self._collector_event_scalars[MEMORY_PHYSICAL_AVAILABLE_BYTES._name] = avail
+                self._collector_event_scalars[metric_name(MEMORY_PHYSICAL_AVAILABLE_BYTES)] = avail
             if free is not None:
-                self._collector_event_scalars[MEMORY_PHYSICAL_FREE_BYTES._name] = free
+                self._collector_event_scalars[metric_name(MEMORY_PHYSICAL_FREE_BYTES)] = free
             if cached is not None:
-                self._collector_event_scalars[MEMORY_PHYSICAL_CACHED_BYTES._name] = cached
+                self._collector_event_scalars[metric_name(MEMORY_PHYSICAL_CACHED_BYTES)] = cached
             if buffers is not None:
-                self._collector_event_scalars[MEMORY_PHYSICAL_BUFFERS_BYTES._name] = buffers
+                self._collector_event_scalars[metric_name(MEMORY_PHYSICAL_BUFFERS_BYTES)] = buffers
             if total is not None and avail is not None:
-                self._collector_event_scalars[MEMORY_PHYSICAL_USED_BYTES._name] = total - avail
+                self._collector_event_scalars[metric_name(MEMORY_PHYSICAL_USED_BYTES)] = total - avail
             if swap_total is not None:
-                self._collector_event_scalars[MEMORY_SWAP_TOTAL_BYTES._name] = swap_total
+                self._collector_event_scalars[metric_name(MEMORY_SWAP_TOTAL_BYTES)] = swap_total
             if swap_free is not None:
-                self._collector_event_scalars[MEMORY_SWAP_FREE_BYTES._name] = swap_free
+                self._collector_event_scalars[metric_name(MEMORY_SWAP_FREE_BYTES)] = swap_free
             if swap_total is not None and swap_free is not None:
-                self._collector_event_scalars[MEMORY_SWAP_USED_BYTES._name] = swap_total - swap_free
+                self._collector_event_scalars[metric_name(MEMORY_SWAP_USED_BYTES)] = swap_total - swap_free
 
             arc_size = _as_float(mem.get("arc_size"))
             if arc_size is not None:
-                self._collector_event_scalars[ZFS_ARC_SIZE_BYTES._name] = arc_size
+                self._collector_event_scalars[metric_name(ZFS_ARC_SIZE_BYTES)] = arc_size
             arc_free = _as_float(mem.get("arc_free_memory"))
             if arc_free is not None:
-                self._collector_event_scalars[ZFS_ARC_FREE_MEMORY_BYTES._name] = arc_free
+                self._collector_event_scalars[metric_name(ZFS_ARC_FREE_MEMORY_BYTES)] = arc_free
             arc_avail = _as_float(mem.get("arc_available_memory"))
             if arc_avail is not None:
-                self._collector_event_scalars[ZFS_ARC_AVAILABLE_BYTES._name] = arc_avail
+                self._collector_event_scalars[metric_name(ZFS_ARC_AVAILABLE_BYTES)] = arc_avail
 
         disks = _first_not_none(payload.get("disls"), payload.get("disks"))
         disk_read_bytes: dict[tuple[str, ...], float] = {}
@@ -2824,11 +1601,11 @@ class TrueNASExporter:
                     if val is not None:
                         bucket[("total",)] = val
 
-        self._collector_event_series[DISK_READ_BYTES_RATE._name] = disk_read_bytes
-        self._collector_event_series[DISK_WRITE_BYTES_RATE._name] = disk_write_bytes
-        self._collector_event_series[DISK_READ_OPS_RATE._name] = disk_read_ops
-        self._collector_event_series[DISK_WRITE_OPS_RATE._name] = disk_write_ops
-        self._collector_event_series[DISK_BUSY_PERCENT._name] = disk_busy
+        self._collector_event_series[metric_name(DISK_READ_BYTES_RATE)] = disk_read_bytes
+        self._collector_event_series[metric_name(DISK_WRITE_BYTES_RATE)] = disk_write_bytes
+        self._collector_event_series[metric_name(DISK_READ_OPS_RATE)] = disk_read_ops
+        self._collector_event_series[metric_name(DISK_WRITE_OPS_RATE)] = disk_write_ops
+        self._collector_event_series[metric_name(DISK_BUSY_PERCENT)] = disk_busy
 
         interfaces = payload.get("interfaces")
         network_rx: dict[tuple[str, ...], float] = {}
@@ -2844,8 +1621,8 @@ class TrueNASExporter:
                     network_rx[(iface,)] = rx
                 if tx is not None:
                     network_tx[(iface,)] = tx
-        self._collector_event_series[NETWORK_RX_BYTES_RATE._name] = network_rx
-        self._collector_event_series[NETWORK_TX_BYTES_RATE._name] = network_tx
+        self._collector_event_series[metric_name(NETWORK_RX_BYTES_RATE)] = network_rx
+        self._collector_event_series[metric_name(NETWORK_TX_BYTES_RATE)] = network_tx
 
         pools_rt = payload.get("pools")
         pool_read: dict[tuple[str, ...], float] = {}
@@ -2862,40 +1639,22 @@ class TrueNASExporter:
                 if write_bytes is not None:
                     pool_write[(pn,)] = write_bytes
 
-        self._collector_event_series[POOL_REALTIME_READ_BYTES._name] = pool_read
-        self._collector_event_series[POOL_REALTIME_WRITE_BYTES._name] = pool_write
+        self._collector_event_series[metric_name(POOL_REALTIME_READ_BYTES)] = pool_read
+        self._collector_event_series[metric_name(POOL_REALTIME_WRITE_BYTES)] = pool_write
 
     def _dispatch_event(self, collection: str, payload: Any) -> None:
         now = time.time()
         self._event_last_monotonic[collection] = time.monotonic()
         self._expired_events.discard(collection)
-        if self._is_collector_mode():
-            self._collector_event_messages[collection] = now
-        else:
-            EVENT_LAST_MESSAGE_TS.labels(event=collection).set(now)
-        if self._is_collector_mode():
-            if collection == "reporting.realtime" and isinstance(payload, dict):
-                self._cache_realtime_event(payload)
-            elif collection == "app.stats" and isinstance(payload, dict):
-                self._cache_app_stats_event(payload)
-            elif collection == "virt.instance.metrics" and isinstance(payload, dict):
-                self._cache_virt_metrics_event(payload)
-            return
+        self._collector_event_messages[collection] = now
         if collection == "reporting.realtime" and isinstance(payload, dict):
-            try:
-                self._handle_realtime_event(payload)
-            except Exception:
-                self._collector_error("event_realtime", "_handle_realtime_event failed")
+            self._cache_realtime_event(payload)
         elif collection == "app.stats" and isinstance(payload, dict):
-            try:
-                self._handle_app_stats_event(payload)
-            except Exception:
-                self._collector_error("event_app_stats", "_handle_app_stats_event failed")
+            self._cache_app_stats_event(payload)
         elif collection == "virt.instance.metrics" and isinstance(payload, dict):
-            try:
-                self._handle_virt_metrics_event(payload)
-            except Exception:
-                self._collector_error("event_virt_metrics", "_handle_virt_metrics_event failed")
+            self._cache_virt_metrics_event(payload)
+        if not self._is_collector_mode():
+            self._publish_cached_events_to_default_registry()
         if self.config.enable_generic_event_metrics and not self._is_collector_mode():
             self._replace_generic_event_metrics(collection, payload)
 
@@ -2923,18 +1682,16 @@ class TrueNASExporter:
                         subscribe_name = self._format_event_subscription(event)
                         try:
                             client.call("core.subscribe", [subscribe_name])
-                            if self._is_collector_mode():
-                                with self._lock:
-                                    self._collector_event_stream_up[event] = 1.0
-                            else:
-                                EVENT_STREAM_UP.labels(event=event).set(1)
+                            with self._lock:
+                                self._collector_event_stream_up[event] = 1.0
+                                if not self._is_collector_mode():
+                                    self._publish_cached_events_to_default_registry()
                             subscribed_events.append(event)
                         except Exception:
-                            if self._is_collector_mode():
-                                with self._lock:
-                                    self._collector_event_stream_up[event] = 0.0
-                            else:
-                                EVENT_STREAM_UP.labels(event=event).set(0)
+                            with self._lock:
+                                self._collector_event_stream_up[event] = 0.0
+                                if not self._is_collector_mode():
+                                    self._publish_cached_events_to_default_registry()
                             self._collector_error("event_subscribe", f"Failed subscribing to {event}")
 
                     if not subscribed_events:
@@ -2978,10 +1735,9 @@ class TrueNASExporter:
                 with self._lock:
                     self._expire_stale_events(force=True)
                     for event in self.config.event_subscriptions:
-                        if self._is_collector_mode():
-                            self._collector_event_stream_up[event] = 0.0
-                        else:
-                            EVENT_STREAM_UP.labels(event=event).set(0)
+                        self._collector_event_stream_up[event] = 0.0
+                    if not self._is_collector_mode():
+                        self._publish_cached_events_to_default_registry()
                 LOG.warning("Event stream reconnecting in %ds", backoff, exc_info=True)
                 if self._stop_event.wait(backoff):
                     break
@@ -4015,6 +2771,7 @@ class TrueNASExporter:
 
             # Methods we already scrape or that require special handling
             skip_set = set(BASE_METHODS) | set(REQUIRES_ENTITY_PARAM)
+            extra_method_set = set(self.config.extra_methods)
 
             for m in names:
                 if m in skip_set:
@@ -4035,8 +2792,9 @@ class TrueNASExporter:
                     or "metric" in m
                     or ".get_" in m
                 )
-                if is_read_pattern and m not in self.config.extra_methods:
+                if is_read_pattern and m not in extra_method_set:
                     self.config.extra_methods.append(m)
+                    extra_method_set.add(m)
                     added_count += 1
 
             if added_count > 0:
@@ -5995,364 +4753,12 @@ class TrueNASExporter:
             except Exception:
                 LOG.debug("ipmi.lan.query channel %s failed", channel, exc_info=True)
 
-    def _snapshot_alert_metrics(self, snapshot: dict[str, dict[str, Any]], alerts_raw: Any) -> None:
-        alerts = alerts_raw if isinstance(alerts_raw, list) else []
-        self._snapshot_set_scalar(snapshot, ALERT_COUNT, len(alerts))
-
-        level_counts: dict[str, int] = {}
-        source_counts: dict[str, int] = {}
-        class_counts: dict[tuple[str, str], int] = {}
-        node_counts: dict[str, int] = {}
-        last_occurrence_by_level: dict[str, float] = {}
-        dismissed_count = 0
-        one_shot_count = 0
-        oldest_ts: float | None = None
-
-        for alert in alerts:
-            if not isinstance(alert, dict):
-                continue
-            level = _str_label(alert.get("level"), "UNKNOWN").upper()
-            source = _str_label(alert.get("source"), "unknown")
-            klass = _str_label(alert.get("klass"), "unknown")
-            node = _str_label(alert.get("node"), "unknown")
-
-            level_counts[level] = level_counts.get(level, 0) + 1
-            source_counts[source] = source_counts.get(source, 0) + 1
-            class_counts[(klass, level)] = class_counts.get((klass, level), 0) + 1
-            node_counts[node] = node_counts.get(node, 0) + 1
-
-            if _as_bool(alert.get("dismissed")):
-                dismissed_count += 1
-            if _as_bool(alert.get("one_shot")):
-                one_shot_count += 1
-
-            created_ts = _parse_ts(alert.get("datetime"))
-            if created_ts is not None:
-                oldest_ts = created_ts if oldest_ts is None else min(oldest_ts, created_ts)
-
-            last_occurrence_ts = _parse_ts(alert.get("last_occurrence"))
-            if last_occurrence_ts is not None:
-                last_occurrence_by_level[level] = max(
-                    last_occurrence_by_level.get(level, 0.0),
-                    last_occurrence_ts,
-                )
-
-        for level, count in level_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_LEVEL, (level,), count)
-        for source, count in source_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_SOURCE, (source,), count)
-        for (klass, level), count in class_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_CLASS, (klass, level), count)
-        for node, count in node_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_NODE, (node,), count)
-        for level, ts in last_occurrence_by_level.items():
-            self._snapshot_set_series(snapshot, ALERT_LAST_OCCURRENCE_TS, (level,), ts)
-
-        self._snapshot_set_scalar(snapshot, ALERT_DISMISSED_COUNT, dismissed_count)
-        self._snapshot_set_scalar(snapshot, ALERT_ONE_SHOT_COUNT, one_shot_count)
-        if oldest_ts is not None:
-            self._snapshot_set_scalar(snapshot, ALERT_OLDEST_TS, oldest_ts)
-
-    def _snapshot_task_list(
-        self,
-        snapshot: dict[str, dict[str, Any]],
-        task_type: str,
-        tasks: Any,
-        name_field: str,
-        enabled_field: str,
-        job_field: str,
-    ) -> None:
-        items = tasks if isinstance(tasks, list) else []
-        self._snapshot_set_series(snapshot, TASK_COUNT, (task_type,), len(items))
-        for task in items[: self.config.max_entity_calls]:
-            if not isinstance(task, dict):
-                continue
-            name = _str_label(task.get(name_field), "unknown")
-            self._snapshot_set_series(
-                snapshot,
-                TASK_ENABLED,
-                (task_type, name),
-                1 if _as_bool(task.get(enabled_field, False)) else 0,
-            )
-
-            job = task.get(job_field)
-            if isinstance(job, dict):
-                state = _str_label(job.get("state"), "UNKNOWN").upper()
-                self._snapshot_set_series(snapshot, TASK_STATE, (task_type, name, state), 1)
-                finished_ts = _parse_ts(job.get("time_finished"))
-                if finished_ts is not None:
-                    self._snapshot_set_series(snapshot, TASK_LAST_RUN_TS, (task_type, name), finished_ts)
-            else:
-                state_raw = task.get("state")
-                if state_raw is not None:
-                    state = _str_label(state_raw, "UNKNOWN").upper()
-                    self._snapshot_set_series(snapshot, TASK_STATE, (task_type, name, state), 1)
-                last_run = task.get("lastrun") or task.get("last_run")
-                ts = _parse_ts(last_run)
-                if ts is not None:
-                    self._snapshot_set_series(snapshot, TASK_LAST_RUN_TS, (task_type, name), ts)
-
-    def collect_collector_snapshot(self) -> dict[str, dict[str, Any]]:
-        snapshot: dict[str, dict[str, Any]] = {"scalar": {}, "series": {}}
-        started = time.time()
-        self._snapshot_set_scalar(snapshot, LAST_SCRAPE_TS, started)
-        self._snapshot_set_series(snapshot, EXPORTER_INFO, (EXPORTER_VERSION,), 1)
-        self._last_scrape_attempt_monotonic = time.monotonic()
-        deadline = time.monotonic() + self.config.scrape_budget_seconds
-        scrape_success = 0.0
-        with self._diagnostic_lock:
-            self._api_call_success.clear()
-            self._api_call_duration.clear()
-
-        try:
-            with JsonRpcWsClient(
-                ws_url=self.config.ws_url,
-                timeout_seconds=self.config.timeout_seconds,
-                verify_tls=self.config.verify_tls,
-                ca_file=self.config.ca_file,
-                deadline_monotonic=deadline,
-            ) as client:
-                client.authenticate(
-                    self.config.api_key,
-                    call=lambda method, params: self._call(client, method, params),
-                )
-
-                state_raw = self._call(client, "system.state", [])
-                state_label = _str_label(state_raw).upper()
-                self._snapshot_set_series(snapshot, SYSTEM_STATE, (state_label,), 1)
-                self._snapshot_set_scalar(snapshot, SYSTEM_READY, 1 if state_label == "READY" else 0)
-
-                info = self._call(client, "system.info", [])
-                if isinstance(info, dict):
-                    hostname = _str_label(info.get("hostname"), "unknown")
-                    version = _str_label(info.get("version"), "unknown")
-                    product_type = _str_label(info.get("product_type"), "unknown")
-                    self._snapshot_set_series(snapshot, HOST_INFO, (hostname, version, product_type), 1)
-                    uptime_seconds = _as_float(info.get("uptime_seconds"))
-                    if uptime_seconds is not None:
-                        self._snapshot_set_scalar(snapshot, HOST_UPTIME_SECONDS, uptime_seconds)
-                    physmem = _as_float(_first_not_none(info.get("physmem"), info.get("physical_memory")))
-                    if physmem is not None:
-                        self._snapshot_set_scalar(snapshot, HOST_PHYSICAL_MEMORY_BYTES, physmem)
-                    cpu_cores = _as_float(_first_not_none(info.get("cores"), info.get("cpu_cores")))
-                    if cpu_cores is not None:
-                        self._snapshot_set_scalar(snapshot, HOST_CPU_CORES, cpu_cores)
-                    physical_cores = _as_float(info.get("physical_cores"))
-                    if physical_cores is not None:
-                        self._snapshot_set_scalar(snapshot, HOST_PHYSICAL_CPU_CORES, physical_cores)
-                    loadavg = info.get("loadavg")
-                    if isinstance(loadavg, (list, tuple)):
-                        for i, label in enumerate(("1m", "5m", "15m")):
-                            lv = _as_float(loadavg[i]) if i < len(loadavg) else None
-                            if lv is not None:
-                                self._snapshot_set_series(snapshot, HOST_LOAD_AVERAGE, (label,), lv)
-
-                pools = self._call_query_with_fallback(
-                    client,
-                    "pool.query",
-                    {
-                        "select": [
-                            "name", "healthy", "warning", "status", "size", "allocated", "free", "scan", "fragmentation",
-                        ]
-                    },
-                )
-                pool_list = pools if isinstance(pools, list) else []
-                self._snapshot_set_scalar(snapshot, POOL_COUNT, len(pool_list))
-                for pool in pool_list:
-                    if not isinstance(pool, dict):
-                        continue
-                    pool_name = _str_label(pool.get("name"), "unnamed")
-                    self._snapshot_set_series(snapshot, POOL_HEALTHY, (pool_name,), 1 if _as_bool(pool.get("healthy")) else 0)
-                    self._snapshot_set_series(snapshot, POOL_WARNING, (pool_name,), 1 if _as_bool(pool.get("warning")) else 0)
-                    status = _str_label(pool.get("status"), "UNKNOWN").upper()
-                    self._snapshot_set_series(snapshot, POOL_STATUS, (pool_name, status), 1)
-                    for metric, field in (
-                        (POOL_SIZE_BYTES, "size"),
-                        (POOL_ALLOCATED_BYTES, "allocated"),
-                        (POOL_FREE_BYTES, "free"),
-                    ):
-                        val = _as_float(pool.get(field))
-                        if val is not None:
-                            self._snapshot_set_series(snapshot, metric, (pool_name,), val)
-                    frag = _as_float(pool.get("fragmentation"))
-                    if frag is not None:
-                        self._snapshot_set_series(snapshot, POOL_FRAGMENTATION, (pool_name,), frag)
-                    scan = pool.get("scan")
-                    if isinstance(scan, dict):
-                        pct = _as_float(scan.get("percentage"))
-                        if pct is not None:
-                            self._snapshot_set_series(snapshot, POOL_SCAN_PERCENT, (pool_name,), pct)
-
-                if self.config.enable_dataset_metrics:
-                    dataset_result = self._call(
-                        client,
-                        "pool.dataset.query",
-                        [
-                            [],
-                            {
-                                "limit": self.config.max_datasets,
-                                "extra": {"properties": ["used", "available", "referenced", "quota", "refquota", "snapshots_changed"]},
-                                "select": [
-                                    "name",
-                                    ["used.parsed", "used"],
-                                    ["available.parsed", "available"],
-                                    ["referenced.parsed", "referenced"],
-                                    ["quota.parsed", "quota"],
-                                    ["refquota.parsed", "refquota"],
-                                    "snapshot_count",
-                                ],
-                            },
-                        ],
-                    )
-                    datasets = dataset_result if isinstance(dataset_result, list) else []
-                    self._snapshot_set_scalar(snapshot, DATASET_COUNT, len(datasets))
-                    for ds in datasets:
-                        if not isinstance(ds, dict):
-                            continue
-                        dataset_name = _str_label(ds.get("name"), "unknown")
-                        for metric, field in (
-                            (DATASET_USED_BYTES, "used"),
-                            (DATASET_AVAILABLE_BYTES, "available"),
-                            (DATASET_REFERENCED_BYTES, "referenced"),
-                            (DATASET_QUOTA_BYTES, "quota"),
-                            (DATASET_REFQUOTA_BYTES, "refquota"),
-                        ):
-                            val = _as_float(ds.get(field))
-                            if val is not None:
-                                self._snapshot_set_series(snapshot, metric, (dataset_name,), val)
-                        snap_count = _as_float(ds.get("snapshot_count"))
-                        if snap_count is not None:
-                            self._snapshot_set_series(snapshot, DATASET_SNAPSHOT_COUNT, (dataset_name,), snap_count)
-
-                services = self._call_query_with_fallback(
-                    client,
-                    "service.query",
-                    {"extra": {"include_state": True}, "select": ["service", "enable", "state"]},
-                )
-                service_list = services if isinstance(services, list) else []
-                self._snapshot_set_scalar(snapshot, SERVICE_COUNT, len(service_list))
-                for svc in service_list:
-                    if not isinstance(svc, dict):
-                        continue
-                    name = _str_label(svc.get("service") or svc.get("name"), "unknown")
-                    self._snapshot_set_series(snapshot, SERVICE_ENABLED, (name,), 1 if _as_bool(svc.get("enable")) else 0)
-                    state = svc.get("state")
-                    running = _as_bool(state.get("running") if isinstance(state, dict) else state)
-                    self._snapshot_set_series(snapshot, SERVICE_RUNNING, (name,), 1 if running else 0)
-
-                alerts = self._call(client, "alert.list", [])
-                self._snapshot_alert_metrics(snapshot, alerts)
-
-                if self.config.enable_task_metrics:
-                    self._snapshot_task_list(
-                        snapshot,
-                        "replication",
-                        self._call(client, "replication.query", [[], {"limit": self.config.query_limit, "select": ["name", "enabled", "job"]}]),
-                        "name",
-                        "enabled",
-                        "job",
-                    )
-                    self._snapshot_task_list(
-                        snapshot,
-                        "cloudsync",
-                        self._call(client, "cloudsync.query", [[], {"limit": self.config.query_limit, "select": ["description", "enabled", "job"]}]),
-                        "description",
-                        "enabled",
-                        "job",
-                    )
-                    self._snapshot_task_list(
-                        snapshot,
-                        "rsynctask",
-                        self._call(client, "rsynctask.query", [[], {"limit": self.config.query_limit, "select": ["desc", "enabled", "job"]}]),
-                        "desc",
-                        "enabled",
-                        "job",
-                    )
-                    self._snapshot_task_list(
-                        snapshot,
-                        "snapshottask",
-                        self._call(client, "pool.snapshottask.query", [[], {"limit": self.config.query_limit, "select": ["dataset", "enabled", "state", "lastrun"]}]),
-                        "dataset",
-                        "enabled",
-                        "state",
-                    )
-
-                scrape_success = 1.0
-                self._last_scrape_success_monotonic = time.monotonic()
-        except Exception:
-            LOG.exception("Collector scrape failed")
-            scrape_success = 0.0
-
-        self._snapshot_set_scalar(snapshot, SCRAPE_SUCCESS, scrape_success)
-        self._snapshot_set_scalar(snapshot, SCRAPE_DURATION, max(0.0, time.time() - started))
-        with self._diagnostic_lock:
-            snapshot["series"][API_CALL_SUCCESS._name] = {
-                (method,): value for method, value in self._api_call_success.items()
-            }
-            snapshot["series"][API_CALL_DURATION._name] = {
-                (method,): value for method, value in self._api_call_duration.items()
-            }
-        self._merge_event_snapshot(snapshot)
-        return snapshot
-
     def run_forever(self) -> None:
         self._ensure_event_thread()
         while not self._stop_event.is_set():
             self.scrape_once()
             if self._stop_event.wait(self.config.interval_seconds):
                 break
-
-
-class _PartialSnapshotCollector:
-    def __init__(self, exporter: TrueNASExporter) -> None:
-        self.exporter = exporter
-
-    def collect(self):
-        snapshot = self.exporter.collect_collector_snapshot()
-
-        for metric in _COLLECTOR_SCALAR_METRICS:
-            value = snapshot["scalar"].get(metric._name)
-            if value is None:
-                continue
-            yield GaugeMetricFamily(metric._name, metric._documentation, value=value)
-
-        for metric in _COLLECTOR_SERIES_METRICS:
-            family = GaugeMetricFamily(metric._name, metric._documentation, labels=list(metric._labelnames))
-            for label_values, value in snapshot["series"].get(metric._name, {}).items():
-                family.add_metric(list(label_values), value)
-            yield family
-
-        with self.exporter._diagnostic_lock:
-            api_errors = dict(self.exporter._api_call_errors)
-            collector_errors = dict(self.exporter._collector_errors)
-            event_messages = dict(self.exporter._event_message_counts)
-
-        api_error_family = CounterMetricFamily(
-            "truenas_api_call_errors",
-            "Total TrueNAS API call errors",
-            labels=["method", "error_type"],
-        )
-        for (method, error_type), value in api_errors.items():
-            api_error_family.add_metric([method, error_type], value)
-        yield api_error_family
-
-        collector_error_family = CounterMetricFamily(
-            "truenas_collector_errors",
-            "Total errors caught inside optional dedicated collectors",
-            labels=["collector"],
-        )
-        for collector, value in collector_errors.items():
-            collector_error_family.add_metric([collector], value)
-        yield collector_error_family
-
-        event_message_family = CounterMetricFamily(
-            "truenas_event_messages",
-            "Total event messages received",
-            labels=["event"],
-        )
-        for event, value in event_messages.items():
-            event_message_family.add_metric([event], value)
-        yield event_message_family
 
 
 class TrueNASCollector:
@@ -6371,75 +4777,6 @@ class TrueNASCollector:
 # ---------------------------------------------------------------------------
 # HTTP server: /metrics + /healthz on one port
 # ---------------------------------------------------------------------------
-
-class _QuietHandler(WSGIRequestHandler):
-    """Suppress per-request access log lines (Prometheus scrapes are very noisy)."""
-    def log_message(self, fmt: str, *args: Any) -> None:
-        pass
-
-
-class _ThreadingWSGIServer(socketserver.ThreadingMixIn, WSGIServer):
-    daemon_threads = True
-
-
-_LANDING_PAGE = b"""\
-<html><head><title>TrueNAS Exporter</title></head><body>
-<h1>TrueNAS Exporter</h1>
-<p><a href="/metrics">Metrics</a></p>
-<p><a href="/healthz">Liveness</a></p>
-<p><a href="/readyz">Readiness</a></p>
-</body></html>
-"""
-
-
-def _start_http_server(
-    port: int,
-    lock: threading.Lock,
-    registry: CollectorRegistry | None = None,
-    lock_metrics: bool = True,
-    readiness_check: Callable[[], bool] | None = None,
-) -> Any:
-    """Start a WSGI server exposing /, /metrics and /healthz on *port*.
-
-    The standard prometheus_client.start_http_server() only exposes /metrics.
-    Adding /healthz lets orchestrators (k8s, Docker, Nomad) distinguish an
-    exporter crash from a scrape failure without touching the Prometheus config.
-
-    The *lock* can be acquired around /metrics exposition so that a Prometheus
-    scrape cannot observe partially-updated metric state. For collector mode,
-    this should be disabled to avoid lock recursion while the custom collector
-    merges event snapshots.
-    """
-    metrics_app = make_wsgi_app() if registry is None else make_wsgi_app(registry=registry)
-
-    def app(environ: dict[str, Any], start_response: Any) -> list[bytes]:
-        path = environ.get("PATH_INFO", "")
-        if path == "/":
-            start_response("200 OK", [("Content-Type", "text/html; charset=utf-8")])
-            return [_LANDING_PAGE]
-        if path == "/healthz":
-            start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8")])
-            return [b"ok\n"]
-        if path == "/readyz":
-            ready = readiness_check() if readiness_check is not None else False
-            status = "200 OK" if ready else "503 Service Unavailable"
-            body = b"ready\n" if ready else b"not ready\n"
-            start_response(status, [("Content-Type", "text/plain; charset=utf-8")])
-            return [body]
-        if lock_metrics:
-            # Acquire the exporter lock so /metrics cannot read partially-updated state.
-            with lock:
-                return metrics_app(environ, start_response)
-        return metrics_app(environ, start_response)
-
-    server = make_server(
-        "", port, app, server_class=_ThreadingWSGIServer, handler_class=_QuietHandler
-    )
-    thread = threading.Thread(target=server.serve_forever, name="http-server", daemon=True)
-    thread.start()
-    LOG.info("HTTP server started on :%d (GET /, GET /metrics, GET /healthz, GET /readyz)", port)
-    return server
-
 
 # ---------------------------------------------------------------------------
 # Configuration loading

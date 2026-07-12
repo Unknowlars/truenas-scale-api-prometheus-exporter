@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -30,7 +31,7 @@ def main() -> None:
     panels = list(walk_panels(dashboard.get("panels", [])))
 
     ids = [panel.get("id") for panel in panels if isinstance(panel.get("id"), int)]
-    duplicates = sorted({panel_id for panel_id in ids if ids.count(panel_id) > 1})
+    duplicates = sorted(panel_id for panel_id, count in Counter(ids).items() if count > 1)
     if duplicates:
         raise SystemExit(f"duplicate dashboard panel IDs: {duplicates}")
 
@@ -64,4 +65,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

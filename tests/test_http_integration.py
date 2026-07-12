@@ -1,4 +1,6 @@
+import concurrent.futures
 import threading
+import time
 import urllib.error
 import urllib.request
 
@@ -36,5 +38,81 @@ def test_real_http_server_liveness_and_readiness():
         with urllib.request.urlopen(f"{base_url}/readyz", timeout=2) as response:
             assert response.status == 200
             assert response.read() == b"ready\n"
+    finally:
+        server.shutdown()
+
+
+def test_overlapping_metrics_are_consistent_and_health_stays_responsive():
+    exporter = exporter_module.TrueNASExporter(
+        exporter_module.Config(
+            ws_url="wss://nas.example/api/current",
+            api_key="test-key",
+            interval_seconds=30,
+            timeout_seconds=20,
+            verify_tls=True,
+            exporter_port=9108,
+            auto_discover_methods=False,
+            query_limit=200,
+            max_method_calls=250,
+            max_list_items=200,
+            max_depth=6,
+            max_entity_calls=50,
+            max_datasets=100,
+            extra_methods=[],
+            exclude_methods=[],
+            filesystem_paths=["/mnt"],
+            enable_filesystem_listdir=False,
+            enable_event_streams=False,
+            enable_dataset_metrics=True,
+            enable_task_metrics=False,
+            enable_ipmi_metrics=False,
+            event_interval_seconds=2,
+            event_read_timeout_seconds=60,
+            event_subscriptions=[],
+            scrape_all_metrics=False,
+            enable_generic_method_metrics=False,
+            enable_generic_event_metrics=False,
+            dataset_snapshot_fallback_limit=0,
+            exporter_mode="collector",
+        )
+    )
+    original_snapshot = exporter.metric_snapshot
+    overlap = threading.Barrier(3)
+
+    def blocked_snapshot():
+        snapshot = original_snapshot()
+        overlap.wait(timeout=2)
+        return snapshot
+
+    exporter.metric_snapshot = blocked_snapshot
+    registry = exporter_module.CollectorRegistry(auto_describe=False)
+    registry.register(exporter_module.TrueNASCollector(exporter))
+    try:
+        server = exporter_module._start_http_server(
+            0,
+            exporter._lock,
+            registry=registry,
+            lock_metrics=False,
+            readiness_check=exporter.is_ready,
+        )
+    except PermissionError:
+        pytest.skip("local sandbox does not permit binding a loopback socket")
+    base_url = f"http://127.0.0.1:{server.server_port}"
+
+    def fetch_metrics():
+        with urllib.request.urlopen(f"{base_url}/metrics", timeout=3) as response:
+            return response.read()
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            requests = [pool.submit(fetch_metrics) for _ in range(2)]
+            started = time.monotonic()
+            with urllib.request.urlopen(f"{base_url}/healthz", timeout=1) as response:
+                assert response.read() == b"ok\n"
+            assert time.monotonic() - started < 1.0
+            overlap.wait(timeout=2)
+            first, second = (request.result(timeout=3) for request in requests)
+        assert first == second
+        assert b"truenas_up" in first
     finally:
         server.shutdown()

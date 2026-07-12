@@ -9,6 +9,7 @@ WORKDIR /workspace
 COPY requirements.txt requirements-dev.txt /workspace/
 RUN python -m pip install -r requirements-dev.txt
 COPY pyproject.toml README.md LICENSE /workspace/
+COPY .env.example docker-compose.yml /workspace/
 COPY src /workspace/src
 COPY truenas_exporter.py /workspace/truenas_exporter.py
 COPY scripts /workspace/scripts

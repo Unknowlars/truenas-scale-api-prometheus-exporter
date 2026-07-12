@@ -9,26 +9,13 @@ if [[ -d .github/workflows ]] && find .github/workflows -type f -print -quit | g
 fi
 
 python3 -m compileall -q truenas_exporter.py src tests scripts
-python3 -m ruff check \
-  src/truenas_exporter/runtime.py \
-  src/truenas_exporter/config.py \
-  src/truenas_exporter/transport.py \
-  src/truenas_exporter/cli.py \
-  src/truenas_exporter/version.py \
-  scripts/generate_metric_contract.py \
-  scripts/generate_api_docs_manifest.py \
-  scripts/validate_dashboard.py \
-  scripts/live_smoke.py
-python3 -m mypy \
-  src/truenas_exporter/config.py \
-  src/truenas_exporter/transport.py \
-  src/truenas_exporter/cli.py \
-  src/truenas_exporter/version.py
+python3 -m ruff check src scripts tests
+python3 -m mypy src/truenas_exporter
 python3 -m pytest -q -p no:cacheprovider \
   --cov=src/truenas_exporter \
   --cov-branch \
   --cov-report=term \
-  --cov-fail-under=48
+  --cov-fail-under=77
 python3 scripts/generate_metric_contract.py --check
 python3 scripts/generate_truenas_dashboard.py --check
 python3 scripts/validate_dashboard.py

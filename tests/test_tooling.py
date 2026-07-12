@@ -1,5 +1,7 @@
-import pytest
 import runpy
+from pathlib import Path
+
+import pytest
 
 from scripts.convert_truenas_api_docs_to_markdown import convert
 
@@ -9,12 +11,13 @@ def test_live_smoke_imports_from_source_checkout():
 
 
 def test_compose_forwards_documented_environment_keys():
+    env_text = Path(".env.example").read_text(encoding="utf-8")
     env_keys = {
         line.split("=", 1)[0]
-        for line in open(".env.example", encoding="utf-8")
+        for line in env_text.splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     }
-    compose = open("docker-compose.yml", encoding="utf-8").read()
+    compose = Path("docker-compose.yml").read_text(encoding="utf-8")
     missing = {key for key in env_keys if f"      {key}:" not in compose}
     assert not missing
 

@@ -18,6 +18,7 @@ _static/
 *.json
 !README.md
 docker-compose.yml
+!docker-compose.yml
 deploy/prometheus/prometheus.truenas-example.yml
 tests/
 !tests/

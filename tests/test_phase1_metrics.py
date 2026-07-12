@@ -1,42 +1,7 @@
 import pytest
+from conftest import make_config
 
 import truenas_exporter as exporter_module
-
-
-def make_config(**overrides):
-    values = {
-        "ws_url": "wss://truenas.example/api/current",
-        "api_key": "test-key",
-        "interval_seconds": 30,
-        "timeout_seconds": 20,
-        "verify_tls": True,
-        "exporter_port": 9108,
-        "auto_discover_methods": False,
-        "query_limit": 200,
-        "max_method_calls": 250,
-        "max_list_items": 200,
-        "max_depth": 6,
-        "max_entity_calls": 50,
-        "max_datasets": 100,
-        "extra_methods": [],
-        "exclude_methods": [],
-        "filesystem_paths": ["/mnt"],
-        "enable_filesystem_listdir": False,
-        "enable_event_streams": True,
-        "enable_dataset_metrics": True,
-        "enable_task_metrics": True,
-        "enable_ipmi_metrics": True,
-        "event_interval_seconds": 2,
-        "event_read_timeout_seconds": 60,
-        "event_subscriptions": ["reporting.realtime"],
-        "scrape_all_metrics": False,
-        "enable_generic_method_metrics": False,
-        "enable_generic_event_metrics": False,
-        "dataset_snapshot_fallback_limit": 0,
-        "exporter_mode": "legacy",
-    }
-    values.update(overrides)
-    return exporter_module.Config(**values)
 
 
 def gauge_value(gauge):
@@ -177,7 +142,9 @@ def reset_gauges():
 
 
 def test_snapshot_count_uses_exact_count_query(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
     calls = []
 
     def fake_call(client, method, params=None):
@@ -197,7 +164,9 @@ def test_snapshot_count_uses_exact_count_query(monkeypatch):
 
 
 def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
     calls = []
 
     def fake_call(client, method, params=None):
@@ -219,7 +188,7 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
 
 
 def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config(dataset_snapshot_fallback_limit=50))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=50))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -321,7 +290,7 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
 
 
 def test_alert_metrics_export_enriched_rollups():
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
     exporter._export_alert_metrics([
         {
@@ -368,7 +337,7 @@ def test_alert_metrics_export_enriched_rollups():
 
 
 def test_job_metrics_use_exact_active_counts_and_filtered_detail_query(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config(query_limit=1))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", query_limit=1))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -438,7 +407,7 @@ def test_job_metrics_use_exact_active_counts_and_filtered_detail_query(monkeypat
 
 
 def test_app_query_enrichment_metrics(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
     def fake_call(client, method, params=None):
         if method == "app.outdated_docker_images":
@@ -487,7 +456,7 @@ def test_app_query_enrichment_metrics(monkeypatch):
 
 
 def test_boot_env_metrics_use_used_bytes_field(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -504,7 +473,7 @@ def test_boot_env_metrics_use_used_bytes_field(monkeypatch):
 
 
 def test_certificate_metrics_do_not_request_undocumented_issuer_field(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -521,7 +490,7 @@ def test_certificate_metrics_do_not_request_undocumented_issuer_field(monkeypatc
 
 
 def test_inventory_collectors_accept_numeric_count_results(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
     counts = {
         "user.query": 11,
@@ -584,7 +553,7 @@ def test_inventory_collectors_accept_numeric_count_results(monkeypatch):
 
 
 def test_enabled_gauges_follow_service_enable_state(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
     def fake_call(client, method, params=None):
         if method == "service.query":
@@ -720,7 +689,7 @@ def test_load_config_new_flags_enabled(monkeypatch):
 
 def test_dataset_snapshot_fallback_disabled_by_default(monkeypatch):
     """With DATASET_SNAPSHOT_FALLBACK_LIMIT=0, no per-dataset snapshot_count calls are made."""
-    exporter = exporter_module.TrueNASExporter(make_config(dataset_snapshot_fallback_limit=0))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=0))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -739,7 +708,7 @@ def test_dataset_snapshot_fallback_disabled_by_default(monkeypatch):
 
 def test_generic_event_metrics_gated_by_flag():
     """With enable_generic_event_metrics=False, _dispatch_event skips generic extraction."""
-    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_event_metrics=False))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_generic_event_metrics=False))
     called = []
 
     original = exporter._replace_generic_event_metrics
@@ -757,7 +726,7 @@ def test_generic_event_metrics_gated_by_flag():
 
 def test_generic_event_metrics_enabled():
     """With enable_generic_event_metrics=True, _dispatch_event calls generic extraction."""
-    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_event_metrics=True))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_generic_event_metrics=True))
     called = []
 
     original = exporter._replace_generic_event_metrics
@@ -775,8 +744,6 @@ def test_generic_event_metrics_enabled():
 
 def test_landing_page():
     """The / endpoint returns an HTML landing page with links."""
-    import io
-
     captured_status = []
     captured_headers = []
 
@@ -784,7 +751,6 @@ def test_landing_page():
         captured_status.append(status)
         captured_headers.extend(headers)
 
-    lock = exporter_module.threading.Lock()
     body = exporter_module._LANDING_PAGE
 
     assert b"/metrics" in body
@@ -808,7 +774,7 @@ def test_disable_created_metrics():
 
 def test_scrub_task_collector_makes_single_api_call(monkeypatch):
     """Phase 2: _collect_scrub_task_metrics uses one list query, not count+list."""
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -829,7 +795,7 @@ def test_scrub_task_collector_makes_single_api_call(monkeypatch):
 
 def test_cloud_backup_collector_makes_single_api_call(monkeypatch):
     """Phase 2: _collect_cloud_backup_metrics uses one list query, not count+list."""
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -852,7 +818,7 @@ def test_cloud_backup_collector_makes_single_api_call(monkeypatch):
 
 def test_cronjob_collector_makes_single_api_call(monkeypatch):
     """Phase 2: _collect_cronjob_metrics uses one list query, not count+list."""
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -872,7 +838,8 @@ def test_cronjob_collector_makes_single_api_call(monkeypatch):
 
 def test_task_collectors_make_single_call_per_type(monkeypatch):
     """Phase 2: _collect_task_metrics uses one call per task type, not count+list."""
-    exporter = exporter_module.TrueNASExporter(make_config())
+    config = make_config(exporter_mode="legacy", enable_task_metrics=True)
+    exporter = exporter_module.TrueNASExporter(config)
     calls = []
 
     def fake_call(client, method, params=None):
@@ -897,7 +864,7 @@ def test_task_collectors_make_single_call_per_type(monkeypatch):
 
 def test_reporting_graph_discovery_skipped_when_generic_disabled(monkeypatch):
     """Phase 2: graph discovery calls are skipped when enable_generic_method_metrics=False."""
-    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_method_metrics=False))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_generic_method_metrics=False))
     calls = []
 
     def fake_safe_call(client, method):
@@ -916,7 +883,7 @@ def test_reporting_graph_discovery_skipped_when_generic_disabled(monkeypatch):
 
 def test_reporting_graph_discovery_runs_when_generic_enabled(monkeypatch):
     """Phase 2: graph discovery calls run when enable_generic_method_metrics=True."""
-    exporter = exporter_module.TrueNASExporter(make_config(enable_generic_method_metrics=True))
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_generic_method_metrics=True))
     calls = []
 
     def fake_safe_call(client, method):
@@ -946,7 +913,7 @@ def test_reporting_graph_discovery_runs_when_generic_enabled(monkeypatch):
 
 
 def test_smart_timestamp_parsing_sets_last_timestamp(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
     monkeypatch.setattr(
         exporter,
@@ -982,14 +949,14 @@ def test_smart_timestamp_parsing_sets_last_timestamp(monkeypatch):
 
 
 def test_smart_results_unavailable_is_non_fatal(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     monkeypatch.setattr(exporter, "_safe_call_auto", lambda client, method: None)
 
     exporter._collect_smart_test_results(object())
 
 
 def test_safe_call_auto_runtime_skips_missing_argument_methods(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
@@ -1011,7 +978,7 @@ def test_requires_entity_param_includes_virt_global_get_network():
 
 
 def test_priority_gap_collectors_emit_dedicated_metrics(monkeypatch):
-    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
     def fake_call(client, method, params=None):
         if method == "service.query":
@@ -1137,3 +1104,226 @@ def test_priority_gap_collectors_emit_dedicated_metrics(monkeypatch):
     assert gauge_value(exporter_module.REPORTING_TIER0_RETENTION_DAYS) == 14
     assert gauge_value(exporter_module.REPORTING_TIER1_RETENTION_DAYS) == 60
     assert gauge_value(exporter_module.REPORTING_TIER1_UPDATE_INTERVAL_SECONDS) == 300
+
+
+def test_full_domain_scrape_accepts_empty_read_only_fixture(monkeypatch):
+    """Walk every enabled domain collector without requiring a live TrueNAS."""
+
+    class EmptyClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    config = make_config(
+        exporter_mode="legacy",
+        enable_dataset_metrics=True,
+        enable_task_metrics=True,
+        enable_ipmi_metrics=True,
+        enable_generic_method_metrics=True,
+        enable_filesystem_listdir=True,
+        filesystem_paths=["/mnt"],
+    )
+    exporter = exporter_module.TrueNASExporter(config)
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: EmptyClient())
+
+    def empty_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.state":
+            return "READY"
+        if method == "system.info" or method.endswith(".config"):
+            return {}
+        return []
+
+    monkeypatch.setattr(exporter, "_call", empty_call)
+    exporter.scrape_once()
+
+    assert exporter_module.SCRAPE_SUCCESS._value.get() == 1
+    assert exporter.is_ready()
+
+
+def test_full_domain_scrape_contains_optional_method_failures(monkeypatch):
+    """Optional read failures must not escape or turn into mutating fallbacks."""
+
+    class FailureClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(
+        make_config(
+            exporter_mode="legacy",
+            enable_dataset_metrics=True,
+            enable_task_metrics=True,
+            enable_ipmi_metrics=True,
+            enable_filesystem_listdir=True,
+        )
+    )
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: FailureClient())
+
+    def failing_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {}
+        raise exporter_module.JsonRpcError(f"{method} unavailable")
+
+    monkeypatch.setattr(exporter, "_call", failing_call)
+    exporter.scrape_once()
+
+    assert exporter_module.SCRAPE_SUCCESS._value.get() in {0, 1}
+    assert all(
+        not exporter._is_safe_read_method(method)
+        for method in ("system.reboot", "pool.delete", "app.update")
+    )
+
+
+def test_full_domain_scrape_accepts_sparse_entity_fixture(monkeypatch):
+    """Exercise defensive entity parsing with minimally populated records."""
+
+    class SparseClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(
+        make_config(
+            exporter_mode="legacy",
+            enable_dataset_metrics=True,
+            enable_task_metrics=True,
+            enable_ipmi_metrics=True,
+            enable_filesystem_listdir=True,
+        )
+    )
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: SparseClient())
+
+    def sparse_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {"hostname": "nas", "version": "25.10.2", "product_type": "SCALE"}
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return [{}]
+        if method.endswith((".config", ".status", ".info", ".summary")):
+            return {}
+        return {}
+
+    monkeypatch.setattr(exporter, "_call", sparse_call)
+    exporter.scrape_once()
+
+    assert exporter_module.LAST_SCRAPE_TS._value.get() > 0
+
+
+def test_full_domain_scrape_accepts_rich_read_only_fixture(monkeypatch):
+    """Exercise populated branches across the complete domain graph."""
+
+    class RichClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(
+        make_config(
+            exporter_mode="legacy",
+            enable_dataset_metrics=True,
+            enable_task_metrics=True,
+            enable_ipmi_metrics=True,
+            enable_filesystem_listdir=True,
+            enable_generic_method_metrics=True,
+        )
+    )
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: RichClient())
+    record = {
+        "id": 1,
+        "name": "demo",
+        "description": "demo",
+        "dataset": "tank/demo",
+        "pool": "tank",
+        "disk": "sda",
+        "service": "ssh",
+        "enabled": True,
+        "enable": True,
+        "running": True,
+        "healthy": True,
+        "warning": False,
+        "active": True,
+        "reachable": True,
+        "state": "RUNNING",
+        "status": "ONLINE",
+        "size": 100,
+        "used": 25,
+        "available": 75,
+        "allocated": 25,
+        "free": 75,
+        "referenced": 20,
+        "quota": 0,
+        "refquota": 0,
+        "snapshot_count": 2,
+        "fragmentation": 1,
+        "temperature": 35,
+        "progress": {"percent": 50},
+        "job": {"state": "SUCCESS", "time_finished": "2026-01-01T00:00:00Z"},
+        "scan": {"state": "SCANNING", "percentage": 10, "errors": 0},
+        "topology": {"data": [{"name": "sda", "stats": {"read_errors": 0}}]},
+        "properties": {},
+    }
+
+    def rich_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {
+                **record,
+                "hostname": "nas",
+                "version": "25.10.2",
+                "product_type": "SCALE",
+                "uptime_seconds": 100,
+                "physmem": 1024,
+                "cores": 4,
+                "physical_cores": 2,
+                "loadavg": [0.1, 0.2, 0.3],
+            }
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return [dict(record)]
+        if method.endswith((".config", ".info", ".summary")):
+            return dict(record)
+        if method.endswith((".count", ".client_count", ".max_count", ".max_total_count")):
+            return 1
+        if method.endswith((".ready", ".enabled", ".available", ".supported")):
+            return True
+        return dict(record)
+
+    monkeypatch.setattr(exporter, "_call", rich_call)
+    exporter.scrape_once()
+
+    assert exporter_module.SCRAPE_SUCCESS._value.get() == 1

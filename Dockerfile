@@ -6,9 +6,11 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /build
+COPY requirements.txt /build/
+RUN python -m pip wheel --wheel-dir /wheels -r requirements.txt
 COPY pyproject.toml README.md LICENSE /build/
 COPY src /build/src
-RUN python -m pip wheel --wheel-dir /wheels .
+RUN python -m pip wheel --no-deps --wheel-dir /wheels .
 
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
@@ -37,4 +39,3 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "import os, urllib.request; port = os.getenv('EXPORTER_PORT', '9108'); urllib.request.urlopen(f'http://127.0.0.1:{port}/healthz', timeout=3).read()"
 
 ENTRYPOINT ["truenas-exporter"]
-

@@ -7,9 +7,9 @@ import html
 import os
 import re
 import shutil
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
 
 try:
     from bs4 import BeautifulSoup, NavigableString, Tag
@@ -17,6 +17,11 @@ except ImportError as exc:  # pragma: no cover - user-facing dependency error
     raise SystemExit(
         "Missing dependency: beautifulsoup4. Install it with `pip install -r requirements-dev.txt`."
     ) from exc
+
+try:
+    from .tooling import TRUENAS_API_VERSION
+except ImportError:  # direct script execution
+    from tooling import TRUENAS_API_VERSION
 
 
 SHARED_DOCS = {
@@ -312,9 +317,7 @@ def render_schema_body(body: Tag, level: int) -> list[str]:
                 lines.append(f"- {value}")
             else:
                 lines.append(f"- Type: {value}")
-        elif child.name == "span" and "default-value" in child_classes:
-            lines.append(f"- {clean_inline_text(child)}")
-        elif child.name == "span" and "no-additional" in child_classes:
+        elif child.name == "span" and "default-value" in child_classes or child.name == "span" and "no-additional" in child_classes:
             lines.append(f"- {clean_inline_text(child)}")
         elif child.name == "span" and "description" in child_classes:
             text = clean_inline_text(child)
@@ -728,7 +731,7 @@ def convert(source_root: Path, output_root: Path, clean: bool) -> None:
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parent.parent
-    default_source = repo_root / "truenas-v25.10.2-docs"
+    default_source = repo_root / f"truenas-v{TRUENAS_API_VERSION}-docs"
     default_output = repo_root / "docs" / "truenas-api"
 
     parser = argparse.ArgumentParser(description="Convert offline TrueNAS API docs into AI-friendly Markdown.")
