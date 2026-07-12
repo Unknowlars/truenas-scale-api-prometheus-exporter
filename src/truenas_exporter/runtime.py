@@ -236,12 +236,13 @@ import logging
 import os
 import re
 import signal
+import socketserver
 import threading
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
-from wsgiref.simple_server import WSGIRequestHandler, make_server
+from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 from prometheus_client import REGISTRY, CollectorRegistry, Gauge, make_wsgi_app
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
@@ -630,7 +631,7 @@ from .metrics import (
     ZFS_L2ARC_READ_BYTES_RATE,
     ZFS_L2ARC_WRITE_BYTES_RATE,
 )
-from .transport import JsonRpcError, JsonRpcWsClient
+from .transport import JsonRpcError, JsonRpcWsClient  # noqa: F401 - compatibility re-export
 from .version import __version__
 
 LOG = logging.getLogger("truenas_exporter")
@@ -695,6 +696,16 @@ def _as_bool(value: Any) -> bool:
     if isinstance(value, (dict, list)):
         return bool(value)
     return False
+
+
+def _link_is_up(value: Any) -> bool:
+    if isinstance(value, str):
+        normalized = value.strip().upper()
+        if normalized == "LINK_STATE_UP":
+            return True
+        if normalized == "LINK_STATE_DOWN":
+            return False
+    return _as_bool(value)
 
 
 def _str_label(value: Any, fallback: str = "unknown") -> str:
@@ -1341,6 +1352,9 @@ class TrueNASExporter:
         self._event_message_counts: dict[str, float] = {}
         self._last_scrape_success_monotonic: float | None = None
         self._last_scrape_attempt_monotonic: float | None = None
+        self._snapshot_lock = threading.Lock()
+        self._metric_snapshot = tuple(REGISTRY.collect())
+        self._scrape_thread: threading.Thread | None = None
         # Tracks the last-seen boot ID so we can increment the reboot counter
         # when it changes, rather than exposing a UUID-valued label.
         self._last_boot_id: str | None = None
@@ -1460,6 +1474,16 @@ class TrueNASExporter:
 
     def stop(self) -> None:
         self._stop_event.set()
+
+    def metric_snapshot(self) -> tuple[Any, ...]:
+        """Return the last complete immutable-by-convention metric snapshot."""
+        with self._snapshot_lock:
+            return self._metric_snapshot
+
+    def _publish_metric_snapshot(self) -> None:
+        families = tuple(REGISTRY.collect())
+        with self._snapshot_lock:
+            self._metric_snapshot = families
 
     def _status_like(self, value: str) -> bool:
         """Return True only for the known-good status string set.
@@ -2892,11 +2916,7 @@ class TrueNASExporter:
                     verify_tls=self.config.verify_tls,
                     ca_file=self.config.ca_file,
                 ) as client:
-                    login_result = client.call("auth.login_with_api_key", [self.config.api_key])
-
-                    # --- Step 2: High-level metric extraction (Recursive traversal) ---
-                    if not _as_bool(login_result):
-                        raise JsonRpcError("event stream: auth.login_with_api_key returned falsy")
+                    client.authenticate(self.config.api_key)
 
                     subscribed_events: list[str] = []
                     for event in self.config.event_subscriptions:
@@ -2948,6 +2968,7 @@ class TrueNASExporter:
                         # that a concurrent /metrics scrape sees a consistent snapshot
                         # (all CPU sub-components from the same event cycle, etc.).
                         with self._lock:
+                            self._expire_stale_events()
                             self._dispatch_event(collection, payload)
 
             except Exception:
@@ -4177,9 +4198,10 @@ class TrueNASExporter:
                     # --- Authentication ---
                     # In TrueNAS 25.x, login_with_api_key returns a session dict;
                     # in older versions it returned True. _as_bool handles both.
-                    login_result = self._call(client, "auth.login_with_api_key", [self.config.api_key])
-                    if not _as_bool(login_result):
-                        raise JsonRpcError("auth.login_with_api_key returned falsy")
+                    client.authenticate(
+                        self.config.api_key,
+                        call=lambda method, params: self._call(client, method, params),
+                    )
 
                     # --- Dynamic Discovery (if enabled) ---
                     self._discover_all_methods(client)
@@ -4485,13 +4507,13 @@ class TrueNASExporter:
                         name = _str_label(iface.get("name"), "unknown")
                         candidate = iface.get("state")
                         if isinstance(candidate, dict):
-                            link_up = _as_bool(
-                                candidate.get("link_state")
-                                or candidate.get("up")
-                                or candidate.get("state")
-                            )
+                            link_up = _link_is_up(_first_not_none(
+                                candidate.get("link_state"),
+                                candidate.get("up"),
+                                candidate.get("state"),
+                            ))
                         else:
-                            link_up = _as_bool(_first_not_none(iface.get("up"), iface.get("link_state")))
+                            link_up = _link_is_up(_first_not_none(iface.get("up"), iface.get("link_state")))
                         INTERFACE_LINK_UP.labels(interface=name).set(1 if link_up else 0)
 
                         # Interface MTU
@@ -4624,10 +4646,14 @@ class TrueNASExporter:
                 LOG.exception("Scrape failed")
                 success = False
 
-        SCRAPE_SUCCESS.set(1 if success else 0)
-        SCRAPE_DURATION.set(max(0.0, time.time() - started))
-        if success:
-            self._last_scrape_success_monotonic = time.monotonic()
+        if self._is_collector_mode():
+            self._publish_cached_events_to_default_registry()
+        with self._lock:
+            SCRAPE_SUCCESS.set(1 if success else 0)
+            SCRAPE_DURATION.set(max(0.0, time.time() - started))
+            if success:
+                self._last_scrape_success_monotonic = time.monotonic()
+            self._publish_metric_snapshot()
 
     # ------------------------------------------------------------------
     # System extras (product type, version, IDs)
@@ -6086,9 +6112,10 @@ class TrueNASExporter:
                 ca_file=self.config.ca_file,
                 deadline_monotonic=deadline,
             ) as client:
-                login_result = self._call(client, "auth.login_with_api_key", [self.config.api_key])
-                if not _as_bool(login_result):
-                    raise JsonRpcError("auth.login_with_api_key returned falsy")
+                client.authenticate(
+                    self.config.api_key,
+                    call=lambda method, params: self._call(client, method, params),
+                )
 
                 state_raw = self._call(client, "system.state", [])
                 state_label = _str_label(state_raw).upper()
@@ -6276,7 +6303,7 @@ class TrueNASExporter:
                 break
 
 
-class TrueNASCollector:
+class _PartialSnapshotCollector:
     def __init__(self, exporter: TrueNASExporter) -> None:
         self.exporter = exporter
 
@@ -6328,12 +6355,8 @@ class TrueNASCollector:
         yield event_message_family
 
 
-class FullParityCollector:
-    """Compatibility bridge exposing the complete legacy metric contract.
-
-    Domain extraction still runs through ``scrape_once`` during the migration,
-    but the HTTP endpoint uses a custom registry and fresh on-demand scrapes.
-    """
+class TrueNASCollector:
+    """Expose the last complete full-parity background snapshot."""
 
     def __init__(self, exporter: TrueNASExporter) -> None:
         self.exporter = exporter
@@ -6342,9 +6365,7 @@ class FullParityCollector:
         return []
 
     def collect(self):
-        self.exporter.scrape_once()
-        self.exporter._publish_cached_events_to_default_registry()
-        yield from REGISTRY.collect()
+        yield from self.exporter.metric_snapshot()
 
 
 # ---------------------------------------------------------------------------
@@ -6355,6 +6376,10 @@ class _QuietHandler(WSGIRequestHandler):
     """Suppress per-request access log lines (Prometheus scrapes are very noisy)."""
     def log_message(self, fmt: str, *args: Any) -> None:
         pass
+
+
+class _ThreadingWSGIServer(socketserver.ThreadingMixIn, WSGIServer):
+    daemon_threads = True
 
 
 _LANDING_PAGE = b"""\
@@ -6407,7 +6432,9 @@ def _start_http_server(
                 return metrics_app(environ, start_response)
         return metrics_app(environ, start_response)
 
-    server = make_server("", port, app, handler_class=_QuietHandler)
+    server = make_server(
+        "", port, app, server_class=_ThreadingWSGIServer, handler_class=_QuietHandler
+    )
     thread = threading.Thread(target=server.serve_forever, name="http-server", daemon=True)
     thread.start()
     LOG.info("HTTP server started on :%d (GET /, GET /metrics, GET /healthz, GET /readyz)", port)
@@ -6439,7 +6466,7 @@ def main() -> None:
     server: Any
     if config.exporter_mode == "collector":
         registry = CollectorRegistry(auto_describe=True)
-        registry.register(FullParityCollector(exporter))  # type: ignore[arg-type]
+        registry.register(TrueNASCollector(exporter))  # type: ignore[arg-type]
         server = _start_http_server(
             config.exporter_port,
             exporter._lock,
@@ -6448,6 +6475,10 @@ def main() -> None:
             readiness_check=exporter.is_ready,
         )
         exporter._ensure_event_thread()
+        exporter._scrape_thread = threading.Thread(
+            target=exporter.run_forever, name="scrape-worker", daemon=True
+        )
+        exporter._scrape_thread.start()
     else:
         server = _start_http_server(
             config.exporter_port,
@@ -6472,6 +6503,8 @@ def main() -> None:
         server.shutdown()
         if exporter._event_thread is not None:
             exporter._event_thread.join(timeout=max(1, config.event_stale_after_seconds + 1))
+        if exporter._scrape_thread is not None:
+            exporter._scrape_thread.join(timeout=max(1, config.timeout_seconds + 1))
 
 
 if __name__ == "__main__":

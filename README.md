@@ -168,7 +168,7 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 | `TRUENAS_TIMEOUT_SECONDS` | no | Timeout for API call batches |
 | `SCRAPE_BUDGET_SECONDS` | no | Total deadline for a collector scrape; default `25` |
 | `LOG_LEVEL` | no | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
-| `EXPORTER_MODE` | no | Exporter runtime architecture: `legacy` (default) or `collector` |
+| `EXPORTER_MODE` | no | Exporter runtime architecture: `collector` (default) or compatibility `legacy` |
 | `ENABLE_EVENT_STREAMS` | no | Enable background event subscriptions |
 | `EVENT_SUBSCRIPTIONS` | no | Comma-separated event streams to subscribe to |
 | `EVENT_INTERVAL_SECONDS` | no | Interval used for supported realtime streams |
@@ -187,14 +187,11 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 
 The exporter now supports two runtime modes behind `EXPORTER_MODE`:
 
-- `legacy` (default): existing background poll loop that updates global Prometheus gauges
-- `collector`: on-demand custom-registry mode. It exposes the full dedicated metric contract through a compatibility bridge while domain extraction is moved into fresh snapshot collectors.
+- `collector` (default): a background single-flight scrape publishes complete atomic snapshots; HTTP requests never call TrueNAS.
+- `legacy`: compatibility mode using the previous global-registry coordinator, retained for the 5.2 release.
 
 
-### Temporary collector-mode migration boundary
-
-- Generic recursive `EVENT_*` extraction remains a legacy-path feature for now.
-- Dedicated metrics have registry parity, but non-core domains still use the legacy extraction coordinator internally. This is tracked in `docs/modernization/02-architecture.md`.
+Collector snapshots prevent torn reads, allow overlapping scrapes, and keep health and readiness endpoints responsive while TrueNAS is slow.
 
 ## Prometheus
 
@@ -243,7 +240,8 @@ The repository includes a ready-to-import dashboard in `grafana-dashboard/operat
 
 | Path | Purpose |
 | --- | --- |
-| `truenas_exporter.py` | Exporter implementation |
+| `truenas_exporter.py` | Source-checkout compatibility launcher |
+| `src/truenas_exporter/` | Exporter package implementation |
 | `Dockerfile` | Container image build |
 | `docker-compose.yml` | Main Docker Compose deployment |
 | `.env.example` | Example environment configuration |

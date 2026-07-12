@@ -24,7 +24,7 @@ then finish Phase 2 per [02-architecture.md](02-architecture.md).
 Verification legend: CONFIRMED = trigger and mechanism proven from code;
 PLAUSIBLE = mechanism real, trigger depends on environment.
 
-- [ ] 1. **CONFIRMED — collector mode runs the full API scrape inside every
+- [x] 1. **CONFIRMED — collector mode runs the full API scrape inside every
   `/metrics` GET on a single-threaded server.**
   `src/truenas_exporter/runtime.py:6344` (`FullParityCollector.collect` →
   `scrape_once`, up to `SCRAPE_BUDGET_SECONDS=25`s) served by wsgiref
@@ -34,46 +34,46 @@ PLAUSIBLE = mechanism real, trigger depends on environment.
   task: background scrape loop + snapshot exposition (see 02-architecture.md);
   do not band-aid with a threaded server alone (that would resurrect the
   torn-read risk the single thread currently prevents).
-- [ ] 2. **CONFIRMED — `truenas_interface_link_up` is constant 0.**
+- [x] 2. **CONFIRMED — `truenas_interface_link_up` is constant 0.**
   `runtime.py:4488`: `_as_bool(candidate.get("link_state") or ...)` —
   TrueNAS returns `LINK_STATE_UP`/`LINK_STATE_DOWN` (middleware
   `netif.InterfaceLinkState`), which `_as_bool` (`runtime.py:686`) maps to
   False; the truthy string also short-circuits the or-chain so fallbacks
   never run. Pre-existing in HEAD, still wrong. Map `LINK_STATE_*` explicitly
   and add a fixture test with the real enum values.
-- [ ] 3. **CONFIRMED — `docker-compose.yml` does not forward `EXPORTER_MODE`,
+- [x] 3. **CONFIRMED — `docker-compose.yml` does not forward `EXPORTER_MODE`,
   `ENABLE_GENERIC_METHOD_METRICS`, `ENABLE_GENERIC_EVENT_METRICS`,
   `DATASET_SNAPSHOT_FALLBACK_LIMIT`.** The `environment:` block forwards ~30
   documented vars via `${VAR:-default}` but omits exactly these four, so
   `EXPORTER_MODE=collector docker compose up` silently runs legacy mode.
   Add the four entries; consider a test that diffs `.env.example` keys
   against the compose `environment:` keys.
-- [ ] 4. **CONFIRMED — `scripts/live_smoke.py` cannot run from a fresh
+- [x] 4. **CONFIRMED — `scripts/live_smoke.py` cannot run from a fresh
   checkout.** It imports `truenas_exporter.config` with no `sys.path`
   bootstrap, and no documented step installs the package (`requirements*.txt`
   have no `-e .`). `python3 scripts/live_smoke.py` →
   ModuleNotFoundError. Add the repo-root/src bootstrap or document
   `pip install -e .`.
-- [ ] 5. **CONFIRMED — legacy-mode stale-event expiry starves under a busy
+- [x] 5. **CONFIRMED — legacy-mode stale-event expiry starves under a busy
   stream.** `_expire_stale_events()` runs only on `ws.recv()` timeout
   (`runtime.py:2930`) or stream error (`:2958`); with `reporting.realtime`
   arriving every ~2s the timeout never fires, so series from a dead
   subscription (e.g. `app.stats` after Docker stops) stay frozen forever —
   violating the Phase 1 acceptance "event series disappear after their TTL".
   Also run expiry on the per-message path (cheap monotonic check).
-- [ ] 6. **CONFIRMED — collector-mode `/readyz` is never ready until
+- [x] 6. **CONFIRMED — collector-mode `/readyz` is never ready until
   something scrapes `/metrics`.** `is_ready()` (`runtime.py:1450`) depends on
   `_last_scrape_success_monotonic`, which in collector mode is only set
   inside scrapes triggered by `/metrics`; `main()` starts no background loop
   (waits on `_stop_event`). A k8s readinessProbe on `/readyz` gating traffic
   deadlocks. Fixed naturally by the background scrape loop in finding 1.
-- [ ] 7. **PLAUSIBLE — shipped Prometheus config times out on full-budget
+- [x] 7. **PLAUSIBLE — shipped Prometheus config times out on full-budget
   scrapes.** `deploy/prometheus/prometheus.yml:13` sets `scrape_timeout: 25s`
   equal to `SCRAPE_BUDGET_SECONDS=25`; `/metrics` can take budget + connect/
   auth overhead (collector mode inline scrape; legacy mode blocks on the
   scrape lock held for the whole cycle, `runtime.py:4036`). Set timeout
   comfortably above worst-case (or lower the default budget).
-- [ ] 8. **PLAUSIBLE — no validation that `EVENT_STALE_AFTER_SECONDS` ≥
+- [x] 8. **PLAUSIBLE — no validation that `EVENT_STALE_AFTER_SECONDS` ≥
   `EVENT_INTERVAL_SECONDS`.** Defaults are 15 and 2, but a documented
   `EVENT_INTERVAL_SECONDS=30` with the default TTL of 15 makes event-derived
   series flap fresh→stale between events. Add a cross-check in

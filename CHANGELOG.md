@@ -21,8 +21,13 @@ All notable changes to this project are documented here.
 - MIT license, security and support policies, metric contract, API-doc manifest, and modernization roadmap
 - local lint, type, coverage, generated-asset, Compose, image, Python-matrix, security-audit, live-smoke, and manual-release tooling
 
+### Changed
+
+- collector mode is now the default; set `EXPORTER_MODE=legacy` to retain the previous coordinator for this compatibility release
+- container startup now uses the `truenas-exporter` entrypoint; Compose `command:` overrides that repeated `python /app/truenas_exporter.py` must be removed
+- configuration parsing is strict: values such as `TRUENAS_VERIFY_TLS=maybe`, HTTP URLs, invalid ports, and relative filesystem paths now abort startup instead of being tolerated
+
 ### Policy
 
 - hosted CI is intentionally prohibited; validation and releases are local and explicit
 - TrueNAS SCALE 25.10.2 remains the authoritative API compatibility target
-

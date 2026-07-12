@@ -134,6 +134,29 @@ def test_load_config_rejects_invalid_url_and_boolean(monkeypatch):
         exporter_module._load_config()
 
 
+def test_load_config_rejects_event_ttl_shorter_than_interval(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EVENT_INTERVAL_SECONDS", "30")
+    monkeypatch.setenv("EVENT_STALE_AFTER_SECONDS", "15")
+    with pytest.raises(ValueError, match="must be >="):
+        exporter_module._load_config()
+
+
+def test_busy_event_path_expires_silent_subscription(monkeypatch):
+    now = {"value": 100.0}
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now["value"])
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", event_subscriptions=["app.stats", "reporting.realtime"])
+    )
+    with exporter._lock:
+        exporter._dispatch_event("app.stats", {"fields": [{"app_name": "demo", "cpu_usage": 1.0}]})
+    now["value"] = 116.0
+    with exporter._lock:
+        exporter._expire_stale_events()
+        exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 2.0}}})
+    assert "app.stats" in exporter._expired_events
+
 @pytest.mark.parametrize(
     ("environment", "message"),
     [
@@ -200,7 +223,7 @@ def test_counter_metric_families_use_prometheus_total_suffix(monkeypatch):
     exporter._collector_errors["system"] = 1.0
     exporter._event_message_counts["reporting.realtime"] = 3.0
 
-    families = list(exporter_module.TrueNASCollector(exporter).collect())
+    families = list(exporter_module._PartialSnapshotCollector(exporter).collect())
     samples = {sample.name: sample.value for family in families for sample in family.samples}
 
     assert samples["truenas_api_call_errors_total"] == 2.0

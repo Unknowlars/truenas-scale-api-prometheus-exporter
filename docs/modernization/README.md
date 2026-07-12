@@ -13,7 +13,7 @@ evidence is produced locally.
 | 2 | [Architecture](02-architecture.md) | In progress | Package boundaries and full metric parity are implemented; global metric mutation removal remains |
 | 3 | [Public release](03-public-release.md) | Complete | README, policies, MIT license, Compose, dashboard, and generated API docs validated |
 | 4 | [Validation and release](04-validation-release.md) | Complete | Local gate, Python 3.12-3.14 matrix, image build, dependency audit, and dry-run release verified |
-| 5 | [Review findings and handover](05-handover.md) | In progress | Midway review (2026-07-12): 6 confirmed + 2 plausible findings open; fix before finishing phase 2 |
+| 5 | [Review findings and handover](05-handover.md) | Complete | Eight findings fixed with fixture regressions; request-time API scraping removed |
 
 ## Locked decisions
 
@@ -33,7 +33,7 @@ A phase is complete only when every checkbox in its document is checked and the
 listed local verification commands pass. Partial work remains marked in
 progress; roadmap documentation must not claim completion early.
 
-Current branch coverage is 48%. Configuration is at 100%, transport at 97%,
+Current branch coverage is 49%. Configuration is at 100%, transport at 95%,
 and metric declarations at 100%. Raising total branch coverage to 85% remains
 part of the architecture migration because the legacy coordinator still holds
 most untested domain branches.
@@ -45,3 +45,11 @@ review findings first, then follow the "Remaining work queue" in
 [02-architecture.md](02-architecture.md). All work is verified through
 `./scripts/validate.sh` and the metric-contract check; the working tree is
 uncommitted at handover, so create a checkpoint commit before changing code.
+
+## Verification evidence
+
+- 2026-07-12 review fixes: 78 passed, 1 skipped; branch coverage 49.26%; Ruff,
+  mypy, metric-contract, dashboard, and fixture checks passed through the local
+  validation gate.
+- `python3 scripts/generate_metric_contract.py --check` passed after the
+  collector-default flip with no metric or label contract change.

@@ -117,9 +117,16 @@ def load_config() -> Config:
     if any(not path.startswith("/") for path in filesystem_paths):
         raise ValueError("FILESYSTEM_PATHS entries must be absolute TrueNAS paths")
 
-    exporter_mode = os.getenv("EXPORTER_MODE", "legacy").strip().lower() or "legacy"
+    exporter_mode = os.getenv("EXPORTER_MODE", "collector").strip().lower() or "collector"
     if exporter_mode not in {"legacy", "collector"}:
         raise ValueError("EXPORTER_MODE must be either 'legacy' or 'collector'")
+
+    event_interval_seconds = _int_env("EVENT_INTERVAL_SECONDS", "2", 1)
+    event_stale_after_seconds = _int_env("EVENT_STALE_AFTER_SECONDS", "15", 1)
+    if event_stale_after_seconds < event_interval_seconds:
+        raise ValueError(
+            "EVENT_STALE_AFTER_SECONDS must be >= EVENT_INTERVAL_SECONDS"
+        )
 
     return Config(
         ws_url=ws_url,
@@ -143,7 +150,7 @@ def load_config() -> Config:
         enable_dataset_metrics=_bool_env("ENABLE_DATASET_METRICS", "true"),
         enable_task_metrics=_bool_env("ENABLE_TASK_METRICS", "true"),
         enable_ipmi_metrics=_bool_env("ENABLE_IPMI_METRICS", "true"),
-        event_interval_seconds=_int_env("EVENT_INTERVAL_SECONDS", "2", 1),
+        event_interval_seconds=event_interval_seconds,
         event_read_timeout_seconds=_int_env("EVENT_READ_TIMEOUT_SECONDS", "60", 1),
         event_subscriptions=_list_env("EVENT_SUBSCRIPTIONS", ",".join(DEFAULT_EVENT_SUBSCRIPTIONS)),
         scrape_all_metrics=_bool_env("SCRAPE_ALL_METRICS", "false"),
@@ -152,7 +159,6 @@ def load_config() -> Config:
         dataset_snapshot_fallback_limit=_int_env("DATASET_SNAPSHOT_FALLBACK_LIMIT", "0", 0),
         exporter_mode=exporter_mode,
         scrape_budget_seconds=_int_env("SCRAPE_BUDGET_SECONDS", "25", 1),
-        event_stale_after_seconds=_int_env("EVENT_STALE_AFTER_SECONDS", "15", 1),
+        event_stale_after_seconds=event_stale_after_seconds,
         ca_file=ca_file,
     )
-

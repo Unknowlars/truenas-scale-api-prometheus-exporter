@@ -6,11 +6,11 @@
 - [ ] Separate configuration, transport, method safety, metrics, events,
   collection, HTTP serving, and CLI startup.
 - [ ] Replace private prometheus-client attribute access with owned metric specs.
-- [ ] Make collectors produce fresh snapshots and publish them atomically.
+- [x] Make collectors produce fresh snapshots and publish them atomically.
 - [x] Export operational counters from the same registry as collector metrics.
 - [x] Add a generated metric-contract manifest and compatibility test.
 - [x] Reach dedicated-metric and dashboard parity with legacy mode.
-- [ ] Make collector mode the default only after parity; retain legacy mode for
+- [x] Make collector mode the default only after parity; retain legacy mode for
   one compatibility release.
 
 ## Acceptance

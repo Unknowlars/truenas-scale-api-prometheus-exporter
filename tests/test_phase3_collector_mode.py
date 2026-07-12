@@ -44,6 +44,10 @@ class FakeClient:
     def __exit__(self, exc_type, exc, tb):
         return None
 
+    def authenticate(self, api_key, call=None):
+        if call is not None:
+            call("auth.login_with_api_key", [api_key])
+
 
 def _family_by_name(families, name):
     for family in families:
@@ -88,7 +92,7 @@ def test_collector_mode_returns_fresh_families_without_stale_pool_series(monkeyp
     monkeypatch.setattr(exporter, "_call", fake_call)
     monkeypatch.setattr(exporter, "_call_query_with_fallback", fake_query_with_fallback)
 
-    collector = exporter_module.TrueNASCollector(exporter)
+    collector = exporter_module._PartialSnapshotCollector(exporter)
 
     first = list(collector.collect())
     first_pool_size = _family_by_name(first, "truenas_pool_size_bytes")
@@ -119,7 +123,7 @@ def test_collector_mode_exposes_up_and_scrape_duration(monkeypatch):
     monkeypatch.setattr(exporter, "_call", fake_call)
     monkeypatch.setattr(exporter, "_call_query_with_fallback", lambda *_: [])
 
-    families = list(exporter_module.TrueNASCollector(exporter).collect())
+    families = list(exporter_module._PartialSnapshotCollector(exporter).collect())
     up_family = _family_by_name(families, "truenas_up")
     duration_family = _family_by_name(families, "truenas_scrape_duration_seconds")
 
@@ -183,7 +187,7 @@ def test_collector_mode_core_metric_names_are_stable(monkeypatch):
         },
     )
 
-    names = {family.name for family in exporter_module.TrueNASCollector(exporter).collect()}
+    names = {family.name for family in exporter_module._PartialSnapshotCollector(exporter).collect()}
     expected = {
         "truenas_up",
         "truenas_scrape_duration_seconds",
@@ -235,8 +239,9 @@ def _capture_http_stack(monkeypatch):
         def serve_forever(self):
             return
 
-    def fake_make_server(host, port, app, handler_class):
+    def fake_make_server(host, port, app, handler_class, server_class=None):
         captured["http_app"] = app
+        captured["server_class"] = server_class
         return FakeServer()
 
     monkeypatch.setattr(exporter_module, "make_wsgi_app", fake_make_wsgi_app)
@@ -314,7 +319,7 @@ def test_full_parity_collector_exposes_declared_metric_families(monkeypatch):
     monkeypatch.setattr(exporter, "scrape_once", lambda: None)
 
     family_names = {
-        family.name for family in exporter_module.FullParityCollector(exporter).collect()
+        family.name for family in exporter_module.TrueNASCollector(exporter).collect()
     }
     contract = build_contract()
     expected = {
@@ -325,3 +330,14 @@ def test_full_parity_collector_exposes_declared_metric_families(monkeypatch):
     }
 
     assert expected <= family_names
+
+
+def test_full_parity_collector_never_scrapes_on_request(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config())
+    monkeypatch.setattr(exporter, "scrape_once", lambda: (_ for _ in ()).throw(AssertionError("scrape")))
+    assert list(exporter_module.TrueNASCollector(exporter).collect())
+
+
+def test_link_state_enums_are_mapped_explicitly():
+    assert exporter_module._link_is_up("LINK_STATE_UP") is True
+    assert exporter_module._link_is_up("LINK_STATE_DOWN") is False

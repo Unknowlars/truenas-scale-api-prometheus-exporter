@@ -6,6 +6,7 @@ import json
 import logging
 import ssl
 import time
+from collections.abc import Callable
 from typing import Any
 
 from websocket import WebSocket, create_connection
@@ -103,3 +104,19 @@ class JsonRpcWsClient:
             raise RuntimeError("WebSocket is not connected")
         return json.loads(self._ws.recv())
 
+    def authenticate(
+        self,
+        api_key: str,
+        call: Callable[[str, list[Any]], Any] | None = None,
+    ) -> None:
+        """Authenticate with a read-only API key, accepting v25 session objects."""
+        request = self.call if call is None else call
+        result = request("auth.login_with_api_key", [api_key])
+        if isinstance(result, str):
+            accepted = result.strip().lower() in {"1", "true", "yes", "on", "up", "running"}
+        elif isinstance(result, (dict, list)):
+            accepted = bool(result)
+        else:
+            accepted = bool(result)
+        if not accepted:
+            raise JsonRpcError("auth.login_with_api_key returned falsy")

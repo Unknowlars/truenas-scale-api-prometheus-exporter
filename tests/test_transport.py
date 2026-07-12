@@ -124,3 +124,12 @@ def test_transport_bounds_stray_messages(monkeypatch):
     with transport.JsonRpcWsClient("ws://nas.example/api/current", 5, True) as client:
         with pytest.raises(transport.JsonRpcError, match="response not received"):
             client.call("system.info")
+
+
+def test_transport_authenticate_accepts_session_and_rejects_falsy():
+    client = transport.JsonRpcWsClient("ws://nas.example/api/current", 5, True)
+    calls = []
+    client.authenticate("secret", call=lambda method, params: calls.append((method, params)) or {"id": "session"})
+    assert calls == [("auth.login_with_api_key", ["secret"])]
+    with pytest.raises(transport.JsonRpcError, match="returned falsy"):
+        client.authenticate("secret", call=lambda _method, _params: False)
