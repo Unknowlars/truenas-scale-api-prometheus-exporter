@@ -3,6 +3,10 @@ from datetime import UTC, datetime, timedelta
 from truenas_exporter.collection import (
     _as_bool,
     _as_float,
+    _as_optional_bool,
+    _as_percent,
+    _as_ratio,
+    _as_size_bytes,
     _cert_days_to_expiry,
     _extract_labeled_numeric_series,
     _first_not_none,
@@ -15,7 +19,9 @@ from truenas_exporter.collection import (
 
 def test_scalar_coercion_edge_cases():
     assert _as_float(None) is None
-    assert _as_float(True) == 1
+    assert _as_float(True) is None
+    assert _as_float(float("nan")) is None
+    assert _as_float(float("inf")) is None
     assert _as_float("bad") is None
     assert _as_float({"parsed": "2.5"}) == 2.5
     assert _as_float({"value": "bad"}) is None
@@ -32,6 +38,23 @@ def test_scalar_coercion_edge_cases():
     assert _str_label("  ", "fallback") == "fallback"
     assert _normalize_core_label("cpu12") == "12"
     assert _normalize_core_label("total") == "total"
+
+
+def test_strict_documented_scalar_parsers_reject_malformed_values():
+    assert _as_optional_bool(0) is False
+    assert _as_optional_bool(1) is True
+    for malformed in (2, -1, float("nan"), float("inf"), "arbitrary"):
+        assert _as_optional_bool(malformed) is None
+
+    assert _as_percent(0) == 0
+    assert _as_percent(100) == 100
+    for malformed in (-1, 101, False, float("nan"), "inf"):
+        assert _as_percent(malformed) is None
+
+    assert _as_ratio("2.5x") == 2.5
+    assert _as_ratio(-1) is None
+    assert _as_size_bytes("1 KiB") == 1024
+    assert _as_size_bytes(-1) is None
 
 
 def test_labeled_series_accepts_list_and_mapping_shapes():
@@ -53,6 +76,10 @@ def test_timestamp_and_certificate_edge_cases():
     assert _parse_ts(10) == 10
     assert _parse_ts({"$date": 2500}) == 2.5
     assert _parse_ts({"$date": "bad"}) is None
+    assert _parse_ts({"$date": False}) is None
+    assert _parse_ts({"$date": float("inf")}) is None
+    assert _parse_ts(float("nan")) is None
+    assert _parse_ts("inf") is None
     assert _parse_ts("Never") is None
     assert _parse_ts("2026-01-01T00:00:00Z") is not None
     assert _parse_ts("2026-01-01T00:00:00") is not None

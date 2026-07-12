@@ -1,0 +1,5 @@
+{
+  "numeric": [null, 0, false, "0", "1.5", "not-a-number", {}, {"parsed": 2.5}],
+  "boolean": [false, true, 0, 1, "off", "on", "stopped", "running", null],
+  "timestamp": [null, 0, {"$date": 0}, "2026-01-01T00:00:00Z", "Never", "not-a-date"]
+}

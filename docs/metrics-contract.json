@@ -203,6 +203,13 @@
       "variable": "APP_DOCKERHUB_PULL_LIMIT_REMAINING"
     },
     {
+      "help": "Seconds remaining in the current DockerHub pull-limit window",
+      "labels": [],
+      "name": "truenas_app_dockerhub_pull_limit_remaining_window_seconds",
+      "type": "gauge",
+      "variable": "APP_DOCKERHUB_PULL_LIMIT_REMAINING_WINDOW_SECONDS"
+    },
+    {
       "help": "Total DockerHub pull limit window size",
       "labels": [],
       "name": "truenas_app_dockerhub_pull_limit_total",
@@ -322,6 +329,13 @@
       "variable": "AUDIT_DATASET_USED_BYTES"
     },
     {
+      "help": "Configured audit dataset quota in bytes",
+      "labels": [],
+      "name": "truenas_audit_quota_bytes",
+      "type": "gauge",
+      "variable": "AUDIT_QUOTA_BYTES"
+    },
+    {
       "help": "Audit quota fill critical threshold percentage",
       "labels": [],
       "name": "truenas_audit_quota_fill_critical_percent",
@@ -336,11 +350,48 @@
       "variable": "AUDIT_QUOTA_FILL_WARNING_PERCENT"
     },
     {
+      "help": "1 if remote audit logging is enabled",
+      "labels": [],
+      "name": "truenas_audit_remote_logging_enabled",
+      "type": "gauge",
+      "variable": "AUDIT_REMOTE_LOGGING_ENABLED"
+    },
+    {
+      "help": "Configured audit dataset reservation in bytes",
+      "labels": [],
+      "name": "truenas_audit_reservation_bytes",
+      "type": "gauge",
+      "variable": "AUDIT_RESERVATION_BYTES"
+    },
+    {
+      "help": "Configured local audit retention in days",
+      "labels": [],
+      "name": "truenas_audit_retention_days",
+      "type": "gauge",
+      "variable": "AUDIT_RETENTION_DAYS"
+    },
+    {
       "help": "Number of active authenticated API sessions",
       "labels": [],
       "name": "truenas_auth_sessions_active",
       "type": "gauge",
       "variable": "AUTH_SESSIONS_ACTIVE"
+    },
+    {
+      "help": "1 if boot environment is selected for the next boot",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_boot_env_activated",
+      "type": "gauge",
+      "variable": "BOOT_ENV_ACTIVATED"
+    },
+    {
+      "help": "Number of boot environments selected for the next boot",
+      "labels": [],
+      "name": "truenas_boot_env_activated_count",
+      "type": "gauge",
+      "variable": "BOOT_ENV_ACTIVATED_COUNT"
     },
     {
       "help": "1 if boot environment is active",
@@ -389,6 +440,15 @@
       "name": "truenas_boot_env_size_bytes",
       "type": "gauge",
       "variable": "BOOT_ENV_SIZE_BYTES"
+    },
+    {
+      "help": "Bytes used by the boot environment",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_boot_environment_used_bytes",
+      "type": "gauge",
+      "variable": "BOOT_ENV_USED_BYTES"
     },
     {
       "help": "Boot pool allocated bytes",
@@ -487,6 +547,15 @@
       "name": "truenas_certificate_days_to_expiry",
       "type": "gauge",
       "variable": "CERT_DAYS_TO_EXPIRY"
+    },
+    {
+      "help": "Certificate expiry time as a Unix timestamp",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_certificate_expiry_timestamp_seconds",
+      "type": "gauge",
+      "variable": "CERT_EXPIRY_TIMESTAMP_SECONDS"
     },
     {
       "help": "Chassis hardware model",
@@ -849,6 +918,15 @@
       "name": "truenas_directoryservices_dns_updates_enabled",
       "type": "gauge",
       "variable": "DIRECTORYSERVICES_DNS_UPDATES_ENABLED"
+    },
+    {
+      "help": "1 if the enabled directory service reports FAULTED status",
+      "labels": [
+        "service"
+      ],
+      "name": "truenas_directoryservices_fault_present",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_FAULT_PRESENT"
     },
     {
       "help": "Directory service fault reason as label",
@@ -1230,6 +1308,15 @@
       "variable": "FTP_ENABLED"
     },
     {
+      "help": "1 if the GPU is available to the TrueNAS host",
+      "labels": [
+        "index"
+      ],
+      "name": "truenas_gpu_available_to_host",
+      "type": "gauge",
+      "variable": "GPU_AVAILABLE_TO_HOST"
+    },
+    {
       "help": "Number of GPU devices visible to the host",
       "labels": [],
       "name": "truenas_gpu_count",
@@ -1247,6 +1334,15 @@
       "name": "truenas_gpu_info",
       "type": "gauge",
       "variable": "GPU_INFO"
+    },
+    {
+      "help": "1 if the GPU uses system-critical PCI devices",
+      "labels": [
+        "index"
+      ],
+      "name": "truenas_gpu_uses_system_critical_devices",
+      "type": "gauge",
+      "variable": "GPU_USES_CRITICAL_DEVICES"
     },
     {
       "help": "Host CPU core count",
@@ -1760,6 +1856,13 @@
       "variable": "METHOD_STATUS_VALUE"
     },
     {
+      "help": "1 if an applied default network route is configured",
+      "labels": [],
+      "name": "truenas_network_default_gateway_configured",
+      "type": "gauge",
+      "variable": "NETWORK_DEFAULT_GATEWAY_CONFIGURED"
+    },
+    {
       "help": "Number of default routes",
       "labels": [],
       "name": "truenas_network_default_routes",
@@ -1811,6 +1914,13 @@
       "name": "truenas_nfs_client_count",
       "type": "gauge",
       "variable": "NFS_CLIENT_COUNT"
+    },
+    {
+      "help": "1 if NFS over RDMA is enabled",
+      "labels": [],
+      "name": "truenas_nfs_rdma_enabled",
+      "type": "gauge",
+      "variable": "NFS_RDMA_ENABLED"
     },
     {
       "help": "NFS server operations per second (instantaneous snapshot from realtime API)",
@@ -1980,6 +2090,33 @@
       "variable": "POOL_DEDUP_RATIO"
     },
     {
+      "help": "Size of the pool deduplication table in bytes",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_dedup_table_size_bytes",
+      "type": "gauge",
+      "variable": "POOL_DEDUP_TABLE_SIZE_BYTES"
+    },
+    {
+      "help": "Active pool expansion completion percentage (0 to 100)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_expand_percent",
+      "type": "gauge",
+      "variable": "POOL_EXPAND_PERCENT"
+    },
+    {
+      "help": "API-reported bytes_reflowed value for the active pool expansion",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_expand_reflowed_bytes",
+      "type": "gauge",
+      "variable": "POOL_EXPAND_REFLOWED_BYTES"
+    },
+    {
       "help": "Pool expandable size in bytes",
       "labels": [
         "pool"
@@ -1987,6 +2124,15 @@
       "name": "truenas_pool_expand_size_bytes",
       "type": "gauge",
       "variable": "POOL_EXPAND_SIZE_BYTES"
+    },
+    {
+      "help": "API-reported bytes_to_reflow value for the active pool expansion",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_expand_to_reflow_bytes",
+      "type": "gauge",
+      "variable": "POOL_EXPAND_TO_REFLOW_BYTES"
     },
     {
       "help": "Pool fragmentation percentage (0 to 100)",
@@ -2294,6 +2440,13 @@
       "variable": "SMART_TEST_LAST_TIMESTAMP"
     },
     {
+      "help": "1 if legacy SMB1 protocol support is enabled",
+      "labels": [],
+      "name": "truenas_smb1_enabled",
+      "type": "gauge",
+      "variable": "SMB1_ENABLED"
+    },
+    {
       "help": "Number of active SMB connections",
       "labels": [],
       "name": "truenas_smb_connection_count",
@@ -2301,11 +2454,27 @@
       "variable": "SMB_CONNECTION_COUNT"
     },
     {
+      "help": "Configured SMB transport encryption mode",
+      "labels": [
+        "mode"
+      ],
+      "name": "truenas_smb_encryption_mode",
+      "type": "gauge",
+      "variable": "SMB_ENCRYPTION_MODE"
+    },
+    {
       "help": "1 if SMB multichannel is enabled",
       "labels": [],
       "name": "truenas_smb_multichannel_enabled",
       "type": "gauge",
       "variable": "SMB_MULTICHANNEL_ENABLED"
+    },
+    {
+      "help": "1 if insecure SMB NTLMv1 authentication is enabled",
+      "labels": [],
+      "name": "truenas_smb_ntlmv1_auth_enabled",
+      "type": "gauge",
+      "variable": "SMB_NTLMV1_AUTH_ENABLED"
     },
     {
       "help": "Number of SMB open files",
@@ -2639,6 +2808,13 @@
       "variable": "UPDATE_AVAILABLE"
     },
     {
+      "help": "Current update download completion percentage (0 to 100)",
+      "labels": [],
+      "name": "truenas_update_download_progress_percent",
+      "type": "gauge",
+      "variable": "UPDATE_DOWNLOAD_PROGRESS_PERCENT"
+    },
+    {
       "help": "Update profile information label (always 1)",
       "labels": [
         "profile"
@@ -2762,6 +2938,13 @@
       "name": "truenas_vm_flag_amd_asids",
       "type": "gauge",
       "variable": "VM_FLAG_AMD_ASIDS"
+    },
+    {
+      "help": "1 if AMD Address Space Identifiers are supported",
+      "labels": [],
+      "name": "truenas_vm_flag_amd_asids_supported",
+      "type": "gauge",
+      "variable": "VM_FLAG_AMD_ASIDS_SUPPORTED"
     },
     {
       "help": "1 if AMD RVI/NPT flag is present",

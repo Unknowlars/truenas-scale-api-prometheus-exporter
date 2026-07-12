@@ -1,0 +1,9 @@
+{
+  "code": "ERROR",
+  "status": null,
+  "error": {
+    "errname": "ENONET",
+    "reason": "Update service is unavailable"
+  },
+  "update_download_progress": null
+}

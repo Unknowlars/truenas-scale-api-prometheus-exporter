@@ -19,8 +19,10 @@ def test_collector_realtime_zero_replaces_previous_value():
     exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 0.0}}})
 
     assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 0.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 0.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 100.0
+    # The CPU object is opaque in the 25.10.2 schema. Total use must not be
+    # relabelled as user-space CPU use when a user field is absent.
+    assert exporter_module.CPU_USER_PERCENT._name not in exporter._collector_event_scalars
+    assert exporter_module.CPU_IDLE_PERCENT._name not in exporter._collector_event_scalars
 
 
 def test_legacy_app_and_vm_zero_values_are_exported():
@@ -105,6 +107,17 @@ def test_load_config_rejects_event_ttl_shorter_than_interval(monkeypatch):
         exporter_module._load_config()
 
 
+@pytest.mark.parametrize(
+    "event", ["core.get_jobs", "replication.query", "vm.query", "unknown.event"]
+)
+def test_load_config_rejects_sensitive_or_undocumented_events(monkeypatch, event):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EVENT_SUBSCRIPTIONS", event)
+    with pytest.raises(ValueError, match="sensitive/raw"):
+        exporter_module._load_config()
+
+
 def test_busy_event_path_expires_silent_subscription(monkeypatch):
     now = {"value": 100.0}
     monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now["value"])
@@ -180,6 +193,9 @@ def test_jsonrpc_client_enforces_total_deadline(monkeypatch):
 
 def test_counter_metric_families_use_prometheus_total_suffix(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config())
+    before_events = exporter_module.EVENT_MESSAGES_TOTAL.labels(
+        event="reporting.realtime"
+    )._value.get()
     exporter_module.API_CALL_ERRORS_TOTAL.labels(method="system.info", error_type="TimeoutError").inc(2)
     exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="system").inc()
     exporter_module.EVENT_MESSAGES_TOTAL.labels(event="reporting.realtime").inc(3)
@@ -190,7 +206,7 @@ def test_counter_metric_families_use_prometheus_total_suffix(monkeypatch):
 
     assert samples["truenas_api_call_errors_total"] == 2.0
     assert samples["truenas_collector_errors_total"] == 1.0
-    assert samples["truenas_event_messages_total"] == 3.0
+    assert samples["truenas_event_messages_total"] == before_events + 3.0
     assert all(
         not math.isnan(samples[name])
         for name in (

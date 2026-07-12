@@ -1,0 +1,12 @@
+[
+  {
+    "network": "default",
+    "netmask": "0.0.0.0",
+    "gateway": "192.0.2.1",
+    "interface": "synthetic0",
+    "flags": [],
+    "table_id": 254,
+    "scope": 0,
+    "preferred_source": null
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "system_power": "on",
+  "power_overload": "false",
+  "interlock": "inactive",
+  "power_fault": "false",
+  "power_control_fault": "false",
+  "power_restore_policy": "always-off",
+  "last_power_event": "none",
+  "chassis_intrusion": "false",
+  "front_panel_lockout": "inactive",
+  "drive_fault": "false",
+  "cooling/fan_fault": "false",
+  "chassis_identify_state": "off"
+}

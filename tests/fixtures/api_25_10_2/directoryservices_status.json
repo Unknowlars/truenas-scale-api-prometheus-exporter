@@ -1,0 +1,5 @@
+{
+  "type": "ACTIVEDIRECTORY",
+  "status": "FAULTED",
+  "status_msg": "Directory service health check failed"
+}

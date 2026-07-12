@@ -1,0 +1,22 @@
+{
+  "code": "NORMAL",
+  "status": {
+    "current_version": {
+      "train": "TrueNAS-SCALE-25.10",
+      "profile": "GENERAL",
+      "matches_profile": true
+    },
+    "new_version": {
+      "version": "25.10.3",
+      "manifest": {},
+      "release_notes": null,
+      "release_notes_url": "https://updates.example.invalid/25.10.3"
+    }
+  },
+  "error": null,
+  "update_download_progress": {
+    "percent": 0,
+    "description": "Waiting",
+    "version": "25.10.3"
+  }
+}

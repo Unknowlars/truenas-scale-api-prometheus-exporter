@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "address": "time-a.example.invalid",
+    "burst": false,
+    "iburst": true,
+    "prefer": true,
+    "minpoll": 6,
+    "maxpoll": 10
+  },
+  {
+    "id": 2,
+    "address": "time-b.example.invalid",
+    "burst": true,
+    "iburst": false,
+    "prefer": false,
+    "minpoll": 8,
+    "maxpoll": 12
+  }
+]

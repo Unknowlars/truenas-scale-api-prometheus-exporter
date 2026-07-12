@@ -1,0 +1,12 @@
+{
+  "fields": {
+    "memory": {
+      "arc_size": null,
+      "physical_memory_total": "not-a-number"
+    },
+    "zfs": {
+      "demand_accesses_per_second": null,
+      "demand_data_hit_percentage": "invalid"
+    }
+  }
+}

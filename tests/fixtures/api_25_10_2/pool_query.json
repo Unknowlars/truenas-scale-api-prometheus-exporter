@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "name": "tank",
+    "guid": "0000000000000000001",
+    "status": "ONLINE",
+    "path": "/mnt/tank",
+    "scan": {
+      "bytes_issued": 0,
+      "bytes_processed": 0,
+      "bytes_to_process": 0,
+      "end_time": null,
+      "errors": 0,
+      "function": "SCRUB",
+      "pause": null,
+      "percentage": 0,
+      "start_time": "2026-01-01T00:00:00+00:00",
+      "state": "SCANNING",
+      "total_secs_left": 0
+    },
+    "expand": {
+      "bytes_reflowed": 978944,
+      "bytes_to_reflow": 835584,
+      "end_time": null,
+      "expanding_vdev": 0,
+      "percentage": 85.35564853556485,
+      "start_time": "2026-01-01T00:00:00+00:00",
+      "state": "FINISHED",
+      "total_secs_left": null,
+      "waiting_for_resilver": 0
+    },
+    "is_upgraded": true,
+    "healthy": true,
+    "warning": false,
+    "status_code": null,
+    "status_detail": null,
+    "size": 1099511627776,
+    "allocated": 274877906944,
+    "free": 824633720832,
+    "freeing": 0,
+    "dedup_table_size": 1048576,
+    "dedup_table_quota": null,
+    "fragmentation": "0",
+    "size_str": "1 TiB",
+    "allocated_str": "256 GiB",
+    "free_str": "768 GiB",
+    "freeing_str": "0 B",
+    "autotrim": {
+      "parsed": "off",
+      "rawvalue": "off",
+      "source": "DEFAULT",
+      "value": "off"
+    },
+    "topology": null
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "sel_version": "1.5",
+  "number_of_log_entries": "0",
+  "free_space_remaining": "1024",
+  "recent_erase_timestamp": "01/01/2026 00:00:00",
+  "get_sel_allocation_information_command": "supported",
+  "reserve_sel_command": "supported",
+  "partial_add_sel_entry_command": "unsupported",
+  "delete_sel_command": "supported",
+  "events_dropped_due_to_lack_of_space": "0",
+  "number_of_possible_allocation_units": "128",
+  "allocation_unit_size": "16",
+  "number_of_free_allocation_units": "64",
+  "largest_free_block": "64",
+  "maximum_record_size": "16"
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "addr": {
+      "pci_slot": "0000:01:00.0",
+      "domain": "0000",
+      "bus": "01",
+      "slot": "00"
+    },
+    "description": "Synthetic GPU",
+    "devices": [
+      {
+        "pci_id": "10de:0000",
+        "pci_slot": "0000:01:00.0",
+        "vm_pci_slot": "pci_0000_01_00_0"
+      }
+    ],
+    "vendor": "Synthetic Vendor",
+    "available_to_host": true,
+    "uses_system_critical_devices": false,
+    "critical_reason": null
+  }
+]

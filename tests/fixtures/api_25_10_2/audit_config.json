@@ -1,0 +1,19 @@
+{
+  "id": 1,
+  "retention": 30,
+  "reservation": 2,
+  "quota": 4,
+  "quota_fill_warning": 75,
+  "quota_fill_critical": 90,
+  "remote_logging_enabled": false,
+  "space": {
+    "used": 0,
+    "used_by_dataset": 0,
+    "used_by_reservation": 2147483648,
+    "used_by_snapshots": 0,
+    "available": 4294967296
+  },
+  "enabled_services": {
+    "MIDDLEWARE": []
+  }
+}

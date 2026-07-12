@@ -50,7 +50,7 @@ services:
       EVENT_INTERVAL_SECONDS: "${EVENT_INTERVAL_SECONDS:-2}"
       EVENT_READ_TIMEOUT_SECONDS: "${EVENT_READ_TIMEOUT_SECONDS:-60}"
       EVENT_STALE_AFTER_SECONDS: "${EVENT_STALE_AFTER_SECONDS:-15}"
-      EVENT_SUBSCRIPTIONS: "${EVENT_SUBSCRIPTIONS:-reporting.realtime,app.stats,virt.instance.metrics,pool.scan,pool.query,disk.query,docker.state,interface.query,alert.list,directoryservices.status,service.query,failover.status,update.status,system.reboot.info,system.shutdown,core.get_jobs,container.query,vm.query}"
+      EVENT_SUBSCRIPTIONS: "${EVENT_SUBSCRIPTIONS:-reporting.realtime,app.stats,virt.instance.metrics}"
       ENABLE_GENERIC_METHOD_METRICS: "${ENABLE_GENERIC_METHOD_METRICS:-false}"
       ENABLE_GENERIC_EVENT_METRICS: "${ENABLE_GENERIC_EVENT_METRICS:-false}"
       DATASET_SNAPSHOT_FALLBACK_LIMIT: "${DATASET_SNAPSHOT_FALLBACK_LIMIT:-0}"

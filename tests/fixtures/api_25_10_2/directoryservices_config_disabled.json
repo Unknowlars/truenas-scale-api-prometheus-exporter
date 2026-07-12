@@ -1,0 +1,11 @@
+{
+  "id": 1,
+  "service_type": null,
+  "credential": null,
+  "enable": false,
+  "enable_account_cache": false,
+  "enable_dns_updates": false,
+  "timeout": 10,
+  "kerberos_realm": null,
+  "configuration": null
+}

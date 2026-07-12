@@ -1,0 +1,7 @@
+{
+  "total_pull_limit": 100,
+  "total_time_limit_in_secs": 21600,
+  "remaining_pull_limit": 0,
+  "remaining_time_limit_in_secs": 3600,
+  "error": null
+}

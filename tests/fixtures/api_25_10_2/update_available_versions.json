@@ -1,0 +1,11 @@
+[
+  {
+    "train": "TrueNAS-SCALE-25.10",
+    "version": {
+      "version": "25.10.3",
+      "manifest": {},
+      "release_notes": null,
+      "release_notes_url": "https://updates.example.invalid/25.10.3"
+    }
+  }
+]

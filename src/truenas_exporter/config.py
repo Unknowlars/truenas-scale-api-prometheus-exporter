@@ -7,26 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-DEFAULT_EVENT_SUBSCRIPTIONS = (
-    "reporting.realtime",
-    "app.stats",
-    "virt.instance.metrics",
-    "pool.scan",
-    "pool.query",
-    "disk.query",
-    "docker.state",
-    "interface.query",
-    "alert.list",
-    "directoryservices.status",
-    "service.query",
-    "failover.status",
-    "update.status",
-    "system.reboot.info",
-    "system.shutdown",
-    "core.get_jobs",
-    "container.query",
-    "vm.query",
-)
+from .api_catalog import DEFAULT_SAFE_EVENT_SUBSCRIPTIONS, SAFE_EVENT_SUBSCRIPTIONS
+
+DEFAULT_EVENT_SUBSCRIPTIONS = DEFAULT_SAFE_EVENT_SUBSCRIPTIONS
 
 
 @dataclass
@@ -128,6 +111,16 @@ def load_config() -> Config:
             "EVENT_STALE_AFTER_SECONDS must be >= EVENT_INTERVAL_SECONDS"
         )
 
+    event_subscriptions = _list_env(
+        "EVENT_SUBSCRIPTIONS", ",".join(DEFAULT_EVENT_SUBSCRIPTIONS)
+    )
+    unsafe_events = sorted(set(event_subscriptions) - SAFE_EVENT_SUBSCRIPTIONS)
+    if unsafe_events:
+        raise ValueError(
+            "EVENT_SUBSCRIPTIONS contains undocumented or sensitive/raw events: "
+            + ", ".join(unsafe_events)
+        )
+
     return Config(
         ws_url=ws_url,
         api_key=api_key,
@@ -152,7 +145,7 @@ def load_config() -> Config:
         enable_ipmi_metrics=_bool_env("ENABLE_IPMI_METRICS", "true"),
         event_interval_seconds=event_interval_seconds,
         event_read_timeout_seconds=_int_env("EVENT_READ_TIMEOUT_SECONDS", "60", 1),
-        event_subscriptions=_list_env("EVENT_SUBSCRIPTIONS", ",".join(DEFAULT_EVENT_SUBSCRIPTIONS)),
+        event_subscriptions=event_subscriptions,
         scrape_all_metrics=_bool_env("SCRAPE_ALL_METRICS", "false"),
         enable_generic_method_metrics=_bool_env("ENABLE_GENERIC_METHOD_METRICS", "false"),
         enable_generic_event_metrics=_bool_env("ENABLE_GENERIC_EVENT_METRICS", "false"),

@@ -1,0 +1,19 @@
+{
+  "id": 1,
+  "servers": null,
+  "allow_nonroot": false,
+  "protocols": ["NFSV3", "NFSV4"],
+  "v4_krb": false,
+  "v4_domain": "",
+  "bindip": [],
+  "mountd_port": null,
+  "rpcstatd_port": null,
+  "rpclockd_port": null,
+  "mountd_log": false,
+  "statd_lockd_log": false,
+  "v4_krb_enabled": false,
+  "userd_manage_gids": false,
+  "keytab_has_nfs_spn": false,
+  "managed_nfsd": true,
+  "rdma": false
+}

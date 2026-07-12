@@ -1,0 +1,45 @@
+{
+  "fields": {
+    "cpu": {},
+    "disls": {
+      "busy": 12.5,
+      "read_bytes": 4096,
+      "write_bytes": 2048,
+      "read_ops": 32,
+      "write_ops": 16
+    },
+    "interfaces": {},
+    "memory": {
+      "arc_size": 4294967296,
+      "arc_free_memory": 1073741824,
+      "arc_available_memory": 2147483648,
+      "physical_memory_total": 34359738368,
+      "physical_memory_available": 17179869184
+    },
+    "zfs": {
+      "demand_accesses_per_second": 1000,
+      "demand_data_accesses_per_second": 700,
+      "demand_metadata_accesses_per_second": 300,
+      "demand_data_hits_per_second": 600,
+      "demand_data_io_hits_per_second": 20,
+      "demand_data_misses_per_second": 100,
+      "demand_data_hit_percentage": 85,
+      "demand_data_io_hit_percentage": 3,
+      "demand_data_miss_percentage": 15,
+      "demand_metadata_hits_per_second": 250,
+      "demand_metadata_io_hits_per_second": 10,
+      "demand_metadata_misses_per_second": 50,
+      "demand_metadata_hit_percentage": 83,
+      "demand_metadata_io_hit_percentage": 3,
+      "demand_metadata_miss_percentage": 17,
+      "l2arc_hits_per_second": 90,
+      "l2arc_misses_per_second": 10,
+      "total_l2arc_accesses_per_second": 100,
+      "l2arc_access_hit_percentage": 90,
+      "l2arc_miss_percentage": 10,
+      "bytes_read_per_second_from_the_l2arc": 8192,
+      "bytes_written_per_second_to_the_l2arc": 4096
+    },
+    "pools": {}
+  }
+}

@@ -127,6 +127,10 @@ POOL_FRAGMENTATION = declare_gauge("POOL_FRAGMENTATION", "truenas_pool_fragmenta
 POOL_AUTOTRIM_ENABLED = declare_gauge("POOL_AUTOTRIM_ENABLED", "truenas_pool_autotrim_enabled", "1 if autotrim is enabled on the pool", ["pool"])
 POOL_DEDUP_RATIO = declare_gauge("POOL_DEDUP_RATIO", "truenas_pool_dedup_ratio", "Pool deduplication ratio (1.0 means no dedup savings)", ["pool"])
 POOL_EXPAND_SIZE_BYTES = declare_gauge("POOL_EXPAND_SIZE_BYTES", "truenas_pool_expand_size_bytes", "Pool expandable size in bytes", ["pool"])
+POOL_DEDUP_TABLE_SIZE_BYTES = declare_gauge("POOL_DEDUP_TABLE_SIZE_BYTES", "truenas_pool_dedup_table_size_bytes", "Size of the pool deduplication table in bytes", ["pool"])
+POOL_EXPAND_REFLOWED_BYTES = declare_gauge("POOL_EXPAND_REFLOWED_BYTES", "truenas_pool_expand_reflowed_bytes", "API-reported bytes_reflowed value for the active pool expansion", ["pool"])
+POOL_EXPAND_TO_REFLOW_BYTES = declare_gauge("POOL_EXPAND_TO_REFLOW_BYTES", "truenas_pool_expand_to_reflow_bytes", "API-reported bytes_to_reflow value for the active pool expansion", ["pool"])
+POOL_EXPAND_PERCENT = declare_gauge("POOL_EXPAND_PERCENT", "truenas_pool_expand_percent", "Active pool expansion completion percentage (0 to 100)", ["pool"])
 
 # ---------------------------------------------------------------------------
 # Datasets
@@ -173,6 +177,7 @@ INTERFACE_LINK_UP = declare_gauge("INTERFACE_LINK_UP", "truenas_interface_link_u
 NETWORK_DEFAULT_ROUTES = declare_gauge("NETWORK_DEFAULT_ROUTES", "truenas_network_default_routes", "Number of default routes")
 NETWORK_NAMESERVERS = declare_gauge("NETWORK_NAMESERVERS", "truenas_network_nameservers", "Number of configured nameservers")
 NETWORK_GATEWAY_REACHABLE = declare_gauge("NETWORK_GATEWAY_REACHABLE", "truenas_network_gateway_reachable", "1 if the default IPv4 gateway is reachable")
+NETWORK_DEFAULT_GATEWAY_CONFIGURED = declare_gauge("NETWORK_DEFAULT_GATEWAY_CONFIGURED", "truenas_network_default_gateway_configured", "1 if an applied default network route is configured")
 
 # ---------------------------------------------------------------------------
 # Services
@@ -225,6 +230,12 @@ CERT_DAYS_TO_EXPIRY = declare_gauge("CERT_DAYS_TO_EXPIRY",
     "truenas_certificate_days_to_expiry",
     "Days until certificate expires (negative = already expired)",
     ["name", "issuer"],
+)
+CERT_EXPIRY_TIMESTAMP_SECONDS = declare_gauge(
+    "CERT_EXPIRY_TIMESTAMP_SECONDS",
+    "truenas_certificate_expiry_timestamp_seconds",
+    "Certificate expiry time as a Unix timestamp",
+    ["name"],
 )
 
 # ---------------------------------------------------------------------------
@@ -362,6 +373,14 @@ BOOT_ENV_KEEP_COUNT = declare_gauge("BOOT_ENV_KEEP_COUNT", "truenas_boot_env_kee
 BOOT_ENV_SIZE_BYTES = declare_gauge("BOOT_ENV_SIZE_BYTES", "truenas_boot_env_size_bytes", "Size of boot environment in bytes", ["name"])
 BOOT_ENV_ACTIVE = declare_gauge("BOOT_ENV_ACTIVE", "truenas_boot_env_active", "1 if boot environment is active", ["name"])
 BOOT_ENV_KEEP = declare_gauge("BOOT_ENV_KEEP", "truenas_boot_env_keep", "1 if boot environment is marked keep", ["name"])
+BOOT_ENV_ACTIVATED = declare_gauge("BOOT_ENV_ACTIVATED", "truenas_boot_env_activated", "1 if boot environment is selected for the next boot", ["name"])
+BOOT_ENV_ACTIVATED_COUNT = declare_gauge("BOOT_ENV_ACTIVATED_COUNT", "truenas_boot_env_activated_count", "Number of boot environments selected for the next boot")
+BOOT_ENV_USED_BYTES = declare_gauge(
+    "BOOT_ENV_USED_BYTES",
+    "truenas_boot_environment_used_bytes",
+    "Bytes used by the boot environment",
+    ["name"],
+)
 
 # ---------------------------------------------------------------------------
 # VM / Virtualization extras
@@ -376,6 +395,7 @@ VM_FLAG_UNRESTRICTED_GUEST = declare_gauge("VM_FLAG_UNRESTRICTED_GUEST",
     "1 if unrestricted guest support is present",
 )
 VM_FLAG_AMD_ASIDS = declare_gauge("VM_FLAG_AMD_ASIDS", "truenas_vm_flag_amd_asids", "Number of AMD ASIDs when reported")
+VM_FLAG_AMD_ASIDS_SUPPORTED = declare_gauge("VM_FLAG_AMD_ASIDS_SUPPORTED", "truenas_vm_flag_amd_asids_supported", "1 if AMD Address Space Identifiers are supported")
 VM_VIRTUALIZATION_DETAILS_SUPPORTED = declare_gauge("VM_VIRTUALIZATION_DETAILS_SUPPORTED", 
     "truenas_vm_virtualization_details_supported",
     "1 if vm.virtualization_details reports virtualization support",
@@ -492,6 +512,10 @@ AUDIT_DATASET_USED_BYTES = declare_gauge("AUDIT_DATASET_USED_BYTES", "truenas_au
 AUDIT_DATASET_AVAILABLE_BYTES = declare_gauge("AUDIT_DATASET_AVAILABLE_BYTES", "truenas_audit_dataset_available_bytes", "Audit dataset available space in bytes")
 AUDIT_QUOTA_FILL_WARNING_PERCENT = declare_gauge("AUDIT_QUOTA_FILL_WARNING_PERCENT", "truenas_audit_quota_fill_warning_percent", "Audit quota fill warning threshold percentage")
 AUDIT_QUOTA_FILL_CRITICAL_PERCENT = declare_gauge("AUDIT_QUOTA_FILL_CRITICAL_PERCENT", "truenas_audit_quota_fill_critical_percent", "Audit quota fill critical threshold percentage")
+AUDIT_RETENTION_DAYS = declare_gauge("AUDIT_RETENTION_DAYS", "truenas_audit_retention_days", "Configured local audit retention in days")
+AUDIT_RESERVATION_BYTES = declare_gauge("AUDIT_RESERVATION_BYTES", "truenas_audit_reservation_bytes", "Configured audit dataset reservation in bytes")
+AUDIT_QUOTA_BYTES = declare_gauge("AUDIT_QUOTA_BYTES", "truenas_audit_quota_bytes", "Configured audit dataset quota in bytes")
+AUDIT_REMOTE_LOGGING_ENABLED = declare_gauge("AUDIT_REMOTE_LOGGING_ENABLED", "truenas_audit_remote_logging_enabled", "1 if remote audit logging is enabled")
 
 # ---------------------------------------------------------------------------
 # Pool warnings
@@ -657,6 +681,8 @@ GPU_INFO = declare_gauge("GPU_INFO",
     "GPU device info — always 1; carry identifying labels",
     ["index", "model", "vendor", "pci_id"],
 )
+GPU_AVAILABLE_TO_HOST = declare_gauge("GPU_AVAILABLE_TO_HOST", "truenas_gpu_available_to_host", "1 if the GPU is available to the TrueNAS host", ["index"])
+GPU_USES_CRITICAL_DEVICES = declare_gauge("GPU_USES_CRITICAL_DEVICES", "truenas_gpu_uses_system_critical_devices", "1 if the GPU uses system-critical PCI devices", ["index"])
 
 # ---------------------------------------------------------------------------
 # JBOF (Just a Bunch of Flash) hardware
@@ -727,7 +753,7 @@ SNAPSHOT_TOTAL_COUNT = declare_gauge("SNAPSHOT_TOTAL_COUNT", "truenas_snapshot_c
 SNAPSHOT_OLDEST_TS = declare_gauge("SNAPSHOT_OLDEST_TS", "truenas_snapshot_oldest_timestamp_seconds", "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots)")
 
 # ---------------------------------------------------------------------------
-# SMART test results (v5 — smart.test.results)
+# SMART test results (legacy declarations; no documented 25.10.2 producer)
 # ---------------------------------------------------------------------------
 SMART_TEST_LAST_RESULT = declare_gauge("SMART_TEST_LAST_RESULT", 
     "truenas_smart_test_last_result",
@@ -774,6 +800,15 @@ DNS_RESOLVER_COUNT = declare_gauge("DNS_RESOLVER_COUNT", "truenas_dns_resolver_c
 SMB_MULTICHANNEL_ENABLED = declare_gauge("SMB_MULTICHANNEL_ENABLED", "truenas_smb_multichannel_enabled", "1 if SMB multichannel is enabled")
 NFS_V4_ENABLED = declare_gauge("NFS_V4_ENABLED", "truenas_nfs_v4_enabled", "1 if NFSv4 is enabled")
 NFS_SERVERS = declare_gauge("NFS_SERVERS", "truenas_nfs_servers", "Number of NFS server threads configured")
+NFS_RDMA_ENABLED = declare_gauge("NFS_RDMA_ENABLED", "truenas_nfs_rdma_enabled", "1 if NFS over RDMA is enabled")
+SMB1_ENABLED = declare_gauge("SMB1_ENABLED", "truenas_smb1_enabled", "1 if legacy SMB1 protocol support is enabled")
+SMB_NTLMV1_AUTH_ENABLED = declare_gauge("SMB_NTLMV1_AUTH_ENABLED", "truenas_smb_ntlmv1_auth_enabled", "1 if insecure SMB NTLMv1 authentication is enabled")
+SMB_ENCRYPTION_MODE = declare_gauge(
+    "SMB_ENCRYPTION_MODE",
+    "truenas_smb_encryption_mode",
+    "Configured SMB transport encryption mode",
+    ["mode"],
+)
 SSH_ENABLED = declare_gauge("SSH_ENABLED", "truenas_ssh_enabled", "1 if SSH service is enabled to start automatically")
 SSH_PASSWORD_AUTH = declare_gauge("SSH_PASSWORD_AUTH", "truenas_ssh_password_auth", "1 if SSH password authentication is enabled")
 FTP_ENABLED = declare_gauge("FTP_ENABLED", "truenas_ftp_enabled", "1 if FTP service is enabled to start automatically")
@@ -816,6 +851,10 @@ APP_DOCKERHUB_PULL_LIMIT_WINDOW_SECONDS = declare_gauge("APP_DOCKERHUB_PULL_LIMI
     "truenas_app_dockerhub_pull_limit_window_seconds",
     "DockerHub rate-limit window duration in seconds",
 )
+APP_DOCKERHUB_PULL_LIMIT_REMAINING_WINDOW_SECONDS = declare_gauge("APP_DOCKERHUB_PULL_LIMIT_REMAINING_WINDOW_SECONDS",
+    "truenas_app_dockerhub_pull_limit_remaining_window_seconds",
+    "Seconds remaining in the current DockerHub pull-limit window",
+)
 APP_DOCKERHUB_RATE_LIMIT_ERROR_PRESENT = declare_gauge("APP_DOCKERHUB_RATE_LIMIT_ERROR_PRESENT", 
     "truenas_app_dockerhub_rate_limit_error_present",
     "1 if app.image.dockerhub_rate_limit reports an error",
@@ -845,6 +884,11 @@ DIRECTORYSERVICES_SERVICE_TYPE = declare_gauge("DIRECTORYSERVICES_SERVICE_TYPE",
 DIRECTORYSERVICES_KERBEROS_CONFIGURED = declare_gauge("DIRECTORYSERVICES_KERBEROS_CONFIGURED", 
     "truenas_directoryservices_kerberos_configured",
     "1 if directoryservices kerberos configuration is present",
+)
+DIRECTORYSERVICES_FAULT_PRESENT = declare_gauge("DIRECTORYSERVICES_FAULT_PRESENT",
+    "truenas_directoryservices_fault_present",
+    "1 if the enabled directory service reports FAULTED status",
+    ["service"],
 )
 
 SYSTEM_SECURITY_FIPS_CONFIGURED = declare_gauge("SYSTEM_SECURITY_FIPS_CONFIGURED", 
@@ -968,3 +1012,6 @@ ALERTSERVICE_ENABLED = declare_gauge("ALERTSERVICE_ENABLED", "truenas_alertservi
 INITSHUTDOWNSCRIPT_COUNT = declare_gauge("INITSHUTDOWNSCRIPT_COUNT", "truenas_initshutdownscript_count", "Number of init/shutdown scripts")
 KEYCHAIN_CREDENTIAL_COUNT = declare_gauge("KEYCHAIN_CREDENTIAL_COUNT", "truenas_keychain_credential_count", "Number of SSH/keychain credentials")
 SYSTEM_GLOBAL_ID = declare_gauge("SYSTEM_GLOBAL_ID", "truenas_system_global_id", "Always 1; system global unique ID as label", ["global_id"])
+
+# Update download status (update.status)
+UPDATE_DOWNLOAD_PROGRESS_PERCENT = declare_gauge("UPDATE_DOWNLOAD_PROGRESS_PERCENT", "truenas_update_download_progress_percent", "Current update download completion percentage (0 to 100)")

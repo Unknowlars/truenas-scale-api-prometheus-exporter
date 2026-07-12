@@ -1,0 +1,24 @@
+[
+  {
+    "id": "default",
+    "dataset": "boot-pool/ROOT/default",
+    "active": true,
+    "activated": false,
+    "created": "2026-01-01T00:00:00Z",
+    "used_bytes": 2048,
+    "used": "2 KiB",
+    "keep": true,
+    "can_activate": false
+  },
+  {
+    "id": "next",
+    "dataset": "boot-pool/ROOT/next",
+    "active": false,
+    "activated": true,
+    "created": "2026-02-01T00:00:00Z",
+    "used_bytes": 0,
+    "used": "0 B",
+    "keep": false,
+    "can_activate": true
+  }
+]

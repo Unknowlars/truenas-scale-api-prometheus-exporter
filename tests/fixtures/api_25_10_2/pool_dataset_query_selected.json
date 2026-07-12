@@ -1,0 +1,43 @@
+[
+  {
+    "id": "tank/data",
+    "encrypted": false,
+    "key_loaded": null,
+    "locked": false,
+    "used": {
+      "parsed": 0,
+      "rawvalue": "0",
+      "value": "0",
+      "source": "LOCAL",
+      "source_info": {}
+    },
+    "available": {
+      "parsed": 1073741824,
+      "rawvalue": "1073741824",
+      "value": "1073741824",
+      "source": "NONE",
+      "source_info": {}
+    },
+    "quota": {
+      "parsed": null,
+      "rawvalue": "none",
+      "value": "none",
+      "source": "DEFAULT",
+      "source_info": {}
+    },
+    "readonly": {
+      "parsed": "off",
+      "rawvalue": "off",
+      "value": "off",
+      "source": "DEFAULT",
+      "source_info": {}
+    },
+    "creation": {
+      "parsed": 1704067200,
+      "rawvalue": "1704067200",
+      "value": "1704067200",
+      "source": "NONE",
+      "source_info": {}
+    }
+  }
+]

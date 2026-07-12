@@ -2,12 +2,19 @@
 
 import re
 
+from .api_catalog import (
+    READ_ONLY_METHOD_ALLOWLIST,
+    SENSITIVE_NAMESPACE_PREFIXES,
+    SENSITIVE_READ_METHODS,
+    UNSAFE_GENERIC_READ_METHODS,
+)
+
+# Keep the historical regex interface used by ``runtime.py``, but derive it
+# from exact documentation-backed membership instead of suffix heuristics.
 SAFE_ALLOW_RE = re.compile(
-    r"(\.query$|\.status$|\.config$|\.info$|\.summary$|\.version$|\.state$"
-    r"|\.choices$|\.graphs$|\.temperatures$|\.sessions$|\.client_count$"
-    r"|\.get_data$|\.get_|\.list$|\.list_|\.available$|\.available_"
-    r"|\.is_|\.has_|\.feature_|\.nvidia_present$|\.licensed$|\.flags$"
-    r"|\.details$|\.reachable$)"
+    r"^(?:"
+    + "|".join(re.escape(method) for method in sorted(READ_ONLY_METHOD_ALLOWLIST))
+    + r")$"
 )
 SAFE_DENY_RE = re.compile(
     r"(^|\.)(create|update|delete|destroy|remove|start|stop|restart|reboot"
@@ -43,6 +50,7 @@ REQUIRES_ENTITY_PARAM: set[str] = {
     "app.get_instance",
     "app.outdated_docker_images",
     "app.rollback_versions",
+    "app.upgrade_summary",
     # ── Catalog ──
     "catalog.get_app_details",   # requires catalog item name
     # ── Cloud Backup — require backup task ID ──
@@ -56,6 +64,7 @@ REQUIRES_ENTITY_PARAM: set[str] = {
     # ── Disk — require disk name list (disk.temperatures works; these don't) ──
     "disk.temperature_agg",      # requires explicit list of disk names
     "disk.temperature_alerts",   # requires explicit list of disk names
+    "disk.temperatures",         # requires explicit list of disk names
     # ── Filesystem ──
     "filesystem.statfs",         # requires a path argument
     # ── Group ──
@@ -67,7 +76,9 @@ REQUIRES_ENTITY_PARAM: set[str] = {
     "iscsi.extent.disk_choices",
     # ── Pool ──
     "pool.is_upgraded",          # requires pool id
+    "pool.get_disks",            # requires pool id
     "pool.dataset.get_quota",    # requires dataset path + quota type
+    "pool.dataset.snapshot_count",  # requires dataset path
     # ── FC per-entity ──
     "fc.fc_host.get_instance",
     "fcport.get_instance",
@@ -85,6 +96,9 @@ REQUIRES_ENTITY_PARAM: set[str] = {
     "reporting.netdata_get_data",
     # ── Route ──
     "route.ipv4gw_reachable",    # failing on this TrueNAS version (API changed)
+    # ── Service per-entity status ──
+    "service.started",
+    "service.started_or_enabled",
     # ── System ──
     "system.feature_enabled",    # requires feature name string
     "system.security.info",      # method removed/renamed in this TrueNAS version
@@ -109,6 +123,25 @@ DENY_NAMESPACE_PREFIXES: tuple[str, ...] = (
     "vmware.",   # requires VMware vCenter credentials in TrueNAS
     "ec2.",      # AWS/cloud integrations
 )
+
+def is_documented_read_only_method(method: str) -> bool:
+    """Return whether *method* is in the 25.10.2 read-only allowlist."""
+
+    return method in READ_ONLY_METHOD_ALLOWLIST
+
+
+def is_sensitive_read_method(method: str) -> bool:
+    """Return whether a full read response can expose sensitive data."""
+
+    return method in SENSITIVE_READ_METHODS or method.startswith(
+        SENSITIVE_NAMESPACE_PREFIXES
+    )
+
+
+def is_unsafe_generic_read_method(method: str) -> bool:
+    """Return whether only an owned count/select call is permitted."""
+
+    return method in UNSAFE_GENERIC_READ_METHODS
 
 BASE_METHODS: list[str] = [
     # System — state/info/ready are called explicitly in scrape_once and their

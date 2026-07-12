@@ -42,8 +42,21 @@ def test_call_diagnostics_fallback_and_count(monkeypatch):
         return ["ok"]
 
     monkeypatch.setattr(exporter, "_call", fallback_call)
-    assert exporter._call_query_with_fallback(failing, "disk.query", {"select": ["name"]}) == ["ok"]
-    assert calls[-1] == ("disk.query", [])
+    assert exporter._call_query_with_fallback(failing, "pool.query", {"select": ["name"]}) == ["ok"]
+    assert calls == [
+        ("pool.query", [[], {"select": ["name"]}]),
+        ("pool.query", []),
+    ]
+
+    calls.clear()
+    with pytest.raises(RuntimeError, match="unsupported options"):
+        exporter._call_query_with_fallback(
+            failing,
+            "disk.query",
+            {"select": ["name"]},
+            allow_bare_fallback=False,
+        )
+    assert calls == [("disk.query", [[], {"select": ["name"]}])]
 
     monkeypatch.setattr(exporter, "_call", lambda *_args, **_kwargs: {})
     with pytest.raises(TypeError):
@@ -301,8 +314,8 @@ def test_method_safety_auto_params_and_discovery(monkeypatch):
     assert not exporter._is_safe_read_method("filesystem.stat")
     assert not exporter._is_safe_read_method("auth.login")
     assert not exporter._is_safe_read_method("pool.delete")
-    assert exporter._is_safe_read_method("pool.query")
-    assert exporter._is_safe_read_method("custom.status")
+    assert exporter._is_safe_read_method("system.ready")
+    assert not exporter._is_safe_read_method("custom.status")
     assert not exporter._is_safe_read_method("custom.mystery")
 
     assert exporter._auto_params("pool.query") == [[], {"limit": 7}]
@@ -317,19 +330,19 @@ def test_method_safety_auto_params_and_discovery(monkeypatch):
         exporter,
         "_safe_call_auto",
         lambda _client, method: {
-            "pool.query": {},
+            "system.ready": {},
             "custom.status": {},
             "unsafe.create": {},
             3: {},
         } if method == "core.get_methods" else None,
     )
     methods = exporter._discover_methods(object())
-    assert "pool.query" in methods
-    assert methods.count("custom.status") == 1
+    assert "system.ready" in methods
+    assert "custom.status" not in methods
     assert "unsafe.create" not in methods
 
 
-def test_safe_call_auto_query_retry_and_generic_failure(monkeypatch):
+def test_safe_call_auto_does_not_retry_without_safe_query_options(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config())
     calls = []
 
@@ -340,7 +353,8 @@ def test_safe_call_auto_query_retry_and_generic_failure(monkeypatch):
         return ["fallback"]
 
     monkeypatch.setattr(exporter, "_call", query_retry)
-    assert exporter._safe_call_auto(object(), "pool.query") == ["fallback"]
+    assert exporter._safe_call_auto(object(), "pool.query") is None
+    assert calls == [("pool.query", [[], {"limit": 200}])]
 
     monkeypatch.setattr(exporter, "_call", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("broken")))
     assert exporter._safe_call_auto(object(), "system.info") is None
@@ -350,25 +364,21 @@ def test_safe_call_auto_query_retry_and_generic_failure(monkeypatch):
 def test_dynamic_discovery_filters_mutations_and_handles_failure():
     exporter = exporter_module.TrueNASExporter(make_config(scrape_all_metrics=True))
     client = _CallClient(result={
-        "demo.query": {},
-        "demo.config": {},
-        "demo.info": {},
-        "demo.status": {},
-        "demo.statistics": {},
-        "demo.metrics": {},
-        "demo.get_state": {},
+        "dns.query": {},
+        "system.info": {},
         "demo.create": {},
         "demo.update": {},
         "demo.delete": {},
         "demo.set_value": {},
         "demo.do_work": {},
         "auth.me": {},
-        "core.ping": {},
+        "user.has_local_administrator_set_up": {},
     })
     exporter._discover_all_methods(client)
     assert exporter._all_methods_discovered
-    assert "demo.query" in exporter.config.extra_methods
-    assert "demo.get_state" in exporter.config.extra_methods
+    assert "dns.query" not in exporter.config.extra_methods  # already a base method
+    assert "system.info" not in exporter.config.extra_methods  # already a base method
+    assert "user.has_local_administrator_set_up" in exporter.config.extra_methods
     assert "demo.create" not in exporter.config.extra_methods
     before = list(exporter.config.extra_methods)
     exporter._discover_all_methods(client)

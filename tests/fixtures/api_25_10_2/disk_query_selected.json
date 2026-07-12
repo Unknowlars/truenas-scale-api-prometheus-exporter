@@ -1,0 +1,24 @@
+[
+  {
+    "identifier": "{devicename}sda",
+    "name": "sda",
+    "size": 4000787030016,
+    "model": "Synthetic HDD",
+    "rotationrate": 7200,
+    "type": "HDD",
+    "bus": "SATA",
+    "devname": "/dev/sda",
+    "pool": "tank"
+  },
+  {
+    "identifier": "{devicename}nvme0n1",
+    "name": "nvme0n1",
+    "size": 1000204886016,
+    "model": "Synthetic NVMe",
+    "rotationrate": null,
+    "type": "SSD",
+    "bus": "NVME",
+    "devname": "/dev/nvme0n1",
+    "pool": null
+  }
+]

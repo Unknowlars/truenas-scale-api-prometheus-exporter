@@ -1,7 +1,13 @@
+import json
+import math
+from pathlib import Path
+
 import pytest
 from conftest import make_config
 
 import truenas_exporter as exporter_module
+
+FIXTURES = Path(__file__).parent / "fixtures" / "api_25_10_2"
 
 
 def gauge_value(gauge):
@@ -195,10 +201,9 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
         calls.append((method, params))
         if method == "pool.dataset.query":
             return [{
-                "name": "tank/data",
+                "id": "tank/data",
                 "used": 123.0,
                 "available": 456.0,
-                "referenced": 78.0,
                 "quota": 1000.0,
                 "refquota": 900.0,
                 "compressratio": 1.5,
@@ -232,7 +237,6 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
     assert dataset_options["extra"]["properties"] == [
         "used",
         "available",
-        "referenced",
         "quota",
         "refquota",
         "compressratio",
@@ -251,10 +255,9 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
         "creation",
     ]
     assert dataset_options["select"] == [
-        "name",
+        "id",
         ["used.parsed", "used"],
         ["available.parsed", "available"],
-        ["referenced.parsed", "referenced"],
         ["quota.parsed", "quota"],
         ["refquota.parsed", "refquota"],
         ["compressratio.parsed", "compressratio"],
@@ -276,7 +279,6 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
         "locked",
     ]
     assert exporter_module.DATASET_USED_BYTES.labels(dataset="tank/data")._value.get() == 123.0
-    assert exporter_module.DATASET_REFERENCED_BYTES.labels(dataset="tank/data")._value.get() == 78.0
     assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/data")._value.get() == 9.0
     assert exporter_module.DATASET_RESERVATION_BYTES.labels(dataset="tank/data")._value.get() == 50.0
     assert exporter_module.DATASET_USED_BY_SNAPSHOTS_BYTES.labels(dataset="tank/data")._value.get() == 13.0
@@ -410,6 +412,8 @@ def test_app_query_enrichment_metrics(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
     def fake_call(client, method, params=None):
+        if method in {"vm.query", "app.query"} and params[1].get("count"):
+            return 0 if method == "vm.query" else 1
         if method == "app.outdated_docker_images":
             return []
         raise AssertionError(f"Unexpected call: {method} {params}")
@@ -458,11 +462,16 @@ def test_app_query_enrichment_metrics(monkeypatch):
 def test_boot_env_metrics_use_used_bytes_field(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
+    environments = json.loads(
+        (FIXTURES / "boot_environment_query.json").read_text(encoding="utf-8")
+    )
 
     def fake_call(client, method, params=None):
         calls.append((method, params))
         assert method == "boot.environment.query"
-        return [{"id": "default", "active": True, "keep": True, "used_bytes": 2048}]
+        if params[1].get("count"):
+            return len(environments)
+        return environments
 
     monkeypatch.setattr(exporter, "_call", fake_call)
 
@@ -470,6 +479,10 @@ def test_boot_env_metrics_use_used_bytes_field(monkeypatch):
 
     assert calls[0][1][1]["select"] == ["id", "active", "activated", "keep", "created", "used_bytes"]
     assert exporter_module.BOOT_ENV_SIZE_BYTES.labels(name="default")._value.get() == 2048.0
+    assert exporter_module.BOOT_ENV_USED_BYTES.labels(name="next")._value.get() == 0.0
+    assert exporter_module.BOOT_ENV_ACTIVATED.labels(name="default")._value.get() == 0.0
+    assert exporter_module.BOOT_ENV_ACTIVATED.labels(name="next")._value.get() == 1.0
+    assert exporter_module.BOOT_ENV_ACTIVATED_COUNT._value.get() == 1.0
 
 
 def test_certificate_metrics_do_not_request_undocumented_issuer_field(monkeypatch):
@@ -479,14 +492,15 @@ def test_certificate_metrics_do_not_request_undocumented_issuer_field(monkeypatc
     def fake_call(client, method, params=None):
         calls.append((method, params))
         assert method == "certificate.query"
-        return [{"name": "ui_cert", "organization": "Example Org", "until": "2099-01-01T00:00:00+00:00", "CSR": None}]
+        return [{"name": "ui_cert", "until": "2099-01-01T00:00:00+00:00", "CSR": None}]
 
     monkeypatch.setattr(exporter, "_call", fake_call)
 
     exporter._collect_certificate_metrics(object())
 
-    assert calls[0][1][1]["select"] == ["name", "organization", "common", "until", "CSR"]
-    assert exporter_module.CERT_DAYS_TO_EXPIRY.labels(name="ui_cert", issuer="Example Org")._value.get() > 0
+    assert calls[0][1][1]["select"] == ["name", "until", "CSR"]
+    assert exporter_module.CERT_DAYS_TO_EXPIRY.labels(name="ui_cert", issuer="unknown")._value.get() > 0
+    assert exporter_module.CERT_EXPIRY_TIMESTAMP_SECONDS.labels(name="ui_cert")._value.get() > 0
 
 
 def test_inventory_collectors_accept_numeric_count_results(monkeypatch):
@@ -569,9 +583,7 @@ def test_enabled_gauges_follow_service_enable_state(monkeypatch):
         if method == "smb.config":
             return {"multichannel": False}
         if method == "nfs.config":
-            return {"v4": True, "servers": 8}
-        if method == "ssh.config":
-            return {"passwordauth": False}
+            return {"protocols": ["NFSV4"], "servers": 8, "rdma": False}
         if method == "network.configuration.config":
             return {"httpproxy": ""}
         if method == "app.image.query":
@@ -594,7 +606,7 @@ def test_enabled_gauges_follow_service_enable_state(monkeypatch):
     exporter._collect_misc_configs(object(), {})
 
     assert gauge_value(exporter_module.SSH_ENABLED) == 0
-    assert gauge_value(exporter_module.SSH_PASSWORD_AUTH) == 0
+    assert math.isnan(gauge_value(exporter_module.SSH_PASSWORD_AUTH))
     assert gauge_value(exporter_module.FTP_ENABLED) == 1
     assert gauge_value(exporter_module.SNMP_ENABLED) == 0
     assert gauge_value(exporter_module.REPORTING_ENABLED) == 1
@@ -617,7 +629,7 @@ def test_load_config_parses_defaults_and_lists(monkeypatch):
     monkeypatch.setenv("TRUENAS_VERIFY_TLS", "no")
     monkeypatch.setenv("FILESYSTEM_PATHS", "/mnt/data, /mnt/backups")
     monkeypatch.setenv("EXTRA_METHODS", "foo.query, bar.config")
-    monkeypatch.setenv("EVENT_SUBSCRIPTIONS", "service.query,reporting.realtime")
+    monkeypatch.setenv("EVENT_SUBSCRIPTIONS", "app.stats,reporting.realtime")
     monkeypatch.setenv("ENABLE_EVENT_STREAMS", "0")
 
     config = exporter_module._load_config()
@@ -627,7 +639,7 @@ def test_load_config_parses_defaults_and_lists(monkeypatch):
     assert config.verify_tls is False
     assert config.filesystem_paths == ["/mnt/data", "/mnt/backups"]
     assert config.extra_methods == ["foo.query", "bar.config"]
-    assert config.event_subscriptions == ["service.query", "reporting.realtime"]
+    assert config.event_subscriptions == ["app.stats", "reporting.realtime"]
     assert config.enable_event_streams is False
     assert config.query_limit == 200
     assert config.exporter_port == 9108
@@ -772,14 +784,15 @@ def test_disable_created_metrics():
 # ---------------------------------------------------------------------------
 
 
-def test_scrub_task_collector_makes_single_api_call(monkeypatch):
-    """Phase 2: _collect_scrub_task_metrics uses one list query, not count+list."""
+def test_scrub_task_collector_uses_exact_count_and_bounded_detail(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
         calls.append((method, params))
         if method == "pool.scrub.query":
+            if params[1].get("count"):
+                return 301
             return [{"id": 1, "pool_name": "tank", "enabled": True}]
         raise AssertionError(f"Unexpected call: {method}")
 
@@ -788,22 +801,23 @@ def test_scrub_task_collector_makes_single_api_call(monkeypatch):
     exporter._collect_scrub_task_metrics(object(), {})
 
     scrub_calls = [c for c in calls if c[0] == "pool.scrub.query"]
-    assert len(scrub_calls) == 1, f"Expected 1 pool.scrub.query call, got {len(scrub_calls)}"
-    # Count should come from list length
-    assert gauge_value(exporter_module.POOL_SCRUB_TASK_COUNT) == 1
+    assert len(scrub_calls) == 2
+    assert scrub_calls[1][1] == [[], {"count": True}]
+    assert gauge_value(exporter_module.POOL_SCRUB_TASK_COUNT) == 301
 
 
-def test_cloud_backup_collector_makes_single_api_call(monkeypatch):
-    """Phase 2: _collect_cloud_backup_metrics uses one list query, not count+list."""
+def test_cloud_backup_collector_uses_exact_count_and_safe_detail_select(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
         calls.append((method, params))
         if method == "cloud_backup.query":
+            if params[1].get("count"):
+                return 402
             return [
-                {"id": 1, "description": "daily", "enabled": True, "job": {"state": "SUCCESS"}},
-                {"id": 2, "description": "weekly", "enabled": False, "job": None},
+                {"id": 1, "enabled": True},
+                {"id": 2, "enabled": False},
             ]
         raise AssertionError(f"Unexpected call: {method}")
 
@@ -812,18 +826,21 @@ def test_cloud_backup_collector_makes_single_api_call(monkeypatch):
     exporter._collect_cloud_backup_metrics(object(), {})
 
     backup_calls = [c for c in calls if c[0] == "cloud_backup.query"]
-    assert len(backup_calls) == 1
-    assert gauge_value(exporter_module.CLOUD_BACKUP_TASK_COUNT) == 2
+    assert len(backup_calls) == 2
+    assert backup_calls[0][1][1]["select"] == ["id", "enabled"]
+    assert gauge_value(exporter_module.CLOUD_BACKUP_TASK_COUNT) == 402
+    assert not list(exporter_module.CLOUD_BACKUP_TASK_STATE.collect())[0].samples
 
 
-def test_cronjob_collector_makes_single_api_call(monkeypatch):
-    """Phase 2: _collect_cronjob_metrics uses one list query, not count+list."""
+def test_cronjob_collector_uses_exact_count_and_excludes_command(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
     def fake_call(client, method, params=None):
         calls.append((method, params))
         if method == "cronjob.query":
+            if params[1].get("count"):
+                return 503
             return [{"id": 1, "description": "nightly", "enabled": True, "command": "echo hi"}]
         raise AssertionError(f"Unexpected call: {method}")
 
@@ -832,12 +849,12 @@ def test_cronjob_collector_makes_single_api_call(monkeypatch):
     exporter._collect_cronjob_metrics(object(), {})
 
     cron_calls = [c for c in calls if c[0] == "cronjob.query"]
-    assert len(cron_calls) == 1
-    assert gauge_value(exporter_module.CRONJOB_COUNT) == 1
+    assert len(cron_calls) == 2
+    assert cron_calls[0][1][1]["select"] == ["id", "enabled"]
+    assert gauge_value(exporter_module.CRONJOB_COUNT) == 503
 
 
-def test_task_collectors_make_single_call_per_type(monkeypatch):
-    """Phase 2: _collect_task_metrics uses one call per task type, not count+list."""
+def test_task_collectors_use_exact_counts_per_type(monkeypatch):
     config = make_config(exporter_mode="legacy", enable_task_metrics=True)
     exporter = exporter_module.TrueNASExporter(config)
     calls = []
@@ -847,7 +864,7 @@ def test_task_collectors_make_single_call_per_type(monkeypatch):
         if method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
             options = params[1] if params and len(params) > 1 else {}
             if options.get("count"):
-                raise AssertionError(f"Unexpected count query for {method}")
+                return 0
             return []
         if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
             return 0
@@ -859,7 +876,12 @@ def test_task_collectors_make_single_call_per_type(monkeypatch):
 
     for method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
         method_calls = [c for c in calls if c[0] == method]
-        assert len(method_calls) == 1, f"Expected 1 call for {method}, got {len(method_calls)}"
+        assert len(method_calls) == 2
+        assert method_calls[0][1][1]["select"] == ["id", "enabled"]
+        assert method_calls[1][1] == [[], {"count": True}]
+
+    assert not list(exporter_module.TASK_STATE.collect())[0].samples
+    assert not list(exporter_module.TASK_LAST_RUN_TS.collect())[0].samples
 
 
 def test_reporting_graph_discovery_skipped_when_generic_disabled(monkeypatch):
@@ -912,40 +934,17 @@ def test_reporting_graph_discovery_runs_when_generic_enabled(monkeypatch):
     assert "reporting.netdata_graphs" in extracted
 
 
-def test_smart_timestamp_parsing_sets_last_timestamp(monkeypatch):
+def test_undocumented_smart_results_method_is_never_called(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
-
     monkeypatch.setattr(
         exporter,
         "_safe_call_auto",
-        lambda client, method: [
-            {
-                "disk": "sda",
-                "tests": [
-                    {
-                        "status": "SUCCESS",
-                        "timestamp": {"$date": 1700000000000},
-                    }
-                ],
-            },
-            {
-                "disk": "sdb",
-                "tests": [
-                    {
-                        "status": "FAILED",
-                        "time_finished": "2025-01-01T00:00:00+00:00",
-                    }
-                ],
-            },
-        ],
+        lambda *_args, **_kwargs: pytest.fail("undocumented SMART RPC must not be called"),
     )
 
     exporter._collect_smart_test_results(object())
-
-    assert labeled_value(exporter_module.SMART_TEST_LAST_RESULT, "sda") == 1
-    assert labeled_value(exporter_module.SMART_TEST_LAST_RESULT, "sdb") == 0
-    assert labeled_value(exporter_module.SMART_TEST_LAST_TIMESTAMP, "sda") == 1700000000.0
-    assert labeled_value(exporter_module.SMART_TEST_LAST_TIMESTAMP, "sdb") == exporter_module._parse_ts("2025-01-01T00:00:00+00:00")
+    assert not list(exporter_module.SMART_TEST_LAST_RESULT.collect())[0].samples
+    assert not list(exporter_module.SMART_TEST_LAST_TIMESTAMP.collect())[0].samples
 
 
 def test_smart_results_unavailable_is_non_fatal(monkeypatch):
@@ -987,67 +986,76 @@ def test_priority_gap_collectors_emit_dedicated_metrics(monkeypatch):
                 return [{"service": "netdata", "enable": True}]
             if requested == ("ssh", "ftp", "snmp"):
                 return []
-        if method == "reporting.exporters.query":
+        if method in {
+            "reporting.exporters.query",
+            "dns.query",
+            "app.image.query",
+            "alertservice.query",
+        } and params[1].get("count"):
             return 0
-        if method == "dns.query":
-            return 0
-        if method == "app.image.query":
-            return 0
-        if method == "network.configuration.config":
-            return {"httpproxy": ""}
         if method == "replication.config.config":
             return {"max_parallel_replication_tasks": 1}
-        if method == "vm.device.iommu_enabled":
+        if method in {
+            "vm.device.iommu_enabled",
+            "vm.supports_virtualization",
+            "iscsi.global.alua_enabled",
+            "iscsi.global.iser_enabled",
+        }:
             return False
-        if method == "mail.config":
-            return {"outgoingserver": ""}
+        if method == "vm.maximum_supported_vcpus":
+            return 16
+        if method == "support.is_available":
+            return True
+        if method == "systemdataset.config":
+            return {"pool": None}
+        if method == "auth.twofactor.config":
+            return {"enabled": False}
         if method == "alertservice.query":
-            if params and len(params) > 1 and params[1].get("count"):
-                return 0
             return []
+        if method == "system.ntpserver.query":
+            if params[1].get("count"):
+                return 2
+            return [
+                {"prefer": True, "burst": False, "iburst": True, "minpoll": 6, "maxpoll": 10},
+                {"prefer": False, "burst": True, "iburst": False, "minpoll": 8, "maxpoll": 12},
+            ]
+        if method == "iscsi.global.sessions":
+            filters = params[0]
+            if not filters:
+                return 2
+            return 1
         raise AssertionError(f"Unexpected call: {method} {params}")
 
     monkeypatch.setattr(exporter, "_call", fake_call)
 
     cache = {
         "app.image.dockerhub_rate_limit": {
-            "total": 100,
-            "remaining": 75,
-            "window_seconds": 21600,
+            "total_pull_limit": 100,
+            "remaining_pull_limit": 75,
+            "total_time_limit_in_secs": 21600,
+            "remaining_time_limit_in_secs": 3600,
             "error": "",
         },
         "update.config": {"autocheck": True, "profile": "STABLE"},
         "catalog.config": {"preferred_trains": ["stable", "enterprise"]},
-        "vm.flags": {"intel_vmx": True, "amd_rvi": False, "unrestricted_guest": True, "amd_asids": 128},
+        "hardware.virtualization.variant": "INTEL",
+        "vm.flags": {"intel_vmx": True, "amd_rvi": False, "unrestricted_guest": True, "amd_asids": True},
         "vm.virtualization_details": {"supported": True, "error": ""},
-        "directoryservices.config": {
-            "enabled": True,
-            "account_cache": False,
-            "allow_dns_updates": True,
-            "timeout": 45,
-            "service_type": "ACTIVEDIRECTORY",
-            "kerberos_realm": "EXAMPLE.LOCAL",
+        "directoryservices.status": {
+            "type": "ACTIVEDIRECTORY",
+            "status": "HEALTHY",
+            "status_msg": None,
         },
         "system.security.config": {
-            "fips_configured": True,
-            "gpos_stig": False,
-            "min_length": 14,
-            "min_age_days": 1,
-            "max_age_days": 90,
-            "warn_age_days": 7,
-            "history": 5,
+            "enable_fips": True,
+            "enable_gpos_stig": False,
+            "min_password_length": 14,
+            "min_password_age": 1,
+            "max_password_age": 90,
+            "password_history_length": 5,
         },
         "support.is_available_and_enabled": True,
-        "support.config": {"enabled": True},
-        "system.ntpserver.query": [
-            {"enabled": True, "reachable": True, "prefer": True, "burst": False, "iburst": True, "minpoll": 6, "maxpoll": 10},
-            {"enabled": False, "reachable": False, "prefer": False, "burst": True, "iburst": False, "minpoll": 8, "maxpoll": 12},
-        ],
-        "iscsi.global.sessions": [
-            {"iser": True, "offload": False, "immediate_data": True},
-            {"iser": False, "offload": True, "immediate_data": False},
-        ],
-        "reporting.config": {"tier0_days": 14, "tier1_days": 60, "tier1_update_interval_seconds": 300},
+        "reporting.config": {"tier0_days": 14, "tier1_days": 60, "tier1_update_interval": 300},
     }
 
     exporter._collect_app_extras(object(), cache)
@@ -1063,6 +1071,7 @@ def test_priority_gap_collectors_emit_dedicated_metrics(monkeypatch):
     assert gauge_value(exporter_module.APP_DOCKERHUB_PULL_LIMIT_TOTAL) == 100
     assert gauge_value(exporter_module.APP_DOCKERHUB_PULL_LIMIT_REMAINING) == 75
     assert gauge_value(exporter_module.APP_DOCKERHUB_PULL_LIMIT_WINDOW_SECONDS) == 21600
+    assert gauge_value(exporter_module.APP_DOCKERHUB_PULL_LIMIT_REMAINING_WINDOW_SECONDS) == 3600
     assert gauge_value(exporter_module.APP_DOCKERHUB_RATE_LIMIT_ERROR_PRESENT) == 0
     assert gauge_value(exporter_module.UPDATE_AUTOCHECK_ENABLED) == 1
     assert labeled_value(exporter_module.UPDATE_PROFILE_INFO, "STABLE") == 1
@@ -1071,32 +1080,30 @@ def test_priority_gap_collectors_emit_dedicated_metrics(monkeypatch):
     assert gauge_value(exporter_module.VM_FLAG_INTEL_VMX) == 1
     assert gauge_value(exporter_module.VM_FLAG_AMD_RVI) == 0
     assert gauge_value(exporter_module.VM_FLAG_UNRESTRICTED_GUEST) == 1
-    assert gauge_value(exporter_module.VM_FLAG_AMD_ASIDS) == 128
+    assert gauge_value(exporter_module.VM_FLAG_AMD_ASIDS) == 1
+    assert gauge_value(exporter_module.VM_FLAG_AMD_ASIDS_SUPPORTED) == 1
     assert gauge_value(exporter_module.VM_VIRTUALIZATION_DETAILS_SUPPORTED) == 1
     assert gauge_value(exporter_module.VM_VIRTUALIZATION_DETAILS_ERROR_PRESENT) == 0
     assert gauge_value(exporter_module.DIRECTORYSERVICES_CONFIG_ENABLED) == 1
-    assert gauge_value(exporter_module.DIRECTORYSERVICES_ACCOUNT_CACHE_ENABLED) == 0
-    assert gauge_value(exporter_module.DIRECTORYSERVICES_DNS_UPDATES_ENABLED) == 1
-    assert gauge_value(exporter_module.DIRECTORYSERVICES_TIMEOUT_SECONDS) == 45
     assert labeled_value(exporter_module.DIRECTORYSERVICES_SERVICE_TYPE, "ACTIVEDIRECTORY") == 1
-    assert gauge_value(exporter_module.DIRECTORYSERVICES_KERBEROS_CONFIGURED) == 1
+    assert labeled_value(exporter_module.DIRECTORYSERVICES_HEALTHY, "activedirectory") == 1
     assert gauge_value(exporter_module.SYSTEM_SECURITY_FIPS_CONFIGURED) == 1
     assert gauge_value(exporter_module.SYSTEM_SECURITY_GPOS_STIG) == 0
     assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_MIN_LENGTH) == 14
     assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_MIN_AGE_DAYS) == 1
     assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_MAX_AGE_DAYS) == 90
-    assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_WARN_AGE_DAYS) == 7
+    assert math.isnan(gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_WARN_AGE_DAYS))
     assert gauge_value(exporter_module.SYSTEM_SECURITY_PASSWORD_HISTORY_COUNT) == 5
     assert gauge_value(exporter_module.SUPPORT_AVAILABLE_AND_ENABLED) == 1
-    assert gauge_value(exporter_module.SUPPORT_CONFIG_ENABLED) == 1
+    assert math.isnan(gauge_value(exporter_module.SUPPORT_CONFIG_ENABLED))
     assert gauge_value(exporter_module.NTP_SERVER_COUNT) == 2
-    assert gauge_value(exporter_module.NTP_SERVER_ACTIVE_COUNT) == 1
-    assert gauge_value(exporter_module.NTP_SERVER_REACHABLE_COUNT) == 1
+    assert math.isnan(gauge_value(exporter_module.NTP_SERVER_ACTIVE_COUNT))
+    assert math.isnan(gauge_value(exporter_module.NTP_SERVER_REACHABLE_COUNT))
     assert gauge_value(exporter_module.NTP_SERVER_PREFER_COUNT) == 1
     assert gauge_value(exporter_module.NTP_SERVER_BURST_COUNT) == 1
     assert gauge_value(exporter_module.NTP_SERVER_IBURST_COUNT) == 1
-    assert gauge_value(exporter_module.NTP_SERVER_MIN_POLL_MINUTES) == 6
-    assert gauge_value(exporter_module.NTP_SERVER_MAX_POLL_MINUTES) == 12
+    assert gauge_value(exporter_module.NTP_SERVER_MIN_POLL_MINUTES) == pytest.approx(2**6 / 60)
+    assert gauge_value(exporter_module.NTP_SERVER_MAX_POLL_MINUTES) == pytest.approx(2**12 / 60)
     assert gauge_value(exporter_module.ISCSI_SESSION_COUNT) == 2
     assert gauge_value(exporter_module.ISCSI_SESSION_ISER_COUNT) == 1
     assert gauge_value(exporter_module.ISCSI_SESSION_OFFLOAD_COUNT) == 1
