@@ -1,19 +1,16 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 30s
+  evaluation_interval: 30s
 
 scrape_configs:
-  - job_name: 'prometheus'
+  - job_name: prometheus
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
 
-  - job_name: 'truenas_exporter'
-    metrics_path: '/metrics'
-    scrape_interval: 5m
-    scrape_timeout: 1m
+  - job_name: truenas_exporter
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
-      - targets: 
-        # Replace this with your exporter IP:port when running from another host.
-        - '192.168.0.247:9108'
-        # Fallback to local host interface if running separately
-        - 'host.docker.internal:9108'
+      - targets: ["truenas-exporter:9108"]
+

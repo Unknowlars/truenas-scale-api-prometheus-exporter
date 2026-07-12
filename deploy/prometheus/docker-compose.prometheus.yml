@@ -1,20 +1,23 @@
 services:
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+  truenas-exporter:
+    build:
+      context: ../..
+      args:
+        PYTHON_VERSION: "3.14.6"
+    image: truenas-scale-api-prometheus-exporter:local
+    env_file:
+      - ../../.env
     restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    depends_on:
+      - truenas-exporter
     ports:
       - "9090:9090"
     volumes:
-      # Mount the configuration file from the host
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      # Uncomment the following line if you want persistent Prometheus data
-      # - prometheus_data:/prometheus
-    # Allow connection to exporter via host network if running separately
-    #xtra_hosts:
-    #  - "host.docker.internal:host-gateway"
-    network_mode: host
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
 
-# Uncomment the following lines if you want persistent data
-# volumes:
-#   prometheus_data:

@@ -281,3 +281,47 @@ def test_start_http_server_collector_uses_custom_registry_without_lock(monkeypat
     assert body == [b"metrics\n"]
     assert status_codes and status_codes[0] == "200 OK"
     assert lock.enter_count == 0
+
+
+def test_start_http_server_readiness_status(monkeypatch):
+    captured = _capture_http_stack(monkeypatch)
+    lock = _CountingLock()
+    ready = {"value": False}
+
+    exporter_module._start_http_server(
+        9108,
+        lock,
+        readiness_check=lambda: ready["value"],
+    )
+
+    statuses = []
+
+    def start_response(status, _headers):
+        statuses.append(status)
+
+    assert captured["http_app"]({"PATH_INFO": "/readyz"}, start_response) == [b"not ready\n"]
+    assert statuses[-1] == "503 Service Unavailable"
+
+    ready["value"] = True
+    assert captured["http_app"]({"PATH_INFO": "/readyz"}, start_response) == [b"ready\n"]
+    assert statuses[-1] == "200 OK"
+
+
+def test_full_parity_collector_exposes_declared_metric_families(monkeypatch):
+    from scripts.generate_metric_contract import build_contract
+
+    exporter = exporter_module.TrueNASExporter(make_config())
+    monkeypatch.setattr(exporter, "scrape_once", lambda: None)
+
+    family_names = {
+        family.name for family in exporter_module.FullParityCollector(exporter).collect()
+    }
+    contract = build_contract()
+    expected = {
+        metric["name"].removesuffix("_total")
+        if metric["type"] == "counter"
+        else metric["name"]
+        for metric in contract["metrics"]
+    }
+
+    assert expected <= family_names

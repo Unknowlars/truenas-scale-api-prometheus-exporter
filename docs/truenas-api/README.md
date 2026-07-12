@@ -1,6 +1,9 @@
 # TrueNAS API Markdown Export
 
 This directory contains an AI-friendly Markdown conversion of the offline TrueNAS API docs.
+It is pinned to TrueNAS SCALE 25.10.2. `MANIFEST.json` records the generated
+file inventory and hashes; the original offline HTML/RST snapshot is not
+redistributed in this repository.
 
 ## Layout
 
@@ -11,7 +14,10 @@ This directory contains an AI-friendly Markdown conversion of the offline TrueNA
 ## Regenerate
 
 ```bash
-python scripts/convert_truenas_api_docs_to_markdown.py --clean
+python scripts/convert_truenas_api_docs_to_markdown.py \
+  --source /path/to/truenas-v25.10.2-docs \
+  --clean
+python scripts/generate_api_docs_manifest.py
 ```
 
 The converter reads from `_sources/*.rst.txt` for page metadata and parses each embedded `#json-schema` block into Markdown headings, bullets, and examples.

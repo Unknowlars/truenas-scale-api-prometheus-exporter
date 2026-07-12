@@ -1,0 +1,3045 @@
+{
+  "metrics": [
+    {
+      "help": "1 if two-factor authentication is enabled",
+      "labels": [],
+      "name": "truenas_2fa_enabled",
+      "type": "gauge",
+      "variable": "TWOFACTOR_ENABLED"
+    },
+    {
+      "help": "Total number of active alerts",
+      "labels": [],
+      "name": "truenas_alert_count",
+      "type": "gauge",
+      "variable": "ALERT_COUNT"
+    },
+    {
+      "help": "Alert count by class and level",
+      "labels": [
+        "klass",
+        "level"
+      ],
+      "name": "truenas_alert_count_by_class",
+      "type": "gauge",
+      "variable": "ALERT_COUNT_BY_CLASS"
+    },
+    {
+      "help": "Alert count by level",
+      "labels": [
+        "level"
+      ],
+      "name": "truenas_alert_count_by_level",
+      "type": "gauge",
+      "variable": "ALERT_COUNT_BY_LEVEL"
+    },
+    {
+      "help": "Alert count by node",
+      "labels": [
+        "node"
+      ],
+      "name": "truenas_alert_count_by_node",
+      "type": "gauge",
+      "variable": "ALERT_COUNT_BY_NODE"
+    },
+    {
+      "help": "Alert count by source component",
+      "labels": [
+        "source"
+      ],
+      "name": "truenas_alert_count_by_source",
+      "type": "gauge",
+      "variable": "ALERT_COUNT_BY_SOURCE"
+    },
+    {
+      "help": "Number of dismissed alerts",
+      "labels": [],
+      "name": "truenas_alert_dismissed_count",
+      "type": "gauge",
+      "variable": "ALERT_DISMISSED_COUNT"
+    },
+    {
+      "help": "Most recent alert occurrence timestamp by level",
+      "labels": [
+        "level"
+      ],
+      "name": "truenas_alert_last_occurrence_timestamp_seconds",
+      "type": "gauge",
+      "variable": "ALERT_LAST_OCCURRENCE_TS"
+    },
+    {
+      "help": "Unix timestamp of the oldest current alert",
+      "labels": [],
+      "name": "truenas_alert_oldest_timestamp_seconds",
+      "type": "gauge",
+      "variable": "ALERT_OLDEST_TS"
+    },
+    {
+      "help": "Number of one-shot alerts",
+      "labels": [],
+      "name": "truenas_alert_one_shot_count",
+      "type": "gauge",
+      "variable": "ALERT_ONE_SHOT_COUNT"
+    },
+    {
+      "help": "Number of alert notification services",
+      "labels": [],
+      "name": "truenas_alertservice_count",
+      "type": "gauge",
+      "variable": "ALERTSERVICE_COUNT"
+    },
+    {
+      "help": "1 if alert service is enabled",
+      "labels": [
+        "name",
+        "type"
+      ],
+      "name": "truenas_alertservice_enabled",
+      "type": "gauge",
+      "variable": "ALERTSERVICE_ENABLED"
+    },
+    {
+      "help": "Duration of API method call",
+      "labels": [
+        "method"
+      ],
+      "name": "truenas_api_call_duration_seconds",
+      "type": "gauge",
+      "variable": "API_CALL_DURATION"
+    },
+    {
+      "help": "Total API call errors per method and error type since exporter start",
+      "labels": [
+        "method",
+        "error_type"
+      ],
+      "name": "truenas_api_call_errors_total",
+      "type": "counter",
+      "variable": "API_CALL_ERRORS_TOTAL"
+    },
+    {
+      "help": "1 if API method call succeeded in latest scrape",
+      "labels": [
+        "method"
+      ],
+      "name": "truenas_api_call_success",
+      "type": "gauge",
+      "variable": "API_CALL_SUCCESS"
+    },
+    {
+      "help": "Bytes available for new app installs",
+      "labels": [],
+      "name": "truenas_app_available_space_bytes",
+      "type": "gauge",
+      "variable": "APP_AVAILABLE_SPACE_BYTES"
+    },
+    {
+      "help": "App container block I/O read bytes",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_blkio_read_bytes",
+      "type": "gauge",
+      "variable": "APP_BLKIO_READ_BYTES"
+    },
+    {
+      "help": "App container block I/O write bytes",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_blkio_write_bytes",
+      "type": "gauge",
+      "variable": "APP_BLKIO_WRITE_BYTES"
+    },
+    {
+      "help": "Number of active containers for an app",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_container_count",
+      "type": "gauge",
+      "variable": "APP_CONTAINER_COUNT"
+    },
+    {
+      "help": "Count of app containers by runtime state",
+      "labels": [
+        "app",
+        "state"
+      ],
+      "name": "truenas_app_container_state_count",
+      "type": "gauge",
+      "variable": "APP_CONTAINER_STATE_COUNT"
+    },
+    {
+      "help": "Number of applications",
+      "labels": [],
+      "name": "truenas_app_count",
+      "type": "gauge",
+      "variable": "APP_COUNT"
+    },
+    {
+      "help": "App container CPU usage percent (0 to 100)",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_cpu_percent",
+      "type": "gauge",
+      "variable": "APP_CPU_PERCENT"
+    },
+    {
+      "help": "1 if the app is a custom app",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_custom",
+      "type": "gauge",
+      "variable": "APP_CUSTOM"
+    },
+    {
+      "help": "Remaining DockerHub pulls in current window",
+      "labels": [],
+      "name": "truenas_app_dockerhub_pull_limit_remaining",
+      "type": "gauge",
+      "variable": "APP_DOCKERHUB_PULL_LIMIT_REMAINING"
+    },
+    {
+      "help": "Total DockerHub pull limit window size",
+      "labels": [],
+      "name": "truenas_app_dockerhub_pull_limit_total",
+      "type": "gauge",
+      "variable": "APP_DOCKERHUB_PULL_LIMIT_TOTAL"
+    },
+    {
+      "help": "DockerHub rate-limit window duration in seconds",
+      "labels": [],
+      "name": "truenas_app_dockerhub_pull_limit_window_seconds",
+      "type": "gauge",
+      "variable": "APP_DOCKERHUB_PULL_LIMIT_WINDOW_SECONDS"
+    },
+    {
+      "help": "1 if app.image.dockerhub_rate_limit reports an error",
+      "labels": [],
+      "name": "truenas_app_dockerhub_rate_limit_error_present",
+      "type": "gauge",
+      "variable": "APP_DOCKERHUB_RATE_LIMIT_ERROR_PRESENT"
+    },
+    {
+      "help": "1 if updated app container images are available",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_image_updates_available",
+      "type": "gauge",
+      "variable": "APP_IMAGE_UPDATES_AVAILABLE"
+    },
+    {
+      "help": "App container memory usage bytes",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_memory_bytes",
+      "type": "gauge",
+      "variable": "APP_MEMORY_BYTES"
+    },
+    {
+      "help": "1 if the app was migrated from Kubernetes",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_migrated",
+      "type": "gauge",
+      "variable": "APP_MIGRATED"
+    },
+    {
+      "help": "App container network receive bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "app",
+        "interface"
+      ],
+      "name": "truenas_app_net_rx_bytes_per_second",
+      "type": "gauge",
+      "variable": "APP_NET_RX_BYTES_RATE"
+    },
+    {
+      "help": "App container network transmit bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "app",
+        "interface"
+      ],
+      "name": "truenas_app_net_tx_bytes_per_second",
+      "type": "gauge",
+      "variable": "APP_NET_TX_BYTES_RATE"
+    },
+    {
+      "help": "Per-app state as label \u2014 always 1",
+      "labels": [
+        "app",
+        "state"
+      ],
+      "name": "truenas_app_state",
+      "type": "gauge",
+      "variable": "APP_STATE"
+    },
+    {
+      "help": "1 if an app upgrade is available",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_upgrade_available",
+      "type": "gauge",
+      "variable": "APP_UPGRADE_AVAILABLE"
+    },
+    {
+      "help": "Number of host IPs used by an app",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_used_host_ip_count",
+      "type": "gauge",
+      "variable": "APP_USED_HOST_IP_COUNT"
+    },
+    {
+      "help": "Number of active workload port mappings for an app",
+      "labels": [
+        "app"
+      ],
+      "name": "truenas_app_used_port_count",
+      "type": "gauge",
+      "variable": "APP_USED_PORT_COUNT"
+    },
+    {
+      "help": "Audit dataset available space in bytes",
+      "labels": [],
+      "name": "truenas_audit_dataset_available_bytes",
+      "type": "gauge",
+      "variable": "AUDIT_DATASET_AVAILABLE_BYTES"
+    },
+    {
+      "help": "Audit dataset used space in bytes",
+      "labels": [],
+      "name": "truenas_audit_dataset_used_bytes",
+      "type": "gauge",
+      "variable": "AUDIT_DATASET_USED_BYTES"
+    },
+    {
+      "help": "Audit quota fill critical threshold percentage",
+      "labels": [],
+      "name": "truenas_audit_quota_fill_critical_percent",
+      "type": "gauge",
+      "variable": "AUDIT_QUOTA_FILL_CRITICAL_PERCENT"
+    },
+    {
+      "help": "Audit quota fill warning threshold percentage",
+      "labels": [],
+      "name": "truenas_audit_quota_fill_warning_percent",
+      "type": "gauge",
+      "variable": "AUDIT_QUOTA_FILL_WARNING_PERCENT"
+    },
+    {
+      "help": "Number of active authenticated API sessions",
+      "labels": [],
+      "name": "truenas_auth_sessions_active",
+      "type": "gauge",
+      "variable": "AUTH_SESSIONS_ACTIVE"
+    },
+    {
+      "help": "1 if boot environment is active",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_boot_env_active",
+      "type": "gauge",
+      "variable": "BOOT_ENV_ACTIVE"
+    },
+    {
+      "help": "Number of active boot environments",
+      "labels": [],
+      "name": "truenas_boot_env_active_count",
+      "type": "gauge",
+      "variable": "BOOT_ENV_ACTIVE_COUNT"
+    },
+    {
+      "help": "Total number of boot environments",
+      "labels": [],
+      "name": "truenas_boot_env_count",
+      "type": "gauge",
+      "variable": "BOOT_ENV_COUNT"
+    },
+    {
+      "help": "1 if boot environment is marked keep",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_boot_env_keep",
+      "type": "gauge",
+      "variable": "BOOT_ENV_KEEP"
+    },
+    {
+      "help": "Number of boot environments marked keep=true",
+      "labels": [],
+      "name": "truenas_boot_env_keep_count",
+      "type": "gauge",
+      "variable": "BOOT_ENV_KEEP_COUNT"
+    },
+    {
+      "help": "Size of boot environment in bytes",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_boot_env_size_bytes",
+      "type": "gauge",
+      "variable": "BOOT_ENV_SIZE_BYTES"
+    },
+    {
+      "help": "Boot pool allocated bytes",
+      "labels": [],
+      "name": "truenas_boot_pool_allocated_bytes",
+      "type": "gauge",
+      "variable": "BOOT_POOL_ALLOCATED_BYTES"
+    },
+    {
+      "help": "Number of disks in boot pool",
+      "labels": [],
+      "name": "truenas_boot_pool_disk_count",
+      "type": "gauge",
+      "variable": "BOOT_POOL_DISK_COUNT"
+    },
+    {
+      "help": "Boot pool free bytes",
+      "labels": [],
+      "name": "truenas_boot_pool_free_bytes",
+      "type": "gauge",
+      "variable": "BOOT_POOL_FREE_BYTES"
+    },
+    {
+      "help": "1 if boot pool is healthy",
+      "labels": [],
+      "name": "truenas_boot_pool_healthy",
+      "type": "gauge",
+      "variable": "BOOT_POOL_HEALTHY"
+    },
+    {
+      "help": "Boot pool active scan percentage (0 to 100)",
+      "labels": [],
+      "name": "truenas_boot_pool_scan_percent",
+      "type": "gauge",
+      "variable": "BOOT_POOL_SCAN_PERCENT"
+    },
+    {
+      "help": "Boot pool scrub/resilver state as label",
+      "labels": [
+        "state"
+      ],
+      "name": "truenas_boot_pool_scan_state",
+      "type": "gauge",
+      "variable": "BOOT_POOL_SCAN_STATE"
+    },
+    {
+      "help": "Boot pool total size in bytes",
+      "labels": [],
+      "name": "truenas_boot_pool_size_bytes",
+      "type": "gauge",
+      "variable": "BOOT_POOL_SIZE_BYTES"
+    },
+    {
+      "help": "Boot pool status as label",
+      "labels": [
+        "status"
+      ],
+      "name": "truenas_boot_pool_status",
+      "type": "gauge",
+      "variable": "BOOT_POOL_STATUS"
+    },
+    {
+      "help": "1 if catalog.config returned a config payload",
+      "labels": [],
+      "name": "truenas_catalog_config_present",
+      "type": "gauge",
+      "variable": "CATALOG_CONFIG_PRESENT"
+    },
+    {
+      "help": "Number of preferred catalog trains configured",
+      "labels": [],
+      "name": "truenas_catalog_preferred_train_count",
+      "type": "gauge",
+      "variable": "CATALOG_PREFERRED_TRAIN_COUNT"
+    },
+    {
+      "help": "Number of app catalog trains available",
+      "labels": [],
+      "name": "truenas_catalog_train_count",
+      "type": "gauge",
+      "variable": "CATALOG_TRAIN_COUNT"
+    },
+    {
+      "help": "Number of certificates",
+      "labels": [],
+      "name": "truenas_certificate_count",
+      "type": "gauge",
+      "variable": "CERT_COUNT"
+    },
+    {
+      "help": "Days until certificate expires (negative = already expired)",
+      "labels": [
+        "name",
+        "issuer"
+      ],
+      "name": "truenas_certificate_days_to_expiry",
+      "type": "gauge",
+      "variable": "CERT_DAYS_TO_EXPIRY"
+    },
+    {
+      "help": "Chassis hardware model",
+      "labels": [
+        "model"
+      ],
+      "name": "truenas_chassis_hardware",
+      "type": "gauge",
+      "variable": "CHASSIS_HARDWARE"
+    },
+    {
+      "help": "Number of configured cloud backup tasks",
+      "labels": [],
+      "name": "truenas_cloud_backup_task_count",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_COUNT"
+    },
+    {
+      "help": "1 if cloud backup task is enabled",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_cloud_backup_task_enabled",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_ENABLED"
+    },
+    {
+      "help": "Cloud backup task state as label",
+      "labels": [
+        "name",
+        "state"
+      ],
+      "name": "truenas_cloud_backup_task_state",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_STATE"
+    },
+    {
+      "help": "Total collector-level errors since exporter start",
+      "labels": [
+        "collector"
+      ],
+      "name": "truenas_collector_errors_total",
+      "type": "counter",
+      "variable": "COLLECTOR_ERRORS_TOTAL"
+    },
+    {
+      "help": "1 if serial console menu is enabled",
+      "labels": [],
+      "name": "truenas_consolemenu_enabled",
+      "type": "gauge",
+      "variable": "CONSOLEMENU_ENABLED"
+    },
+    {
+      "help": "Per-CPU-core usage percent (0 to 100)",
+      "labels": [
+        "core"
+      ],
+      "name": "truenas_cpu_core_usage_percent",
+      "type": "gauge",
+      "variable": "CPU_CORE_USAGE_PERCENT"
+    },
+    {
+      "help": "Host CPU idle percent (0 to 100); inferred as 100-total usage when idle split is unavailable",
+      "labels": [],
+      "name": "truenas_cpu_idle_percent",
+      "type": "gauge",
+      "variable": "CPU_IDLE_PERCENT"
+    },
+    {
+      "help": "Host CPU interrupt/hardware IRQ percent (0 to 100)",
+      "labels": [],
+      "name": "truenas_cpu_interrupt_percent",
+      "type": "gauge",
+      "variable": "CPU_INTERRUPT_PERCENT"
+    },
+    {
+      "help": "Host CPU I/O wait percent (0 to 100)",
+      "labels": [],
+      "name": "truenas_cpu_iowait_percent",
+      "type": "gauge",
+      "variable": "CPU_IOWAIT_PERCENT"
+    },
+    {
+      "help": "Host CPU kernel usage percent (0 to 100)",
+      "labels": [],
+      "name": "truenas_cpu_system_percent",
+      "type": "gauge",
+      "variable": "CPU_SYSTEM_PERCENT"
+    },
+    {
+      "help": "Per-CPU-core temperature in Celsius",
+      "labels": [
+        "core"
+      ],
+      "name": "truenas_cpu_temperature_celsius",
+      "type": "gauge",
+      "variable": "CPU_TEMPERATURE_C"
+    },
+    {
+      "help": "Total host CPU usage percent (0 to 100, all cores combined)",
+      "labels": [],
+      "name": "truenas_cpu_usage_percent",
+      "type": "gauge",
+      "variable": "CPU_USAGE_PERCENT"
+    },
+    {
+      "help": "Host CPU user-space usage percent (0 to 100); falls back to total CPU usage when user split is unavailable",
+      "labels": [],
+      "name": "truenas_cpu_user_percent",
+      "type": "gauge",
+      "variable": "CPU_USER_PERCENT"
+    },
+    {
+      "help": "Number of configured cron jobs",
+      "labels": [],
+      "name": "truenas_cronjob_count",
+      "type": "gauge",
+      "variable": "CRONJOB_COUNT"
+    },
+    {
+      "help": "1 if cron job is enabled",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_cronjob_enabled",
+      "type": "gauge",
+      "variable": "CRONJOB_ENABLED"
+    },
+    {
+      "help": "1 if dataset atime updates are enabled",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_atime",
+      "type": "gauge",
+      "variable": "DATASET_ATIME"
+    },
+    {
+      "help": "Dataset available space in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_available_bytes",
+      "type": "gauge",
+      "variable": "DATASET_AVAILABLE_BYTES"
+    },
+    {
+      "help": "Dataset compression ratio",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_compression_ratio",
+      "type": "gauge",
+      "variable": "DATASET_COMPRESSION_RATIO"
+    },
+    {
+      "help": "Total number of datasets returned by query",
+      "labels": [],
+      "name": "truenas_dataset_count",
+      "type": "gauge",
+      "variable": "DATASET_COUNT"
+    },
+    {
+      "help": "Dataset creation timestamp as Unix seconds",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_creation_timestamp_seconds",
+      "type": "gauge",
+      "variable": "DATASET_CREATION_TS"
+    },
+    {
+      "help": "1 if dataset is encrypted",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_encrypted",
+      "type": "gauge",
+      "variable": "DATASET_ENCRYPTED"
+    },
+    {
+      "help": "1 if dataset allows executable files",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_exec",
+      "type": "gauge",
+      "variable": "DATASET_EXEC"
+    },
+    {
+      "help": "1 if encrypted dataset keys are loaded",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_key_loaded",
+      "type": "gauge",
+      "variable": "DATASET_KEY_LOADED"
+    },
+    {
+      "help": "1 if encrypted dataset is locked",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_locked",
+      "type": "gauge",
+      "variable": "DATASET_LOCKED"
+    },
+    {
+      "help": "Dataset quota in bytes (0 = no quota)",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_quota_bytes",
+      "type": "gauge",
+      "variable": "DATASET_QUOTA_BYTES"
+    },
+    {
+      "help": "Dataset quota critical threshold percentage",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_quota_critical_percent",
+      "type": "gauge",
+      "variable": "DATASET_QUOTA_CRITICAL_PERCENT"
+    },
+    {
+      "help": "Dataset quota warning threshold percentage",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_quota_warning_percent",
+      "type": "gauge",
+      "variable": "DATASET_QUOTA_WARNING_PERCENT"
+    },
+    {
+      "help": "1 if dataset readonly is enabled",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_readonly",
+      "type": "gauge",
+      "variable": "DATASET_READONLY"
+    },
+    {
+      "help": "Dataset referenced bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_referenced_bytes",
+      "type": "gauge",
+      "variable": "DATASET_REFERENCED_BYTES"
+    },
+    {
+      "help": "Dataset refquota in bytes (0 = no quota)",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_refquota_bytes",
+      "type": "gauge",
+      "variable": "DATASET_REFQUOTA_BYTES"
+    },
+    {
+      "help": "Dataset refquota critical threshold percentage",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_refquota_critical_percent",
+      "type": "gauge",
+      "variable": "DATASET_REFQUOTA_CRITICAL_PERCENT"
+    },
+    {
+      "help": "Dataset refquota warning threshold percentage",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_refquota_warning_percent",
+      "type": "gauge",
+      "variable": "DATASET_REFQUOTA_WARNING_PERCENT"
+    },
+    {
+      "help": "Dataset refreservation in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_refreservation_bytes",
+      "type": "gauge",
+      "variable": "DATASET_REFRESERVATION_BYTES"
+    },
+    {
+      "help": "Dataset reservation in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_reservation_bytes",
+      "type": "gauge",
+      "variable": "DATASET_RESERVATION_BYTES"
+    },
+    {
+      "help": "Number of snapshots for dataset",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_snapshot_count",
+      "type": "gauge",
+      "variable": "DATASET_SNAPSHOT_COUNT"
+    },
+    {
+      "help": "Dataset space used by child datasets in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_used_by_children_bytes",
+      "type": "gauge",
+      "variable": "DATASET_USED_BY_CHILDREN_BYTES"
+    },
+    {
+      "help": "Dataset space used by the dataset itself in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_used_by_dataset_bytes",
+      "type": "gauge",
+      "variable": "DATASET_USED_BY_DATASET_BYTES"
+    },
+    {
+      "help": "Dataset space used by snapshots in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_used_by_snapshots_bytes",
+      "type": "gauge",
+      "variable": "DATASET_USED_BY_SNAPSHOTS_BYTES"
+    },
+    {
+      "help": "Dataset used space in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_used_bytes",
+      "type": "gauge",
+      "variable": "DATASET_USED_BYTES"
+    },
+    {
+      "help": "1 if directoryservices account cache is enabled",
+      "labels": [],
+      "name": "truenas_directoryservices_account_cache_enabled",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_ACCOUNT_CACHE_ENABLED"
+    },
+    {
+      "help": "1 if directoryservices.config is enabled",
+      "labels": [],
+      "name": "truenas_directoryservices_config_enabled",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_CONFIG_ENABLED"
+    },
+    {
+      "help": "1 if directoryservices DNS updates are enabled",
+      "labels": [],
+      "name": "truenas_directoryservices_dns_updates_enabled",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_DNS_UPDATES_ENABLED"
+    },
+    {
+      "help": "Directory service fault reason as label",
+      "labels": [
+        "service",
+        "reason"
+      ],
+      "name": "truenas_directoryservices_fault_reason",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_FAULT_REASON"
+    },
+    {
+      "help": "1 if directory service appears healthy",
+      "labels": [
+        "service"
+      ],
+      "name": "truenas_directoryservices_healthy",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_HEALTHY"
+    },
+    {
+      "help": "1 if directoryservices kerberos configuration is present",
+      "labels": [],
+      "name": "truenas_directoryservices_kerberos_configured",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_KERBEROS_CONFIGURED"
+    },
+    {
+      "help": "Directoryservices service type label (always 1)",
+      "labels": [
+        "service_type"
+      ],
+      "name": "truenas_directoryservices_service_type",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_SERVICE_TYPE"
+    },
+    {
+      "help": "Directory service status as label",
+      "labels": [
+        "service",
+        "status"
+      ],
+      "name": "truenas_directoryservices_status",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_STATUS"
+    },
+    {
+      "help": "Directoryservices timeout in seconds",
+      "labels": [],
+      "name": "truenas_directoryservices_timeout_seconds",
+      "type": "gauge",
+      "variable": "DIRECTORYSERVICES_TIMEOUT_SECONDS"
+    },
+    {
+      "help": "Disk busy percentage (0\u2013100)",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_busy_percent",
+      "type": "gauge",
+      "variable": "DISK_BUSY_PERCENT"
+    },
+    {
+      "help": "Number of disks",
+      "labels": [],
+      "name": "truenas_disk_count",
+      "type": "gauge",
+      "variable": "DISK_COUNT"
+    },
+    {
+      "help": "1 if disk is in use by a pool",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_in_use",
+      "type": "gauge",
+      "variable": "DISK_IN_USE"
+    },
+    {
+      "help": "Disk identity info \u2014 always 1",
+      "labels": [
+        "disk",
+        "model",
+        "serial",
+        "bus"
+      ],
+      "name": "truenas_disk_info",
+      "type": "gauge",
+      "variable": "DISK_INFO"
+    },
+    {
+      "help": "Disk read throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_read_bytes_per_second",
+      "type": "gauge",
+      "variable": "DISK_READ_BYTES_RATE"
+    },
+    {
+      "help": "Disk read operations/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_read_ops_per_second",
+      "type": "gauge",
+      "variable": "DISK_READ_OPS_RATE"
+    },
+    {
+      "help": "1 if disk is rotational (HDD), 0 if SSD/NVMe",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_rotational",
+      "type": "gauge",
+      "variable": "DISK_ROTATIONAL"
+    },
+    {
+      "help": "Disk size in bytes",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_size_bytes",
+      "type": "gauge",
+      "variable": "DISK_SIZE_BYTES"
+    },
+    {
+      "help": "1 if S.M.A.R.T. is enabled for disk",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_smart_enabled",
+      "type": "gauge",
+      "variable": "DISK_SMART_ENABLED"
+    },
+    {
+      "help": "Aggregated disk temperature metrics",
+      "labels": [
+        "disk",
+        "kind"
+      ],
+      "name": "truenas_disk_temperature_agg_celsius",
+      "type": "gauge",
+      "variable": "DISK_TEMP_AGG_C"
+    },
+    {
+      "help": "Temperature alert count per disk",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_temperature_alert_count",
+      "type": "gauge",
+      "variable": "DISK_TEMP_ALERT_COUNT"
+    },
+    {
+      "help": "Disk temperature in Celsius",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_temperature_celsius",
+      "type": "gauge",
+      "variable": "DISK_TEMPERATURE_C"
+    },
+    {
+      "help": "Disk write throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_write_bytes_per_second",
+      "type": "gauge",
+      "variable": "DISK_WRITE_BYTES_RATE"
+    },
+    {
+      "help": "Disk write operations/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_write_ops_per_second",
+      "type": "gauge",
+      "variable": "DISK_WRITE_OPS_RATE"
+    },
+    {
+      "help": "Number of configured DNS resolvers",
+      "labels": [],
+      "name": "truenas_dns_resolver_count",
+      "type": "gauge",
+      "variable": "DNS_RESOLVER_COUNT"
+    },
+    {
+      "help": "Number of Docker container images",
+      "labels": [],
+      "name": "truenas_docker_image_count",
+      "type": "gauge",
+      "variable": "DOCKER_IMAGE_COUNT"
+    },
+    {
+      "help": "Number of Docker networks",
+      "labels": [],
+      "name": "truenas_docker_network_count",
+      "type": "gauge",
+      "variable": "DOCKER_NETWORK_COUNT"
+    },
+    {
+      "help": "1 if NVIDIA GPU is present for Docker",
+      "labels": [],
+      "name": "truenas_docker_nvidia_present",
+      "type": "gauge",
+      "variable": "DOCKER_NVIDIA_PRESENT"
+    },
+    {
+      "help": "Docker daemon status",
+      "labels": [
+        "status"
+      ],
+      "name": "truenas_docker_status",
+      "type": "gauge",
+      "variable": "DOCKER_STATUS"
+    },
+    {
+      "help": "Boolean values from event payload (1/0)",
+      "labels": [
+        "event",
+        "path"
+      ],
+      "name": "truenas_event_boolean_value",
+      "type": "gauge",
+      "variable": "EVENT_BOOLEAN_VALUE"
+    },
+    {
+      "help": "Last event message timestamp",
+      "labels": [
+        "event"
+      ],
+      "name": "truenas_event_last_message_timestamp_seconds",
+      "type": "gauge",
+      "variable": "EVENT_LAST_MESSAGE_TS"
+    },
+    {
+      "help": "List length from event payload",
+      "labels": [
+        "event",
+        "path"
+      ],
+      "name": "truenas_event_list_length",
+      "type": "gauge",
+      "variable": "EVENT_LIST_LENGTH"
+    },
+    {
+      "help": "Total event messages received",
+      "labels": [
+        "event"
+      ],
+      "name": "truenas_event_messages_total",
+      "type": "counter",
+      "variable": "EVENT_MESSAGES_TOTAL"
+    },
+    {
+      "help": "Numeric values from event payload",
+      "labels": [
+        "event",
+        "path"
+      ],
+      "name": "truenas_event_numeric_value",
+      "type": "gauge",
+      "variable": "EVENT_NUMERIC_VALUE"
+    },
+    {
+      "help": "Status values from event payload",
+      "labels": [
+        "event",
+        "path",
+        "status"
+      ],
+      "name": "truenas_event_status_value",
+      "type": "gauge",
+      "variable": "EVENT_STATUS_VALUE"
+    },
+    {
+      "help": "1 when event subscription is active",
+      "labels": [
+        "event"
+      ],
+      "name": "truenas_event_stream_up",
+      "type": "gauge",
+      "variable": "EVENT_STREAM_UP"
+    },
+    {
+      "help": "Exporter version info \u2014 always 1",
+      "labels": [
+        "version"
+      ],
+      "name": "truenas_exporter_info",
+      "type": "gauge",
+      "variable": "EXPORTER_INFO"
+    },
+    {
+      "help": "HA failover disabled reason as label with value 1",
+      "labels": [
+        "reason"
+      ],
+      "name": "truenas_failover_disabled_reason",
+      "type": "gauge",
+      "variable": "FAILOVER_DISABLED_REASON"
+    },
+    {
+      "help": "Number of reasons HA failover is currently disabled",
+      "labels": [],
+      "name": "truenas_failover_disabled_reason_count",
+      "type": "gauge",
+      "variable": "FAILOVER_DISABLED_REASON_COUNT"
+    },
+    {
+      "help": "Number of Fibre Channel host adapters",
+      "labels": [],
+      "name": "truenas_fc_host_count",
+      "type": "gauge",
+      "variable": "FC_HOST_COUNT"
+    },
+    {
+      "help": "Number of Fibre Channel ports",
+      "labels": [],
+      "name": "truenas_fc_port_count",
+      "type": "gauge",
+      "variable": "FC_PORT_COUNT"
+    },
+    {
+      "help": "1 if FC port is online",
+      "labels": [
+        "port"
+      ],
+      "name": "truenas_fc_port_online",
+      "type": "gauge",
+      "variable": "FC_PORT_ONLINE"
+    },
+    {
+      "help": "FC port link speed in Gbit/s",
+      "labels": [
+        "port"
+      ],
+      "name": "truenas_fc_port_speed_gbit",
+      "type": "gauge",
+      "variable": "FC_PORT_SPEED"
+    },
+    {
+      "help": "1 if feature is enabled",
+      "labels": [
+        "feature"
+      ],
+      "name": "truenas_feature_enabled",
+      "type": "gauge",
+      "variable": "FEATURE_ENABLED"
+    },
+    {
+      "help": "Number of filesystem paths being scraped",
+      "labels": [],
+      "name": "truenas_filesystem_path_count",
+      "type": "gauge",
+      "variable": "FILESYSTEM_PATH_COUNT"
+    },
+    {
+      "help": "1 if FIPS is available on this system",
+      "labels": [],
+      "name": "truenas_fips_available",
+      "type": "gauge",
+      "variable": "FIPS_AVAILABLE"
+    },
+    {
+      "help": "1 if FIPS mode is currently enabled",
+      "labels": [],
+      "name": "truenas_fips_enabled",
+      "type": "gauge",
+      "variable": "FIPS_ENABLED"
+    },
+    {
+      "help": "1 if FTP service is enabled to start automatically",
+      "labels": [],
+      "name": "truenas_ftp_enabled",
+      "type": "gauge",
+      "variable": "FTP_ENABLED"
+    },
+    {
+      "help": "Number of GPU devices visible to the host",
+      "labels": [],
+      "name": "truenas_gpu_count",
+      "type": "gauge",
+      "variable": "GPU_COUNT"
+    },
+    {
+      "help": "GPU device info \u2014 always 1; carry identifying labels",
+      "labels": [
+        "index",
+        "model",
+        "vendor",
+        "pci_id"
+      ],
+      "name": "truenas_gpu_info",
+      "type": "gauge",
+      "variable": "GPU_INFO"
+    },
+    {
+      "help": "Host CPU core count",
+      "labels": [],
+      "name": "truenas_host_cpu_cores",
+      "type": "gauge",
+      "variable": "HOST_CPU_CORES"
+    },
+    {
+      "help": "Always 1; CPU model string in label",
+      "labels": [
+        "model"
+      ],
+      "name": "truenas_host_cpu_info",
+      "type": "gauge",
+      "variable": "HOST_CPU_MODEL"
+    },
+    {
+      "help": "1 if host RAM is ECC-protected",
+      "labels": [],
+      "name": "truenas_host_ecc_memory",
+      "type": "gauge",
+      "variable": "HOST_ECC_MEMORY"
+    },
+    {
+      "help": "Static host info exported as labels",
+      "labels": [
+        "hostname",
+        "version",
+        "product_type"
+      ],
+      "name": "truenas_host_info",
+      "type": "gauge",
+      "variable": "HOST_INFO"
+    },
+    {
+      "help": "Host load average",
+      "labels": [
+        "window"
+      ],
+      "name": "truenas_host_load_average",
+      "type": "gauge",
+      "variable": "HOST_LOAD_AVERAGE"
+    },
+    {
+      "help": "Host physical CPU cores (non-HT)",
+      "labels": [],
+      "name": "truenas_host_physical_cpu_cores",
+      "type": "gauge",
+      "variable": "HOST_PHYSICAL_CPU_CORES"
+    },
+    {
+      "help": "Host physical memory in bytes",
+      "labels": [],
+      "name": "truenas_host_physical_memory_bytes",
+      "type": "gauge",
+      "variable": "HOST_PHYSICAL_MEMORY_BYTES"
+    },
+    {
+      "help": "Always 1; hardware manufacturer/product labels from DMI",
+      "labels": [
+        "manufacturer",
+        "product"
+      ],
+      "name": "truenas_host_system_info",
+      "type": "gauge",
+      "variable": "HOST_SYSTEM_INFO"
+    },
+    {
+      "help": "Host uptime in seconds",
+      "labels": [],
+      "name": "truenas_host_uptime_seconds",
+      "type": "gauge",
+      "variable": "HOST_UPTIME_SECONDS"
+    },
+    {
+      "help": "Hardware virtualization variant",
+      "labels": [
+        "variant"
+      ],
+      "name": "truenas_hw_virt_variant",
+      "type": "gauge",
+      "variable": "HW_VIRT_VARIANT"
+    },
+    {
+      "help": "Number of init/shutdown scripts",
+      "labels": [],
+      "name": "truenas_initshutdownscript_count",
+      "type": "gauge",
+      "variable": "INITSHUTDOWNSCRIPT_COUNT"
+    },
+    {
+      "help": "Seconds until pending network changes auto-rollback (0 = no rollback pending)",
+      "labels": [],
+      "name": "truenas_interface_checkin_waiting_seconds",
+      "type": "gauge",
+      "variable": "INTERFACE_CHECKIN_WAITING_SECONDS"
+    },
+    {
+      "help": "Number of network interfaces",
+      "labels": [],
+      "name": "truenas_interface_count",
+      "type": "gauge",
+      "variable": "INTERFACE_COUNT"
+    },
+    {
+      "help": "1 if there are uncommitted network configuration changes",
+      "labels": [],
+      "name": "truenas_interface_has_pending_changes",
+      "type": "gauge",
+      "variable": "INTERFACE_HAS_PENDING_CHANGES"
+    },
+    {
+      "help": "1 if interface link is up",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_interface_link_up",
+      "type": "gauge",
+      "variable": "INTERFACE_LINK_UP"
+    },
+    {
+      "help": "Interface MTU in bytes",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_interface_mtu",
+      "type": "gauge",
+      "variable": "INTERFACE_MTU"
+    },
+    {
+      "help": "Interface type (PHYSICAL/BRIDGE/etc)",
+      "labels": [
+        "interface",
+        "type"
+      ],
+      "name": "truenas_interface_type",
+      "type": "gauge",
+      "variable": "INTERFACE_TYPE"
+    },
+    {
+      "help": "1 if IOMMU/PCI passthrough is enabled",
+      "labels": [],
+      "name": "truenas_iommu_enabled",
+      "type": "gauge",
+      "variable": "IOMMU_ENABLED"
+    },
+    {
+      "help": "1 if drive fault detected",
+      "labels": [],
+      "name": "truenas_ipmi_chassis_drive_fault",
+      "type": "gauge",
+      "variable": "IPMI_CHASSIS_DRIVE_FAULT"
+    },
+    {
+      "help": "1 if fan fault detected",
+      "labels": [],
+      "name": "truenas_ipmi_chassis_fan_fault",
+      "type": "gauge",
+      "variable": "IPMI_CHASSIS_FAN_FAULT"
+    },
+    {
+      "help": "1 if chassis intrusion detected",
+      "labels": [],
+      "name": "truenas_ipmi_chassis_intrusion",
+      "type": "gauge",
+      "variable": "IPMI_CHASSIS_INTRUSION"
+    },
+    {
+      "help": "1 if chassis power is on",
+      "labels": [],
+      "name": "truenas_ipmi_chassis_power_on",
+      "type": "gauge",
+      "variable": "IPMI_CHASSIS_POWER_ON"
+    },
+    {
+      "help": "1 if power overload detected",
+      "labels": [],
+      "name": "truenas_ipmi_chassis_power_overload",
+      "type": "gauge",
+      "variable": "IPMI_CHASSIS_POWER_OVERLOAD"
+    },
+    {
+      "help": "1 if IPMI kernel module is loaded",
+      "labels": [],
+      "name": "truenas_ipmi_loaded",
+      "type": "gauge",
+      "variable": "IPMI_LOADED"
+    },
+    {
+      "help": "Number of entries in IPMI System Event Log",
+      "labels": [],
+      "name": "truenas_ipmi_sel_entry_count",
+      "type": "gauge",
+      "variable": "IPMI_SEL_ENTRY_COUNT"
+    },
+    {
+      "help": "Free space in IPMI SEL in bytes",
+      "labels": [],
+      "name": "truenas_ipmi_sel_free_space_bytes",
+      "type": "gauge",
+      "variable": "IPMI_SEL_FREE_SPACE_BYTES"
+    },
+    {
+      "help": "1 if running on iXsystems hardware",
+      "labels": [],
+      "name": "truenas_is_ix_hardware",
+      "type": "gauge",
+      "variable": "TRUENAS_IS_IX_HARDWARE"
+    },
+    {
+      "help": "1 if system is marked as production",
+      "labels": [],
+      "name": "truenas_is_production",
+      "type": "gauge",
+      "variable": "TRUENAS_IS_PRODUCTION"
+    },
+    {
+      "help": "1 if iSCSI ALUA protocol is enabled",
+      "labels": [],
+      "name": "truenas_iscsi_alua_enabled",
+      "type": "gauge",
+      "variable": "ISCSI_ALUA_ENABLED"
+    },
+    {
+      "help": "Number of iSCSI clients",
+      "labels": [],
+      "name": "truenas_iscsi_client_count",
+      "type": "gauge",
+      "variable": "ISCSI_CLIENT_COUNT"
+    },
+    {
+      "help": "Number of iSCSI extents",
+      "labels": [],
+      "name": "truenas_iscsi_extent_count",
+      "type": "gauge",
+      "variable": "ISCSI_EXTENT_COUNT"
+    },
+    {
+      "help": "Number of iSCSI initiator groups",
+      "labels": [],
+      "name": "truenas_iscsi_initiator_count",
+      "type": "gauge",
+      "variable": "ISCSI_INITIATOR_COUNT"
+    },
+    {
+      "help": "1 if iSCSI iSER (RDMA) protocol is enabled",
+      "labels": [],
+      "name": "truenas_iscsi_iser_enabled",
+      "type": "gauge",
+      "variable": "ISCSI_ISER_ENABLED"
+    },
+    {
+      "help": "Number of iSCSI portals",
+      "labels": [],
+      "name": "truenas_iscsi_portal_count",
+      "type": "gauge",
+      "variable": "ISCSI_PORTAL_COUNT"
+    },
+    {
+      "help": "Number of active iSCSI sessions",
+      "labels": [],
+      "name": "truenas_iscsi_session_count",
+      "type": "gauge",
+      "variable": "ISCSI_SESSION_COUNT"
+    },
+    {
+      "help": "Number of active iSCSI sessions with immediate-data enabled",
+      "labels": [],
+      "name": "truenas_iscsi_session_immediate_data_count",
+      "type": "gauge",
+      "variable": "ISCSI_SESSION_IMMEDIATE_DATA_COUNT"
+    },
+    {
+      "help": "Number of active iSCSI sessions using iSER",
+      "labels": [],
+      "name": "truenas_iscsi_session_iser_count",
+      "type": "gauge",
+      "variable": "ISCSI_SESSION_ISER_COUNT"
+    },
+    {
+      "help": "Number of active iSCSI sessions using offload",
+      "labels": [],
+      "name": "truenas_iscsi_session_offload_count",
+      "type": "gauge",
+      "variable": "ISCSI_SESSION_OFFLOAD_COUNT"
+    },
+    {
+      "help": "Number of iSCSI targets",
+      "labels": [],
+      "name": "truenas_iscsi_target_count",
+      "type": "gauge",
+      "variable": "ISCSI_TARGET_COUNT"
+    },
+    {
+      "help": "Number of JBOF enclosures connected",
+      "labels": [],
+      "name": "truenas_jbof_count",
+      "type": "gauge",
+      "variable": "JBOF_COUNT"
+    },
+    {
+      "help": "Number of active abortable jobs",
+      "labels": [],
+      "name": "truenas_job_abortable_active_count",
+      "type": "gauge",
+      "variable": "JOB_ABORTABLE_ACTIVE_COUNT"
+    },
+    {
+      "help": "Number of active jobs in WAITING or RUNNING state",
+      "labels": [],
+      "name": "truenas_job_active_count",
+      "type": "gauge",
+      "variable": "JOB_ACTIVE_COUNT"
+    },
+    {
+      "help": "Number of active jobs by method and state",
+      "labels": [
+        "method",
+        "state"
+      ],
+      "name": "truenas_job_active_count_by_method",
+      "type": "gauge",
+      "variable": "JOB_ACTIVE_COUNT_BY_METHOD"
+    },
+    {
+      "help": "Number of active jobs by state",
+      "labels": [
+        "state"
+      ],
+      "name": "truenas_job_active_count_by_state",
+      "type": "gauge",
+      "variable": "JOB_ACTIVE_COUNT_BY_STATE"
+    },
+    {
+      "help": "Unix timestamp of the oldest active job by state",
+      "labels": [
+        "state"
+      ],
+      "name": "truenas_job_oldest_active_timestamp_seconds",
+      "type": "gauge",
+      "variable": "JOB_OLDEST_ACTIVE_TS"
+    },
+    {
+      "help": "Maximum running job progress percent by method",
+      "labels": [
+        "method"
+      ],
+      "name": "truenas_job_progress_percent",
+      "type": "gauge",
+      "variable": "JOB_PROGRESS_PERCENT"
+    },
+    {
+      "help": "Number of active transient jobs",
+      "labels": [],
+      "name": "truenas_job_transient_active_count",
+      "type": "gauge",
+      "variable": "JOB_TRANSIENT_ACTIVE_COUNT"
+    },
+    {
+      "help": "Number of SSH/keychain credentials",
+      "labels": [],
+      "name": "truenas_keychain_credential_count",
+      "type": "gauge",
+      "variable": "KEYCHAIN_CREDENTIAL_COUNT"
+    },
+    {
+      "help": "1 if KMIP key management is enabled",
+      "labels": [],
+      "name": "truenas_kmip_enabled",
+      "type": "gauge",
+      "variable": "KMIP_ENABLED"
+    },
+    {
+      "help": "Unix timestamp of last scrape attempt",
+      "labels": [],
+      "name": "truenas_last_scrape_timestamp_seconds",
+      "type": "gauge",
+      "variable": "LAST_SCRAPE_TS"
+    },
+    {
+      "help": "Number of local groups",
+      "labels": [],
+      "name": "truenas_local_group_count",
+      "type": "gauge",
+      "variable": "LOCAL_GROUP_COUNT"
+    },
+    {
+      "help": "Number of local user accounts",
+      "labels": [],
+      "name": "truenas_local_user_count",
+      "type": "gauge",
+      "variable": "LOCAL_USER_COUNT"
+    },
+    {
+      "help": "1 if outgoing email (SMTP) is configured",
+      "labels": [],
+      "name": "truenas_mail_configured",
+      "type": "gauge",
+      "variable": "MAIL_CONFIGURED"
+    },
+    {
+      "help": "1 if managed by TrueCommand",
+      "labels": [],
+      "name": "truenas_managed_by_truecommand",
+      "type": "gauge",
+      "variable": "SYSTEM_MANAGED_BY_TRUECOMMAND"
+    },
+    {
+      "help": "Available physical RAM in bytes",
+      "labels": [],
+      "name": "truenas_memory_physical_available_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_PHYSICAL_AVAILABLE_BYTES"
+    },
+    {
+      "help": "Buffer cache bytes",
+      "labels": [],
+      "name": "truenas_memory_physical_buffers_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_PHYSICAL_BUFFERS_BYTES"
+    },
+    {
+      "help": "Page cache bytes",
+      "labels": [],
+      "name": "truenas_memory_physical_cached_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_PHYSICAL_CACHED_BYTES"
+    },
+    {
+      "help": "Free physical RAM in bytes",
+      "labels": [],
+      "name": "truenas_memory_physical_free_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_PHYSICAL_FREE_BYTES"
+    },
+    {
+      "help": "Total physical RAM in bytes",
+      "labels": [],
+      "name": "truenas_memory_physical_total_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_PHYSICAL_TOTAL_BYTES"
+    },
+    {
+      "help": "Used physical RAM in bytes (total - available)",
+      "labels": [],
+      "name": "truenas_memory_physical_used_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_PHYSICAL_USED_BYTES"
+    },
+    {
+      "help": "Swap free in bytes",
+      "labels": [],
+      "name": "truenas_memory_swap_free_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_SWAP_FREE_BYTES"
+    },
+    {
+      "help": "Swap total in bytes",
+      "labels": [],
+      "name": "truenas_memory_swap_total_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_SWAP_TOTAL_BYTES"
+    },
+    {
+      "help": "Swap used in bytes",
+      "labels": [],
+      "name": "truenas_memory_swap_used_bytes",
+      "type": "gauge",
+      "variable": "MEMORY_SWAP_USED_BYTES"
+    },
+    {
+      "help": "Boolean value from method result (1/0)",
+      "labels": [
+        "method",
+        "path"
+      ],
+      "name": "truenas_method_boolean_value",
+      "type": "gauge",
+      "variable": "METHOD_BOOLEAN_VALUE"
+    },
+    {
+      "help": "List length from method result",
+      "labels": [
+        "method",
+        "path"
+      ],
+      "name": "truenas_method_list_length",
+      "type": "gauge",
+      "variable": "METHOD_LIST_LENGTH"
+    },
+    {
+      "help": "Numeric value from method result",
+      "labels": [
+        "method",
+        "path"
+      ],
+      "name": "truenas_method_numeric_value",
+      "type": "gauge",
+      "variable": "METHOD_NUMERIC_VALUE"
+    },
+    {
+      "help": "Status string from method result",
+      "labels": [
+        "method",
+        "path",
+        "status"
+      ],
+      "name": "truenas_method_status_value",
+      "type": "gauge",
+      "variable": "METHOD_STATUS_VALUE"
+    },
+    {
+      "help": "Number of default routes",
+      "labels": [],
+      "name": "truenas_network_default_routes",
+      "type": "gauge",
+      "variable": "NETWORK_DEFAULT_ROUTES"
+    },
+    {
+      "help": "1 if the default IPv4 gateway is reachable",
+      "labels": [],
+      "name": "truenas_network_gateway_reachable",
+      "type": "gauge",
+      "variable": "NETWORK_GATEWAY_REACHABLE"
+    },
+    {
+      "help": "1 if HTTP proxy is configured",
+      "labels": [],
+      "name": "truenas_network_httpproxy_configured",
+      "type": "gauge",
+      "variable": "NETWORK_HTTPPROXY_CONFIGURED"
+    },
+    {
+      "help": "Number of configured nameservers",
+      "labels": [],
+      "name": "truenas_network_nameservers",
+      "type": "gauge",
+      "variable": "NETWORK_NAMESERVERS"
+    },
+    {
+      "help": "Network interface receive bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_network_rx_bytes_per_second",
+      "type": "gauge",
+      "variable": "NETWORK_RX_BYTES_RATE"
+    },
+    {
+      "help": "Network interface transmit bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_network_tx_bytes_per_second",
+      "type": "gauge",
+      "variable": "NETWORK_TX_BYTES_RATE"
+    },
+    {
+      "help": "Number of NFS clients",
+      "labels": [],
+      "name": "truenas_nfs_client_count",
+      "type": "gauge",
+      "variable": "NFS_CLIENT_COUNT"
+    },
+    {
+      "help": "NFS server operations per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_nfs_server_ops_per_second",
+      "type": "gauge",
+      "variable": "NFS_SERVER_STAT_OPS"
+    },
+    {
+      "help": "Number of NFS server threads configured",
+      "labels": [],
+      "name": "truenas_nfs_servers",
+      "type": "gauge",
+      "variable": "NFS_SERVERS"
+    },
+    {
+      "help": "Number of configured NFS shares",
+      "labels": [],
+      "name": "truenas_nfs_share_count",
+      "type": "gauge",
+      "variable": "NFS_SHARE_COUNT"
+    },
+    {
+      "help": "Number of active NFSv3 clients",
+      "labels": [],
+      "name": "truenas_nfs_v3_client_count",
+      "type": "gauge",
+      "variable": "NFS_V3_CLIENT_COUNT"
+    },
+    {
+      "help": "Number of active NFSv4 clients",
+      "labels": [],
+      "name": "truenas_nfs_v4_client_count",
+      "type": "gauge",
+      "variable": "NFS_V4_CLIENT_COUNT"
+    },
+    {
+      "help": "1 if NFSv4 is enabled",
+      "labels": [],
+      "name": "truenas_nfs_v4_enabled",
+      "type": "gauge",
+      "variable": "NFS_V4_ENABLED"
+    },
+    {
+      "help": "Configured NTP servers marked active",
+      "labels": [],
+      "name": "truenas_ntp_server_active_count",
+      "type": "gauge",
+      "variable": "NTP_SERVER_ACTIVE_COUNT"
+    },
+    {
+      "help": "Configured NTP servers with burst enabled",
+      "labels": [],
+      "name": "truenas_ntp_server_burst_count",
+      "type": "gauge",
+      "variable": "NTP_SERVER_BURST_COUNT"
+    },
+    {
+      "help": "Total configured NTP servers",
+      "labels": [],
+      "name": "truenas_ntp_server_count",
+      "type": "gauge",
+      "variable": "NTP_SERVER_COUNT"
+    },
+    {
+      "help": "Configured NTP servers with iburst enabled",
+      "labels": [],
+      "name": "truenas_ntp_server_iburst_count",
+      "type": "gauge",
+      "variable": "NTP_SERVER_IBURST_COUNT"
+    },
+    {
+      "help": "Maximum configured NTP poll interval (minutes)",
+      "labels": [],
+      "name": "truenas_ntp_server_max_poll_minutes",
+      "type": "gauge",
+      "variable": "NTP_SERVER_MAX_POLL_MINUTES"
+    },
+    {
+      "help": "Minimum configured NTP poll interval (minutes)",
+      "labels": [],
+      "name": "truenas_ntp_server_min_poll_minutes",
+      "type": "gauge",
+      "variable": "NTP_SERVER_MIN_POLL_MINUTES"
+    },
+    {
+      "help": "Configured NTP servers marked prefer",
+      "labels": [],
+      "name": "truenas_ntp_server_prefer_count",
+      "type": "gauge",
+      "variable": "NTP_SERVER_PREFER_COUNT"
+    },
+    {
+      "help": "NTP servers currently reachable",
+      "labels": [],
+      "name": "truenas_ntp_server_reachable_count",
+      "type": "gauge",
+      "variable": "NTP_SERVER_REACHABLE_COUNT"
+    },
+    {
+      "help": "Number of NVMe-oF allowed hosts",
+      "labels": [],
+      "name": "truenas_nvmet_host_count",
+      "type": "gauge",
+      "variable": "NVMET_HOST_COUNT"
+    },
+    {
+      "help": "Number of NVMe-oF namespaces",
+      "labels": [],
+      "name": "truenas_nvmet_namespace_count",
+      "type": "gauge",
+      "variable": "NVMET_NAMESPACE_COUNT"
+    },
+    {
+      "help": "Number of NVMe-oF ports",
+      "labels": [],
+      "name": "truenas_nvmet_port_count",
+      "type": "gauge",
+      "variable": "NVMET_PORT_COUNT"
+    },
+    {
+      "help": "Number of active NVMe-oF sessions",
+      "labels": [],
+      "name": "truenas_nvmet_session_count",
+      "type": "gauge",
+      "variable": "NVMET_SESSION_COUNT"
+    },
+    {
+      "help": "Number of NVMe-oF subsystems",
+      "labels": [],
+      "name": "truenas_nvmet_subsys_count",
+      "type": "gauge",
+      "variable": "NVMET_SUBSYS_COUNT"
+    },
+    {
+      "help": "Pool allocated bytes",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_allocated_bytes",
+      "type": "gauge",
+      "variable": "POOL_ALLOCATED_BYTES"
+    },
+    {
+      "help": "1 if autotrim is enabled on the pool",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_autotrim_enabled",
+      "type": "gauge",
+      "variable": "POOL_AUTOTRIM_ENABLED"
+    },
+    {
+      "help": "Number of pools",
+      "labels": [],
+      "name": "truenas_pool_count",
+      "type": "gauge",
+      "variable": "POOL_COUNT"
+    },
+    {
+      "help": "Pool deduplication ratio (1.0 means no dedup savings)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_dedup_ratio",
+      "type": "gauge",
+      "variable": "POOL_DEDUP_RATIO"
+    },
+    {
+      "help": "Pool expandable size in bytes",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_expand_size_bytes",
+      "type": "gauge",
+      "variable": "POOL_EXPAND_SIZE_BYTES"
+    },
+    {
+      "help": "Pool fragmentation percentage (0 to 100)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_fragmentation_percent",
+      "type": "gauge",
+      "variable": "POOL_FRAGMENTATION"
+    },
+    {
+      "help": "Pool free bytes",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_free_bytes",
+      "type": "gauge",
+      "variable": "POOL_FREE_BYTES"
+    },
+    {
+      "help": "Pool healthy flag (1 healthy, 0 not)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_healthy",
+      "type": "gauge",
+      "variable": "POOL_HEALTHY"
+    },
+    {
+      "help": "Unix timestamp of last pool scan end",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_last_scan_timestamp_seconds",
+      "type": "gauge",
+      "variable": "POOL_LAST_SCAN_TS"
+    },
+    {
+      "help": "Pool read throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_read_bytes_per_second",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_READ_BYTES"
+    },
+    {
+      "help": "Pool write throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_write_bytes_per_second",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_WRITE_BYTES"
+    },
+    {
+      "help": "1 if resilver priority scheduling is enabled",
+      "labels": [],
+      "name": "truenas_pool_resilver_enabled",
+      "type": "gauge",
+      "variable": "POOL_RESILVER_ENABLED"
+    },
+    {
+      "help": "Bytes processed in last pool scan",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_bytes_processed",
+      "type": "gauge",
+      "variable": "POOL_SCAN_BYTES_PROCESSED"
+    },
+    {
+      "help": "Total bytes to process in last pool scan",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_bytes_total",
+      "type": "gauge",
+      "variable": "POOL_SCAN_BYTES_TOTAL"
+    },
+    {
+      "help": "Errors found in last pool scan",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_errors",
+      "type": "gauge",
+      "variable": "POOL_SCAN_ERRORS"
+    },
+    {
+      "help": "Active pool scan/scrub percentage (0 to 100)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_percent",
+      "type": "gauge",
+      "variable": "POOL_SCAN_PERCENT"
+    },
+    {
+      "help": "Estimated seconds remaining in active pool scan",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_seconds_remaining",
+      "type": "gauge",
+      "variable": "POOL_SCAN_SECONDS_REMAINING"
+    },
+    {
+      "help": "Unix timestamp of last scrub task run",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scrub_last_run_timestamp_seconds",
+      "type": "gauge",
+      "variable": "POOL_SCRUB_LAST_RUN_TS"
+    },
+    {
+      "help": "Number of configured pool scrub tasks",
+      "labels": [],
+      "name": "truenas_pool_scrub_task_count",
+      "type": "gauge",
+      "variable": "POOL_SCRUB_TASK_COUNT"
+    },
+    {
+      "help": "1 if scrub task is enabled",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scrub_task_enabled",
+      "type": "gauge",
+      "variable": "POOL_SCRUB_TASK_ENABLED"
+    },
+    {
+      "help": "Scrub task last-run state as label",
+      "labels": [
+        "pool",
+        "state"
+      ],
+      "name": "truenas_pool_scrub_task_state",
+      "type": "gauge",
+      "variable": "POOL_SCRUB_TASK_STATE"
+    },
+    {
+      "help": "Pool total size in bytes",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_size_bytes",
+      "type": "gauge",
+      "variable": "POOL_SIZE_BYTES"
+    },
+    {
+      "help": "Pool status enum mapped to 1",
+      "labels": [
+        "pool",
+        "status"
+      ],
+      "name": "truenas_pool_status",
+      "type": "gauge",
+      "variable": "POOL_STATUS"
+    },
+    {
+      "help": "Checksum errors on pool vdev since last scrub clear",
+      "labels": [
+        "pool",
+        "vdev"
+      ],
+      "name": "truenas_pool_vdev_checksum_errors",
+      "type": "gauge",
+      "variable": "POOL_VDEV_CHECKSUM_ERRORS"
+    },
+    {
+      "help": "Read errors on pool vdev since last scrub clear",
+      "labels": [
+        "pool",
+        "vdev"
+      ],
+      "name": "truenas_pool_vdev_read_errors",
+      "type": "gauge",
+      "variable": "POOL_VDEV_READ_ERRORS"
+    },
+    {
+      "help": "Write errors on pool vdev since last scrub clear",
+      "labels": [
+        "pool",
+        "vdev"
+      ],
+      "name": "truenas_pool_vdev_write_errors",
+      "type": "gauge",
+      "variable": "POOL_VDEV_WRITE_ERRORS"
+    },
+    {
+      "help": "Pool warning flag (1 if warning present)",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_warning",
+      "type": "gauge",
+      "variable": "POOL_WARNING"
+    },
+    {
+      "help": "Number of RBAC privilege entries",
+      "labels": [],
+      "name": "truenas_privilege_count",
+      "type": "gauge",
+      "variable": "PRIVILEGE_COUNT"
+    },
+    {
+      "help": "Maximum parallel replication tasks allowed",
+      "labels": [],
+      "name": "truenas_replication_max_parallel",
+      "type": "gauge",
+      "variable": "REPLICATION_MAX_PARALLEL"
+    },
+    {
+      "help": "1 if the reporting service is enabled to start automatically",
+      "labels": [],
+      "name": "truenas_reporting_enabled",
+      "type": "gauge",
+      "variable": "REPORTING_ENABLED"
+    },
+    {
+      "help": "Number of reporting exporter plugins",
+      "labels": [],
+      "name": "truenas_reporting_exporter_count",
+      "type": "gauge",
+      "variable": "REPORTING_EXPORTER_COUNT"
+    },
+    {
+      "help": "Reporting tier0 retention in days",
+      "labels": [],
+      "name": "truenas_reporting_tier0_retention_days",
+      "type": "gauge",
+      "variable": "REPORTING_TIER0_RETENTION_DAYS"
+    },
+    {
+      "help": "Reporting tier1 retention in days",
+      "labels": [],
+      "name": "truenas_reporting_tier1_retention_days",
+      "type": "gauge",
+      "variable": "REPORTING_TIER1_RETENTION_DAYS"
+    },
+    {
+      "help": "Reporting tier1 update interval in seconds",
+      "labels": [],
+      "name": "truenas_reporting_tier1_update_interval_seconds",
+      "type": "gauge",
+      "variable": "REPORTING_TIER1_UPDATE_INTERVAL_SECONDS"
+    },
+    {
+      "help": "Duration of last scrape in seconds",
+      "labels": [],
+      "name": "truenas_scrape_duration_seconds",
+      "type": "gauge",
+      "variable": "SCRAPE_DURATION"
+    },
+    {
+      "help": "1 if serial console is enabled",
+      "labels": [],
+      "name": "truenas_serialconsole_enabled",
+      "type": "gauge",
+      "variable": "SERIALCONSOLE_ENABLED"
+    },
+    {
+      "help": "Number of services",
+      "labels": [],
+      "name": "truenas_service_count",
+      "type": "gauge",
+      "variable": "SERVICE_COUNT"
+    },
+    {
+      "help": "1 if service is enabled",
+      "labels": [
+        "service"
+      ],
+      "name": "truenas_service_enabled",
+      "type": "gauge",
+      "variable": "SERVICE_ENABLED"
+    },
+    {
+      "help": "1 if service is running",
+      "labels": [
+        "service"
+      ],
+      "name": "truenas_service_running",
+      "type": "gauge",
+      "variable": "SERVICE_RUNNING"
+    },
+    {
+      "help": "Last SMART test result \u2014 1 = SUCCESS, 0 = FAILED",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_smart_test_last_result",
+      "type": "gauge",
+      "variable": "SMART_TEST_LAST_RESULT"
+    },
+    {
+      "help": "Unix timestamp of last SMART test for disk",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_smart_test_last_timestamp_seconds",
+      "type": "gauge",
+      "variable": "SMART_TEST_LAST_TIMESTAMP"
+    },
+    {
+      "help": "Number of active SMB connections",
+      "labels": [],
+      "name": "truenas_smb_connection_count",
+      "type": "gauge",
+      "variable": "SMB_CONNECTION_COUNT"
+    },
+    {
+      "help": "1 if SMB multichannel is enabled",
+      "labels": [],
+      "name": "truenas_smb_multichannel_enabled",
+      "type": "gauge",
+      "variable": "SMB_MULTICHANNEL_ENABLED"
+    },
+    {
+      "help": "Number of SMB open files",
+      "labels": [],
+      "name": "truenas_smb_open_file_count",
+      "type": "gauge",
+      "variable": "SMB_OPEN_FILE_COUNT"
+    },
+    {
+      "help": "Number of active SMB sessions",
+      "labels": [],
+      "name": "truenas_smb_session_count",
+      "type": "gauge",
+      "variable": "SMB_SESSION_COUNT"
+    },
+    {
+      "help": "Number of configured SMB shares",
+      "labels": [],
+      "name": "truenas_smb_share_count",
+      "type": "gauge",
+      "variable": "SMB_SHARE_COUNT"
+    },
+    {
+      "help": "Total number of ZFS snapshots",
+      "labels": [],
+      "name": "truenas_snapshot_count",
+      "type": "gauge",
+      "variable": "SNAPSHOT_TOTAL_COUNT"
+    },
+    {
+      "help": "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots)",
+      "labels": [],
+      "name": "truenas_snapshot_oldest_timestamp_seconds",
+      "type": "gauge",
+      "variable": "SNAPSHOT_OLDEST_TS"
+    },
+    {
+      "help": "Maximum number of snapshot tasks allowed",
+      "labels": [],
+      "name": "truenas_snapshot_task_max_count",
+      "type": "gauge",
+      "variable": "SNAPSHOT_TASK_MAX_COUNT"
+    },
+    {
+      "help": "Maximum total snapshot tasks allowed",
+      "labels": [],
+      "name": "truenas_snapshot_task_max_total_count",
+      "type": "gauge",
+      "variable": "SNAPSHOT_TASK_MAX_TOTAL_COUNT"
+    },
+    {
+      "help": "1 if SNMP service is enabled to start automatically",
+      "labels": [],
+      "name": "truenas_snmp_enabled",
+      "type": "gauge",
+      "variable": "SNMP_ENABLED"
+    },
+    {
+      "help": "1 if SSH service is enabled to start automatically",
+      "labels": [],
+      "name": "truenas_ssh_enabled",
+      "type": "gauge",
+      "variable": "SSH_ENABLED"
+    },
+    {
+      "help": "1 if SSH password authentication is enabled",
+      "labels": [],
+      "name": "truenas_ssh_password_auth",
+      "type": "gauge",
+      "variable": "SSH_PASSWORD_AUTH"
+    },
+    {
+      "help": "Number of static routes",
+      "labels": [],
+      "name": "truenas_static_route_count",
+      "type": "gauge",
+      "variable": "STATIC_ROUTE_COUNT"
+    },
+    {
+      "help": "1 if proactive support is available",
+      "labels": [],
+      "name": "truenas_support_available",
+      "type": "gauge",
+      "variable": "SUPPORT_AVAILABLE"
+    },
+    {
+      "help": "1 if support is both available and enabled",
+      "labels": [],
+      "name": "truenas_support_available_and_enabled",
+      "type": "gauge",
+      "variable": "SUPPORT_AVAILABLE_AND_ENABLED"
+    },
+    {
+      "help": "1 if support.config reports support enabled",
+      "labels": [],
+      "name": "truenas_support_config_enabled",
+      "type": "gauge",
+      "variable": "SUPPORT_CONFIG_ENABLED"
+    },
+    {
+      "help": "Number of boot ID changes detected since exporter start (proxy for reboot count)",
+      "labels": [],
+      "name": "truenas_system_boot_changes_total",
+      "type": "counter",
+      "variable": "SYSTEM_BOOT_CHANGES_TOTAL"
+    },
+    {
+      "help": "Always 1; system global unique ID as label",
+      "labels": [
+        "global_id"
+      ],
+      "name": "truenas_system_global_id",
+      "type": "gauge",
+      "variable": "SYSTEM_GLOBAL_ID"
+    },
+    {
+      "help": "Always 1; host_id label is a stable UUID, does not change between reboots",
+      "labels": [
+        "host_id"
+      ],
+      "name": "truenas_system_host_id",
+      "type": "gauge",
+      "variable": "SYSTEM_HOST_ID"
+    },
+    {
+      "help": "System product type as label",
+      "labels": [
+        "product_type"
+      ],
+      "name": "truenas_system_product_type",
+      "type": "gauge",
+      "variable": "SYSTEM_PRODUCT_TYPE"
+    },
+    {
+      "help": "1 if system state is READY",
+      "labels": [],
+      "name": "truenas_system_ready",
+      "type": "gauge",
+      "variable": "SYSTEM_READY"
+    },
+    {
+      "help": "Pending reboot reason as label",
+      "labels": [
+        "reason"
+      ],
+      "name": "truenas_system_reboot_reason",
+      "type": "gauge",
+      "variable": "SYSTEM_REBOOT_REASON"
+    },
+    {
+      "help": "1 if a system reboot is pending",
+      "labels": [],
+      "name": "truenas_system_reboot_required",
+      "type": "gauge",
+      "variable": "SYSTEM_REBOOT_REQUIRED"
+    },
+    {
+      "help": "1 if system.security.config reports FIPS configured",
+      "labels": [],
+      "name": "truenas_system_security_fips_configured",
+      "type": "gauge",
+      "variable": "SYSTEM_SECURITY_FIPS_CONFIGURED"
+    },
+    {
+      "help": "1 if system.security.config reports GPOS STIG enabled",
+      "labels": [],
+      "name": "truenas_system_security_gpos_stig",
+      "type": "gauge",
+      "variable": "SYSTEM_SECURITY_GPOS_STIG"
+    },
+    {
+      "help": "Configured password history length",
+      "labels": [],
+      "name": "truenas_system_security_password_history_count",
+      "type": "gauge",
+      "variable": "SYSTEM_SECURITY_PASSWORD_HISTORY_COUNT"
+    },
+    {
+      "help": "Configured maximum password age in days",
+      "labels": [],
+      "name": "truenas_system_security_password_max_age_days",
+      "type": "gauge",
+      "variable": "SYSTEM_SECURITY_PASSWORD_MAX_AGE_DAYS"
+    },
+    {
+      "help": "Configured minimum password age in days",
+      "labels": [],
+      "name": "truenas_system_security_password_min_age_days",
+      "type": "gauge",
+      "variable": "SYSTEM_SECURITY_PASSWORD_MIN_AGE_DAYS"
+    },
+    {
+      "help": "Configured minimum password length",
+      "labels": [],
+      "name": "truenas_system_security_password_min_length",
+      "type": "gauge",
+      "variable": "SYSTEM_SECURITY_PASSWORD_MIN_LENGTH"
+    },
+    {
+      "help": "Configured password expiration warning age in days",
+      "labels": [],
+      "name": "truenas_system_security_password_warn_age_days",
+      "type": "gauge",
+      "variable": "SYSTEM_SECURITY_PASSWORD_WARN_AGE_DAYS"
+    },
+    {
+      "help": "System state enum mapped to label with value 1",
+      "labels": [
+        "state"
+      ],
+      "name": "truenas_system_state",
+      "type": "gauge",
+      "variable": "SYSTEM_STATE"
+    },
+    {
+      "help": "TrueNAS version as label",
+      "labels": [
+        "version"
+      ],
+      "name": "truenas_system_version",
+      "type": "gauge",
+      "variable": "SYSTEM_VERSION"
+    },
+    {
+      "help": "System dataset pool as label",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_systemdataset_pool",
+      "type": "gauge",
+      "variable": "SYSTEMDATASET_POOL"
+    },
+    {
+      "help": "Number of configured tasks",
+      "labels": [
+        "task_type"
+      ],
+      "name": "truenas_task_count",
+      "type": "gauge",
+      "variable": "TASK_COUNT"
+    },
+    {
+      "help": "1 if task is enabled",
+      "labels": [
+        "task_type",
+        "name"
+      ],
+      "name": "truenas_task_enabled",
+      "type": "gauge",
+      "variable": "TASK_ENABLED"
+    },
+    {
+      "help": "Unix timestamp of task last run completion",
+      "labels": [
+        "task_type",
+        "name"
+      ],
+      "name": "truenas_task_last_run_timestamp_seconds",
+      "type": "gauge",
+      "variable": "TASK_LAST_RUN_TS"
+    },
+    {
+      "help": "Task last run state as label with value 1",
+      "labels": [
+        "task_type",
+        "name",
+        "state"
+      ],
+      "name": "truenas_task_state",
+      "type": "gauge",
+      "variable": "TASK_STATE"
+    },
+    {
+      "help": "1 if TrueNAS Connect is enabled",
+      "labels": [],
+      "name": "truenas_tn_connect_enabled",
+      "type": "gauge",
+      "variable": "TN_CONNECT_ENABLED"
+    },
+    {
+      "help": "TrueNAS Connect status",
+      "labels": [
+        "status"
+      ],
+      "name": "truenas_tn_connect_status",
+      "type": "gauge",
+      "variable": "TN_CONNECT_STATUS"
+    },
+    {
+      "help": "TrueCommand connection status",
+      "labels": [
+        "status"
+      ],
+      "name": "truenas_truecommand_status",
+      "type": "gauge",
+      "variable": "TRUECOMMAND_STATUS"
+    },
+    {
+      "help": "Number of kernel tunables configured",
+      "labels": [],
+      "name": "truenas_tunable_count",
+      "type": "gauge",
+      "variable": "TUNABLE_COUNT"
+    },
+    {
+      "help": "Web UI HTTPS port number",
+      "labels": [],
+      "name": "truenas_ui_https_port",
+      "type": "gauge",
+      "variable": "UI_HTTPS_PORT"
+    },
+    {
+      "help": "1 if last scrape succeeded, 0 otherwise",
+      "labels": [],
+      "name": "truenas_up",
+      "type": "gauge",
+      "variable": "SCRAPE_SUCCESS"
+    },
+    {
+      "help": "1 if automatic update checks are enabled",
+      "labels": [],
+      "name": "truenas_update_autocheck_enabled",
+      "type": "gauge",
+      "variable": "UPDATE_AUTOCHECK_ENABLED"
+    },
+    {
+      "help": "1 if an update is available",
+      "labels": [],
+      "name": "truenas_update_available",
+      "type": "gauge",
+      "variable": "UPDATE_AVAILABLE"
+    },
+    {
+      "help": "Update profile information label (always 1)",
+      "labels": [
+        "profile"
+      ],
+      "name": "truenas_update_profile_info",
+      "type": "gauge",
+      "variable": "UPDATE_PROFILE_INFO"
+    },
+    {
+      "help": "Update status as label with value 1",
+      "labels": [
+        "status"
+      ],
+      "name": "truenas_update_status",
+      "type": "gauge",
+      "variable": "UPDATE_STATUS"
+    },
+    {
+      "help": "1 = version available",
+      "labels": [
+        "version"
+      ],
+      "name": "truenas_update_version_available",
+      "type": "gauge",
+      "variable": "UPDATE_VERSION_AVAILABLE"
+    },
+    {
+      "help": "1 if a UPS device is configured",
+      "labels": [],
+      "name": "truenas_ups_configured",
+      "type": "gauge",
+      "variable": "UPS_CONFIGURED"
+    },
+    {
+      "help": "UPS status string as label",
+      "labels": [
+        "status"
+      ],
+      "name": "truenas_ups_status",
+      "type": "gauge",
+      "variable": "UPS_STATUS"
+    },
+    {
+      "help": "Virt/Incus global state",
+      "labels": [
+        "state"
+      ],
+      "name": "truenas_virt_global_state",
+      "type": "gauge",
+      "variable": "VIRT_GLOBAL_STATE"
+    },
+    {
+      "help": "Number of Incus/LXD virtual instances",
+      "labels": [],
+      "name": "truenas_virt_instance_count",
+      "type": "gauge",
+      "variable": "VIRT_INSTANCE_COUNT"
+    },
+    {
+      "help": "Incus instance CPU usage %",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_virt_instance_cpu_usage_percent",
+      "type": "gauge",
+      "variable": "VIRT_INSTANCE_CPU"
+    },
+    {
+      "help": "Incus instance memory usage bytes",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_virt_instance_mem_bytes",
+      "type": "gauge",
+      "variable": "VIRT_INSTANCE_MEM"
+    },
+    {
+      "help": "1 if Incus instance is running",
+      "labels": [
+        "name",
+        "type"
+      ],
+      "name": "truenas_virt_instance_running",
+      "type": "gauge",
+      "variable": "VIRT_INSTANCE_RUNNING"
+    },
+    {
+      "help": "Number of Incus storage volumes",
+      "labels": [],
+      "name": "truenas_virt_volume_count",
+      "type": "gauge",
+      "variable": "VIRT_VOLUME_COUNT"
+    },
+    {
+      "help": "Incus volume size bytes",
+      "labels": [
+        "name",
+        "pool"
+      ],
+      "name": "truenas_virt_volume_size_bytes",
+      "type": "gauge",
+      "variable": "VIRT_VOLUME_SIZE_BYTES"
+    },
+    {
+      "help": "Available memory for VMs",
+      "labels": [],
+      "name": "truenas_vm_available_memory_bytes",
+      "type": "gauge",
+      "variable": "VM_AVAILABLE_MEMORY_BYTES"
+    },
+    {
+      "help": "Number of virtual machines",
+      "labels": [],
+      "name": "truenas_vm_count",
+      "type": "gauge",
+      "variable": "VM_COUNT"
+    },
+    {
+      "help": "Number of AMD ASIDs when reported",
+      "labels": [],
+      "name": "truenas_vm_flag_amd_asids",
+      "type": "gauge",
+      "variable": "VM_FLAG_AMD_ASIDS"
+    },
+    {
+      "help": "1 if AMD RVI/NPT flag is present",
+      "labels": [],
+      "name": "truenas_vm_flag_amd_rvi",
+      "type": "gauge",
+      "variable": "VM_FLAG_AMD_RVI"
+    },
+    {
+      "help": "1 if Intel VT-x/VMX flag is present",
+      "labels": [],
+      "name": "truenas_vm_flag_intel_vmx",
+      "type": "gauge",
+      "variable": "VM_FLAG_INTEL_VMX"
+    },
+    {
+      "help": "1 if unrestricted guest support is present",
+      "labels": [],
+      "name": "truenas_vm_flag_unrestricted_guest",
+      "type": "gauge",
+      "variable": "VM_FLAG_UNRESTRICTED_GUEST"
+    },
+    {
+      "help": "Maximum vCPUs the system can offer",
+      "labels": [],
+      "name": "truenas_vm_maximum_supported_vcpus",
+      "type": "gauge",
+      "variable": "VM_MAX_VCPUS"
+    },
+    {
+      "help": "1 if KVM/hardware virt is available",
+      "labels": [],
+      "name": "truenas_vm_supports_virtualization",
+      "type": "gauge",
+      "variable": "VM_SUPPORTS_VIRTUALIZATION"
+    },
+    {
+      "help": "1 if vm.virtualization_details reports an error",
+      "labels": [],
+      "name": "truenas_vm_virtualization_details_error_present",
+      "type": "gauge",
+      "variable": "VM_VIRTUALIZATION_DETAILS_ERROR_PRESENT"
+    },
+    {
+      "help": "1 if vm.virtualization_details reports virtualization support",
+      "labels": [],
+      "name": "truenas_vm_virtualization_details_supported",
+      "type": "gauge",
+      "variable": "VM_VIRTUALIZATION_DETAILS_SUPPORTED"
+    },
+    {
+      "help": "Virtual memory in use by VMs in bytes",
+      "labels": [
+        "state"
+      ],
+      "name": "truenas_vm_vmemory_in_use_bytes",
+      "type": "gauge",
+      "variable": "VM_VMEMORY_IN_USE_BYTES"
+    },
+    {
+      "help": "Number of WebDAV (WebShare) shares",
+      "labels": [],
+      "name": "truenas_webdav_share_count",
+      "type": "gauge",
+      "variable": "APP_WEBDAV_SHARE_COUNT"
+    },
+    {
+      "help": "ZFS ARC available memory in bytes (v25+)",
+      "labels": [],
+      "name": "truenas_zfs_arc_available_bytes",
+      "type": "gauge",
+      "variable": "ZFS_ARC_AVAILABLE_BYTES"
+    },
+    {
+      "help": "ZFS ARC free memory in bytes (v25+)",
+      "labels": [],
+      "name": "truenas_zfs_arc_free_memory_bytes",
+      "type": "gauge",
+      "variable": "ZFS_ARC_FREE_MEMORY_BYTES"
+    },
+    {
+      "help": "ZFS ARC cache hit ratio (0.0\u20131.0)",
+      "labels": [],
+      "name": "truenas_zfs_arc_hit_ratio",
+      "type": "gauge",
+      "variable": "ZFS_ARC_HIT_RATIO"
+    },
+    {
+      "help": "ZFS ARC hits per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_arc_hits_per_second",
+      "type": "gauge",
+      "variable": "ZFS_ARC_HITS_RATE"
+    },
+    {
+      "help": "ZFS ARC maximum allowed size in bytes",
+      "labels": [],
+      "name": "truenas_zfs_arc_max_size_bytes",
+      "type": "gauge",
+      "variable": "ZFS_ARC_MAX_SIZE_BYTES"
+    },
+    {
+      "help": "ZFS ARC minimum size in bytes",
+      "labels": [],
+      "name": "truenas_zfs_arc_min_size_bytes",
+      "type": "gauge",
+      "variable": "ZFS_ARC_MIN_SIZE_BYTES"
+    },
+    {
+      "help": "ZFS ARC misses per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_arc_misses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_ARC_MISSES_RATE"
+    },
+    {
+      "help": "ZFS ARC current size in bytes",
+      "labels": [],
+      "name": "truenas_zfs_arc_size_bytes",
+      "type": "gauge",
+      "variable": "ZFS_ARC_SIZE_BYTES"
+    },
+    {
+      "help": "ZFS ARC total demand accesses per second (data + metadata, instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_accesses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_ACCESSES_RATE"
+    },
+    {
+      "help": "ZFS demand data accesses per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_data_accesses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_DATA_ACCESSES_RATE"
+    },
+    {
+      "help": "ZFS demand data hit ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_demand_data_hit_ratio",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_DATA_HIT_RATIO"
+    },
+    {
+      "help": "ZFS demand data hits per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_data_hits_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_DATA_HITS_RATE"
+    },
+    {
+      "help": "ZFS demand data IO hit ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_demand_data_io_hit_ratio",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_DATA_IO_HIT_RATIO"
+    },
+    {
+      "help": "ZFS demand data I/O hits per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_data_io_hits_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_DATA_IO_HITS_RATE"
+    },
+    {
+      "help": "ZFS demand data miss ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_demand_data_miss_ratio",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_DATA_MISS_RATIO"
+    },
+    {
+      "help": "ZFS demand data misses per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_data_misses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_DATA_MISSES_RATE"
+    },
+    {
+      "help": "ZFS demand metadata hit ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_demand_meta_hit_ratio",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_META_HIT_RATIO"
+    },
+    {
+      "help": "ZFS demand metadata hits per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_meta_hits_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_META_HITS_RATE"
+    },
+    {
+      "help": "ZFS demand metadata misses per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_meta_misses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_META_MISSES_RATE"
+    },
+    {
+      "help": "ZFS demand metadata accesses per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_metadata_accesses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_META_ACCESSES_RATE"
+    },
+    {
+      "help": "ZFS demand metadata I/O hit ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_demand_metadata_io_hit_ratio",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_META_IO_HIT_RATIO"
+    },
+    {
+      "help": "ZFS demand metadata I/O hits per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_demand_metadata_io_hits_per_second",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_META_IO_HITS_RATE"
+    },
+    {
+      "help": "ZFS demand metadata miss ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_demand_metadata_miss_ratio",
+      "type": "gauge",
+      "variable": "ZFS_DEMAND_META_MISS_RATIO"
+    },
+    {
+      "help": "ZFS L2ARC total accesses per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_l2arc_accesses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_L2ARC_ACCESSES_RATE"
+    },
+    {
+      "help": "L2ARC cache hit ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_l2arc_hit_ratio",
+      "type": "gauge",
+      "variable": "ZFS_L2ARC_HIT_RATIO"
+    },
+    {
+      "help": "L2ARC cache hits per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_l2arc_hits_per_second",
+      "type": "gauge",
+      "variable": "ZFS_L2ARC_HITS_RATE"
+    },
+    {
+      "help": "ZFS L2ARC miss ratio (0.0-1.0)",
+      "labels": [],
+      "name": "truenas_zfs_l2arc_miss_ratio",
+      "type": "gauge",
+      "variable": "ZFS_L2ARC_MISS_RATIO"
+    },
+    {
+      "help": "L2ARC cache misses per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_l2arc_misses_per_second",
+      "type": "gauge",
+      "variable": "ZFS_L2ARC_MISSES_RATE"
+    },
+    {
+      "help": "L2ARC read bytes per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_l2arc_read_bytes_per_second",
+      "type": "gauge",
+      "variable": "ZFS_L2ARC_READ_BYTES_RATE"
+    },
+    {
+      "help": "L2ARC write bytes per second (instantaneous snapshot from realtime API)",
+      "labels": [],
+      "name": "truenas_zfs_l2arc_write_bytes_per_second",
+      "type": "gauge",
+      "variable": "ZFS_L2ARC_WRITE_BYTES_RATE"
+    }
+  ],
+  "schema_version": 1,
+  "source": "src/truenas_exporter/metrics.py",
+  "truenas_version": "25.10.2"
+}

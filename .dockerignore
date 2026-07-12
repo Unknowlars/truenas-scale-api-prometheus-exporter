@@ -16,10 +16,14 @@ _static/
 *.html
 *.md
 *.json
+!README.md
 docker-compose.yml
 deploy/prometheus/prometheus.truenas-example.yml
 tests/
+!tests/
+!tests/**
 pytest.ini
 requirements-dev.txt
+!requirements-dev.txt
 deploy/prometheus/docker-compose.prometheus.yml
 deploy/prometheus/prometheus.yml

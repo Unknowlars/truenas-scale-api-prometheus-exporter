@@ -1,3 +1,4 @@
+import argparse
 import copy
 import json
 from pathlib import Path
@@ -6,7 +7,7 @@ from pathlib import Path
 DS = {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}
 PLUGIN_VERSION = "12.4.0"
 REPO_ROOT = Path(__file__).resolve().parent.parent
-OUT = REPO_ROOT / "truenas-exporter-dashboard.json"
+OUT = REPO_ROOT / "grafana-dashboard" / "operations-center-dashboard.json"
 
 
 def tgt(expr, legend="", ref="A", fmt="time_series", instant=False):
@@ -480,6 +481,7 @@ I = '$instance'
 
 
 def build_dashboard():
+    IDS.value = 1
     panels = []
     y = 0
 
@@ -1949,7 +1951,7 @@ def build_dashboard():
 
     dashboard = {
         "title": "TrueNAS - Operations Center",
-        "uid": "truenas-operations-center",
+        "uid": "truenas-operations-center-3",
         "description": (
             "Comprehensive TrueNAS dashboard: system health, CPU, memory, ZFS pools & ARC, "
             "disks, network, services, shares, apps, VMs, boot environments, hardware/IPMI, "
@@ -1957,11 +1959,11 @@ def build_dashboard():
         ),
         "tags": ["truenas", "storage", "operations", "zfs", "exporter"],
         "schemaVersion": 42,
-        "version": 1,
+        "version": 9,
         "refresh": "30s",
         "timezone": "browser",
         "graphTooltip": 1,
-        "time": {"from": "now-12h", "to": "now"},
+        "time": {"from": "now-6h", "to": "now"},
         "timepicker": {},
         "weekStart": "",
         "fiscalYearStartMonth": 0,
@@ -2011,9 +2013,31 @@ def build_dashboard():
             ]
         },
     }
+    collapsed_panels = []
+    current_row = None
+    for panel in dashboard["panels"]:
+        if panel.get("type") == "row":
+            panel["collapsed"] = True
+            panel.setdefault("panels", [])
+            collapsed_panels.append(panel)
+            current_row = panel
+        elif current_row is None:
+            collapsed_panels.append(panel)
+        else:
+            current_row["panels"].append(panel)
+    dashboard["panels"] = collapsed_panels
     return dashboard
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate the canonical TrueNAS Grafana dashboard.")
+    parser.add_argument("--check", action="store_true", help="Fail when the committed dashboard differs.")
+    args = parser.parse_args()
     dashboard = build_dashboard()
-    OUT.write_text(json.dumps(dashboard, indent=2) + "\n")
+    rendered = json.dumps(dashboard, indent=2) + "\n"
+    if args.check:
+        if not OUT.exists() or OUT.read_text(encoding="utf-8") != rendered:
+            raise SystemExit(f"Dashboard is out of date: run {Path(__file__).name}")
+    else:
+        OUT.parent.mkdir(parents=True, exist_ok=True)
+        OUT.write_text(rendered, encoding="utf-8")

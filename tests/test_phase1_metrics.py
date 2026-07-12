@@ -668,12 +668,13 @@ def test_load_config_parses_defaults_and_lists(monkeypatch):
     ("env", "message"),
     [
         ({}, "TRUENAS_WS_URL is required"),
-        ({"TRUENAS_WS_URL": "wss://nas.example/api/current"}, "TRUENAS_API_KEY is required"),
+        ({"TRUENAS_WS_URL": "wss://nas.example/api/current"}, "TRUENAS_API_KEY or TRUENAS_API_KEY_FILE is required"),
     ],
 )
 def test_load_config_requires_mandatory_env(monkeypatch, env, message):
     monkeypatch.delenv("TRUENAS_WS_URL", raising=False)
     monkeypatch.delenv("TRUENAS_API_KEY", raising=False)
+    monkeypatch.delenv("TRUENAS_API_KEY_FILE", raising=False)
     for key, value in env.items():
         monkeypatch.setenv(key, value)
 
@@ -788,6 +789,7 @@ def test_landing_page():
 
     assert b"/metrics" in body
     assert b"/healthz" in body
+    assert b"/readyz" in body
 
 
 def test_disable_created_metrics():

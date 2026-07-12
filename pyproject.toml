@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "truenas-scale-api-prometheus-exporter"
+version = "5.2.0"
+description = "Prometheus exporter for the TrueNAS SCALE JSON-RPC WebSocket API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "Unknowlars" }]
+dependencies = [
+  "prometheus-client==0.22.1",
+  "websocket-client==1.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "beautifulsoup4>=4.12,<5",
+  "mypy>=1.15,<2",
+  "pip-audit>=2.8,<3",
+  "pytest>=8,<9",
+  "pytest-cov>=6,<8",
+  "ruff>=0.11,<1",
+]
+
+[project.scripts]
+truenas-exporter = "truenas_exporter.cli:main"
+
+[project.urls]
+Repository = "https://github.com/Unknowlars/truenas-scale-api-prometheus-exporter"
+Issues = "https://github.com/Unknowlars/truenas-scale-api-prometheus-exporter/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = ["docs/truenas-api"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+exclude = ["docs/truenas-api"]
+

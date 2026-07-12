@@ -9,6 +9,8 @@ venv/
 !.env.example
 *.log
 .pytest_cache/
+.coverage
+htmlcov/
 .mypy_cache/
 .ruff_cache/
 dist/

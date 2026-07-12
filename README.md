@@ -5,7 +5,7 @@
 Standalone Prometheus exporter for the TrueNAS JSON-RPC WebSocket API, with Docker-first deployment, safe metric defaults, and an included Grafana dashboard.
 
 ![TrueNAS SCALE 25.10.2](https://img.shields.io/badge/TrueNAS%20SCALE-25.10.2-0095d5?style=flat-square)
-![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776ab?style=flat-square&logo=python&logoColor=white)
+![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776ab?style=flat-square&logo=python&logoColor=white)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)
 
 [Quick start](#quick-start) • [Configuration](#configuration) • [Grafana dashboard](#grafana-dashboard) • [Testing](#testing)
@@ -72,7 +72,7 @@ It is designed to be easy to run publicly and easy to operate:
 - bundled Grafana dashboard JSON and dashboard generator source
 - conservative defaults that keep higher-cardinality options disabled unless you opt in
 
-See `docs/exporter-metric-expansion-plan.md` for the current dedicated-metric roadmap.
+See [`docs/modernization/README.md`](docs/modernization/README.md) for the tracked reliability and architecture roadmap.
 
 > [!IMPORTANT]
 > This exporter is currently maintained against TrueNAS SCALE `25.10.2`. Nearby versions may work, but collector coverage and default event subscriptions are tuned for that release.
@@ -92,7 +92,7 @@ If you are new to Prometheus exporters, start with Option 1 and follow the begin
 
 ### Option 1: Docker Compose
 
-This is the fastest way to get the exporter running locally.
+This builds the checked-out source and runs it locally.
 
 ```bash
 cp .env.example .env
@@ -159,16 +159,20 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `TRUENAS_WS_URL` | yes | TrueNAS WebSocket API URL, for example `wss://truenas.example.local/api/current` |
-| `TRUENAS_API_KEY` | yes | TrueNAS API key; use a read-only key |
+| `TRUENAS_API_KEY` | yes* | TrueNAS API key; use a read-only key. May be replaced by `TRUENAS_API_KEY_FILE`. |
+| `TRUENAS_API_KEY_FILE` | no | Path to a mounted file containing the API key |
+| `TRUENAS_CA_FILE` | no | Path to a custom CA bundle used for TrueNAS TLS verification |
 | `TRUENAS_VERIFY_TLS` | no | Keep `true` in production; set `false` only for controlled testing |
 | `EXPORTER_PORT` | no | HTTP port for `/metrics` and `/healthz`; default `9108` |
 | `SCRAPE_INTERVAL_SECONDS` | no | Poll interval for regular collectors |
 | `TRUENAS_TIMEOUT_SECONDS` | no | Timeout for API call batches |
+| `SCRAPE_BUDGET_SECONDS` | no | Total deadline for a collector scrape; default `25` |
 | `LOG_LEVEL` | no | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
 | `EXPORTER_MODE` | no | Exporter runtime architecture: `legacy` (default) or `collector` |
 | `ENABLE_EVENT_STREAMS` | no | Enable background event subscriptions |
 | `EVENT_SUBSCRIPTIONS` | no | Comma-separated event streams to subscribe to |
 | `EVENT_INTERVAL_SECONDS` | no | Interval used for supported realtime streams |
+| `EVENT_STALE_AFTER_SECONDS` | no | Omit event metrics older than this many seconds; default `15` |
 | `ENABLE_DATASET_METRICS` | no | Enable dataset collectors |
 | `ENABLE_TASK_METRICS` | no | Enable task collectors |
 | `ENABLE_IPMI_METRICS` | no | Enable IPMI collectors when available |
@@ -184,13 +188,13 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 The exporter now supports two runtime modes behind `EXPORTER_MODE`:
 
 - `legacy` (default): existing background poll loop that updates global Prometheus gauges
-- `collector`: Prometheus custom collector mode that builds fresh metric families on each scrape for migrated core metrics (health/scrape, system, pools, datasets, tasks, services, alerts, and curated realtime event metrics)
+- `collector`: on-demand custom-registry mode. It exposes the full dedicated metric contract through a compatibility bridge while domain extraction is moved into fresh snapshot collectors.
 
 
-### Temporary collector-mode gaps
+### Temporary collector-mode migration boundary
 
-- Generic recursive `METHOD_*` and `EVENT_*` extraction remains a legacy-path feature for now
-- Non-core dedicated metrics outside the migrated Phase 3 set still follow the legacy implementation
+- Generic recursive `EVENT_*` extraction remains a legacy-path feature for now.
+- Dedicated metrics have registry parity, but non-core domains still use the legacy extraction coordinator internally. This is tracked in `docs/modernization/02-architecture.md`.
 
 ## Prometheus
 
@@ -227,10 +231,10 @@ The repo also includes `deploy/prometheus/docker-compose.prometheus.yml` and `de
 
 ## Grafana Dashboard
 
-The repository includes a ready-to-import dashboard in `truenas-exporter-dashboard.json`.
+The repository includes a ready-to-import dashboard in `grafana-dashboard/operations-center-dashboard.json`.
 
 1. Open Grafana and go to `Dashboards` -> `Import`.
-2. Upload `truenas-exporter-dashboard.json`.
+2. Upload `grafana-dashboard/operations-center-dashboard.json`.
 3. Choose your Prometheus data source.
 4. Save the dashboard.
 
@@ -244,11 +248,11 @@ The repository includes a ready-to-import dashboard in `truenas-exporter-dashboa
 | `docker-compose.yml` | Main Docker Compose deployment |
 | `.env.example` | Example environment configuration |
 | `deploy/prometheus/prometheus.truenas-example.yml` | Minimal Prometheus scrape config |
-| `truenas-exporter-dashboard.json` | Importable Grafana dashboard |
+| `grafana-dashboard/operations-center-dashboard.json` | Importable Grafana dashboard |
 | `scripts/generate_truenas_dashboard.py` | Dashboard generator source |
 | `scripts/convert_truenas_api_docs_to_markdown.py` | Offline API docs converter |
-| `examples/operations-center-dashboard.json` | Example dashboard export snapshot |
-| `docs/exporter-metric-expansion-plan.md` | Planned metric expansion roadmap |
+| `docs/metrics-contract.json` | Machine-readable Prometheus metric contract |
+| `docs/modernization/README.md` | Tracked reliability and architecture roadmap |
 | `tests/` | Unit tests for collector and event behavior |
 
 ## Testing
@@ -257,11 +261,10 @@ The repository includes a ready-to-import dashboard in `truenas-exporter-dashboa
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-dev.txt
-pytest
-python -m compileall truenas_exporter.py tests
+./scripts/validate.sh
 ```
 
-The current automated tests focus on collector behavior, query shaping, and event subscription handling.
+The validation script runs linting, static typing, branch coverage, generated-asset checks, Compose validation, and a container build. Set `RUN_PYTHON_MATRIX=1` to test Python 3.12, 3.13, and 3.14 in local containers. No hosted CI is used by design.
 
 ## Cardinality and Series Impact
 
@@ -286,6 +289,7 @@ Dedicated collectors remain active regardless of `ENABLE_GENERIC_METHOD_METRICS`
 ## Operational Notes
 
 - `/healthz` confirms the exporter process is serving HTTP; it does not guarantee the last scrape succeeded
+- `/readyz` returns `200` only after a recent successful scrape and otherwise returns `503`
 - some collectors only produce metrics when the related TrueNAS service or subsystem is enabled
 - event-driven metrics depend on supported TrueNAS event streams and API behavior
 - enabling discovery-heavy options can increase Prometheus series count quickly on large systems

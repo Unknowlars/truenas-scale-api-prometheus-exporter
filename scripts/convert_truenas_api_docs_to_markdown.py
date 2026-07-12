@@ -613,6 +613,16 @@ def build_index_page(title: str, intro: str, entries: list[tuple[str, str]]) -> 
 
 def convert(source_root: Path, output_root: Path, clean: bool) -> None:
     if clean and output_root.exists():
+        resolved = output_root.resolve()
+        protected = {
+            Path("/").resolve(),
+            Path.home().resolve(),
+            Path.cwd().resolve(),
+            source_root.resolve(),
+            source_root.resolve().parent,
+        }
+        if resolved in protected or len(resolved.parts) < 3:
+            raise ValueError(f"Refusing unsafe --clean output path: {resolved}")
         shutil.rmtree(output_root)
 
     pages = build_pages(source_root)

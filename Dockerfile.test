@@ -1,0 +1,16 @@
+ARG PYTHON_VERSION=3.14
+FROM python:${PYTHON_VERSION}-slim
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /workspace
+COPY requirements.txt requirements-dev.txt /workspace/
+RUN python -m pip install -r requirements-dev.txt
+COPY pyproject.toml README.md LICENSE /workspace/
+COPY src /workspace/src
+COPY truenas_exporter.py /workspace/truenas_exporter.py
+COPY scripts /workspace/scripts
+COPY tests /workspace/tests
+RUN python -m pytest -q -p no:cacheprovider
