@@ -145,9 +145,10 @@ def test_event_cache_expiry_dispatch_and_snapshot(monkeypatch):
 class _EventClient:
     instances = []
 
-    def __init__(self, messages, fail_subscription=False):
+    def __init__(self, messages, fail_subscription=False, subscribe_result="sub-1"):
         self.messages = iter(messages)
         self.fail_subscription = fail_subscription
+        self.subscribe_result = subscribe_result
         self.calls = []
         self.__class__.instances.append(self)
 
@@ -157,13 +158,22 @@ class _EventClient:
     def __exit__(self, *_args):
         return None
 
-    def authenticate(self, _key):
-        return None
+    def authenticate(self, _key, call=None):
+        if call is not None:
+            call("auth.login_with_api_key", ["redacted-test-key"])
 
     def call(self, method, params=None):
         self.calls.append((method, params))
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
         if self.fail_subscription:
             raise RuntimeError("subscription failed")
+        if method == "core.subscribe":
+            return self.subscribe_result
+        if method == "core.unsubscribe":
+            return True
         return True
 
     def recv_json(self):
@@ -197,6 +207,8 @@ def test_event_stream_filters_messages_and_stops(monkeypatch):
     monkeypatch.setattr(exporter, "_dispatch_event", dispatch_and_stop)
     exporter._event_stream_loop()
     assert exporter._event_message_counts["reporting.realtime"] == 1
+    assert ("core.unsubscribe", ["sub-1"]) in client.calls
+    assert exporter._collector_event_stream_up["reporting.realtime"] == 0
 
 
 def test_event_stream_subscription_failure_and_thread_guards(monkeypatch):
@@ -215,6 +227,55 @@ def test_event_stream_subscription_failure_and_thread_guards(monkeypatch):
     disabled._event_thread = SimpleNamespace(is_alive=lambda: True)
     disabled.config = make_config(enable_event_streams=True)
     disabled._ensure_event_thread()
+
+
+def test_event_stream_rejects_invalid_subscription_ids(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(enable_event_streams=True, event_subscriptions=["app.stats"])
+    )
+    client = _EventClient([], subscribe_result=True)
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: client)
+    monkeypatch.setattr(exporter._stop_event, "wait", lambda _seconds: True)
+
+    exporter._event_stream_loop()
+
+    assert exporter._collector_event_stream_up["app.stats"] == 0
+    assert ("core.unsubscribe", [True]) not in client.calls
+    assert exporter._collector_errors["event_subscribe"] == 1
+
+
+def test_event_stream_cleanup_unsubscribes_and_clears_cached_series(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(enable_event_streams=True, event_subscriptions=["app.stats"])
+    )
+    exporter._dispatch_event("app.stats", {"fields": [{"app_name": "demo", "cpu_usage": 1}]})
+    assert exporter._collector_event_series[exporter_module.APP_CPU_PERCENT._name]
+
+    client = _EventClient([RuntimeError("connection dropped")])
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: client)
+    monkeypatch.setattr(exporter._stop_event, "wait", lambda _seconds: True)
+
+    exporter._event_stream_loop()
+
+    assert ("core.unsubscribe", ["sub-1"]) in client.calls
+    assert exporter._collector_event_stream_up["app.stats"] == 0
+    assert exporter_module.APP_CPU_PERCENT._name not in exporter._collector_event_series
+    assert "app.stats" not in exporter._event_last_monotonic
+
+
+def test_event_stream_v25_virt_subscription_is_tracked_and_unsubscribed(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(enable_event_streams=True, event_subscriptions=["virt.instance.metrics"])
+    )
+    client = _EventClient([])
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: client)
+    monkeypatch.setattr(exporter._stop_event, "wait", lambda _seconds: True)
+
+    exporter._event_stream_loop()
+
+    assert ("core.subscribe", ["virt.instance.metrics"]) in client.calls
+    assert ("core.unsubscribe", ["sub-1"]) in client.calls
+    assert exporter._collector_event_stream_up["virt.instance.metrics"] == 0
 
 
 class _Server:

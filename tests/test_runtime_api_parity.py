@@ -12,12 +12,18 @@ import pytest
 from conftest import make_config
 
 import truenas_exporter as runtime
+from truenas_exporter.compat_profiles import PROFILE_25_10, PROFILE_26_0, PROFILE_UNKNOWN
 
 FIXTURES = Path(__file__).parent / "fixtures" / "api_25_10_2"
+FIXTURES_V26 = Path(__file__).parent / "fixtures" / "api_26_0_0"
 
 
 def fixture(name: str) -> Any:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def fixture_v26(name: str) -> Any:
+    return json.loads((FIXTURES_V26 / name).read_text(encoding="utf-8"))
 
 
 def value(metric: Any) -> float:
@@ -97,6 +103,9 @@ class _Client:
 def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, Any]] = []
     pool = fixture("pool_query.json")
+    pool[0]["dedup_table_size"] = {"parsed": 1048576}
+    pool[0]["scan"]["bytes_processed"] = {"value": 0}
+    pool[0]["scan"]["bytes_to_process"] = {"parsed": 0}
     disks = fixture("disk_query_selected.json")
     update = fixture("update_status_normal.json")
     vmemory = fixture("vm_get_vmemory_in_use.json")
@@ -119,6 +128,7 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
         ):
             return 0
         responses: dict[str, Any] = {
+            "system.version_short": "25.10.2",
             "system.state": "READY",
             "system.ready": False,
             "system.info": {
@@ -170,6 +180,8 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
     assert vmemory_states == {"RNP", "PRD", "RPRD"}
     assert labeled(runtime.POOL_FRAGMENTATION, "tank") == 0
     assert labeled(runtime.POOL_DEDUP_TABLE_SIZE_BYTES, "tank") == 1048576
+    assert labeled(runtime.POOL_SCAN_BYTES_PROCESSED, "tank") == 0
+    assert labeled(runtime.POOL_SCAN_BYTES_TOTAL, "tank") == 0
     assert labeled(runtime.POOL_EXPAND_REFLOWED_BYTES, "tank") == 978944
     assert labeled(runtime.POOL_EXPAND_TO_REFLOW_BYTES, "tank") == 835584
     assert labeled(runtime.POOL_EXPAND_PERCENT, "tank") == pytest.approx(85.35564853556485)
@@ -429,6 +441,94 @@ def test_generic_event_series_expire_and_malformed_gpu_booleans_are_absent(
     assert not list(runtime.GPU_USES_CRITICAL_DEVICES.collect())[0].samples
 
 
+def test_profile_vm_memory_units_and_malformed_values() -> None:
+    v25 = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_25_10)
+    v26 = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_26_0)
+    unknown = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_UNKNOWN)
+
+    assert v25._profile_normalized_bytes("vm.get_available_memory", 8192) == 8192 * 1024**2
+    assert v25._profile_normalized_bytes("vm.get_vmemory_in_use", {"parsed": 1024}) == 1024 * 1024**2
+
+    v26_available = fixture_v26("vm_get_available_memory.json")
+    v26_vmemory = fixture_v26("vm_get_vmemory_in_use.json")
+    assert v26._profile_normalized_bytes("vm.get_available_memory", v26_available) == 8589934592
+    assert v26._profile_normalized_bytes("vm.get_vmemory_in_use", v26_vmemory["PRD"]) == 1073741824
+    assert unknown._profile_normalized_bytes("vm.get_available_memory", v26_available) == 8589934592
+
+    for malformed in (None, False, -1, float("nan"), float("inf"), "not-a-number"):
+        assert v26._profile_normalized_bytes("vm.get_available_memory", malformed) is None
+
+
+def test_bounded_dataset_and_app_shape_normalizers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = runtime.TrueNASExporter(
+        make_config(enable_dataset_metrics=True, enable_task_metrics=False)
+    )
+
+    dataset = {
+        "name": "tank/v26",
+        "properties": {
+            "used": {"parsed": 123},
+            "available": {"value": 456},
+            "quota": {"rawvalue": 0},
+            "compressratio": {"parsed": "1.25x"},
+            "readonly": {"parsed": False},
+            "encrypted": {"parsed": True},
+            "creation": {"parsed": "2026-01-01T00:00:00Z"},
+        },
+    }
+
+    monkeypatch.setattr(
+        exporter,
+        "_call",
+        lambda _client, method, _params=None: [dataset]
+        if method == "pool.dataset.query"
+        else pytest.fail(f"unexpected dataset call: {method}"),
+    )
+    monkeypatch.setattr(exporter, "_query_count", lambda *_args, **_kwargs: 1)
+    exporter._collect_dataset_metrics(object())
+
+    assert labeled(runtime.DATASET_USED_BYTES, "tank/v26") == 123
+    assert labeled(runtime.DATASET_AVAILABLE_BYTES, "tank/v26") == 456
+    assert labeled(runtime.DATASET_QUOTA_BYTES, "tank/v26") == 0
+    assert labeled(runtime.DATASET_COMPRESSION_RATIO, "tank/v26") == 1.25
+    assert labeled(runtime.DATASET_READONLY, "tank/v26") == 0
+    assert labeled(runtime.DATASET_ENCRYPTED, "tank/v26") == 1
+    assert labeled(runtime.DATASET_CREATION_TS, "tank/v26") == 1767225600
+
+    app = {
+        "name": "demo",
+        "state": {"value": "RUNNING"},
+        "properties": {
+            "upgrade_available": {"parsed": False},
+            "image_updates_available": {"parsed": True},
+            "custom_app": None,
+            "migrated": {"value": False},
+            "active_workloads": {
+                "properties": {
+                    "containers": {"parsed": 2},
+                    "used_ports": [8080],
+                    "used_host_ips": ["127.0.0.1"],
+                    "container_details": [{"state": "running"}, {"state": None}],
+                },
+            },
+        },
+    }
+    monkeypatch.setattr(exporter, "_safe_call_auto", lambda _client, method: [] if method == "vm.query" else [app])
+    monkeypatch.setattr(exporter, "_query_count", lambda _client, method, *_args, **_kwargs: 0 if method == "vm.query" else 1)
+    exporter._collect_entity_detail_metrics(object(), {})
+
+    assert labeled(runtime.APP_STATE, "demo", "RUNNING") == 1
+    assert labeled(runtime.APP_UPGRADE_AVAILABLE, "demo") == 0
+    assert labeled(runtime.APP_IMAGE_UPDATES_AVAILABLE, "demo") == 1
+    assert labeled(runtime.APP_MIGRATED, "demo") == 0
+    assert labeled(runtime.APP_CONTAINER_COUNT, "demo") == 2
+    assert labeled(runtime.APP_USED_PORT_COUNT, "demo") == 1
+    assert labeled(runtime.APP_USED_HOST_IP_COUNT, "demo") == 1
+    assert labeled(runtime.APP_CONTAINER_STATE_COUNT, "demo", "RUNNING") == 1
+
+
 @pytest.mark.parametrize(
     "malformed",
     [False, -1, 1.5, "2", {"parsed": 2}, float("nan"), float("inf")],
@@ -440,6 +540,223 @@ def test_count_query_rejects_non_integer_or_negative_shapes(
     monkeypatch.setattr(exporter, "_call", lambda *_args, **_kwargs: malformed)
     with pytest.raises(TypeError, match="nonnegative integer"):
         exporter._query_count(object(), "pool.query")
+
+
+class _BootstrapClient:
+    def __init__(self, version_result: Any = "25.10.2", version_error: Exception | None = None) -> None:
+        self.version_result = version_result
+        self.version_error = version_error
+        self.calls: list[tuple[str, Any]] = []
+
+    def authenticate(self, _api_key: str, call: Any = None) -> None:
+        if call is not None:
+            call("auth.login_with_api_key", ["redacted-test-key"])
+
+    def call(self, method: str, params: Any = None) -> Any:
+        self.calls.append((method, params))
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            if self.version_error is not None:
+                raise self.version_error
+            return self.version_result
+        raise AssertionError(f"unexpected bootstrap call: {method}")
+
+
+@pytest.mark.parametrize(
+    ("version", "expected_profile"),
+    [
+        ("25.10.2", PROFILE_25_10),
+        ("TrueNAS-SCALE-25.10.3", PROFILE_25_10),
+        ("26.0.0", PROFILE_26_0),
+        ("TrueNAS-SCALE-26.0.1", PROFILE_26_0),
+        ("27.1.0", PROFILE_UNKNOWN),
+    ],
+)
+def test_bootstrap_version_detection_selects_profile_once(
+    version: str, expected_profile: Any
+) -> None:
+    exporter = runtime.TrueNASExporter(make_config())
+    client = _BootstrapClient(version)
+
+    assert exporter._bootstrap_connection(client) == version
+    assert exporter.compatibility_profile is expected_profile
+    assert client.calls == [
+        ("auth.login_with_api_key", ["redacted-test-key"]),
+        ("system.version_short", []),
+    ]
+
+
+def test_bootstrap_malformed_and_failed_detection_fall_back_without_expanding_access(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    secret = "sensitive-api-key-value"
+    blocked_methods = {
+        "virt.instance.query",
+        "virt.volume.query",
+        "nvmet.global.sessions",
+        "reporting.graphs",
+        "reporting.netdata_graphs",
+    }
+
+    for client in (
+        _BootstrapClient({"version": "25.10.2", "token": secret}),
+        _BootstrapClient(version_error=RuntimeError(f"boom {secret}")),
+    ):
+        exporter = runtime.TrueNASExporter(
+            make_config(
+                auto_discover_methods=True,
+                extra_methods=sorted(blocked_methods),
+                event_subscriptions=["virt.instance.metrics", "app.stats"],
+                enable_generic_method_metrics=True,
+            )
+        )
+        with caplog.at_level("DEBUG", logger="truenas_exporter"):
+            exporter._bootstrap_connection(client)
+
+        assert exporter.compatibility_profile is PROFILE_UNKNOWN
+        assert blocked_methods.isdisjoint(exporter._discover_methods(object()))
+        assert not exporter.compatibility_profile.allows_event("virt.instance.metrics")
+        assert exporter.compatibility_profile.allows_event("app.stats")
+
+        recorder = _BootstrapClient("unused")
+        for method in blocked_methods:
+            with pytest.raises(RuntimeError, match="outside"):
+                exporter._call(recorder, method, [])
+        assert recorder.calls == []
+
+    assert secret not in caplog.text
+
+
+def test_profile_gate_blocks_removed_and_prohibited_calls_before_client() -> None:
+    class RecordingClient:
+        calls: list[tuple[str, Any]] = []
+
+        def call(self, method: str, params: Any = None) -> Any:
+            self.calls.append((method, params))
+            return 0
+
+    for profile in (PROFILE_26_0, PROFILE_UNKNOWN):
+        exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=profile)
+        client = RecordingClient()
+        for method in (
+            "virt.instance.query",
+            "virt.volume.query",
+            "nvmet.global.sessions",
+            "reporting.graphs",
+            "reporting.netdata_graphs",
+            "pool.is_upgraded",
+            "pool.ddt_prefetch",
+        ):
+            with pytest.raises(RuntimeError, match="outside"):
+                exporter._call(client, method, [])
+            with pytest.raises(RuntimeError, match="outside"):
+                exporter._query_count(client, method)
+        assert client.calls == []
+
+    v25_exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_25_10)
+    client = RecordingClient()
+    assert v25_exporter._query_count(client, "virt.instance.query") == 0
+    assert client.calls == [("virt.instance.query", [[], {"count": True}])]
+
+
+def test_profile_gate_filters_extra_discovered_reporting_and_count_queries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = runtime.TrueNASExporter(
+        make_config(
+            auto_discover_methods=True,
+            extra_methods=[
+                "app.image.query",
+                "virt.instance.query",
+                "reporting.graphs",
+                "pool.is_upgraded",
+            ],
+            enable_generic_method_metrics=True,
+        ),
+        compatibility_profile=PROFILE_26_0,
+    )
+
+    def fake_safe_call(_client: Any, method: str) -> Any:
+        if method == "core.get_methods":
+            return {
+                "app.image.query": {},
+                "virt.instance.query": {},
+                "reporting.netdata_graphs": {},
+                "pool.ddt_prefetch": {},
+            }
+        return None
+
+    monkeypatch.setattr(exporter, "_safe_call_auto", fake_safe_call)
+    discovered = exporter._discover_methods(object())
+
+    assert "app.image.query" not in discovered
+    assert "virt.instance.query" not in discovered
+    assert "reporting.graphs" not in discovered
+    assert "reporting.netdata_graphs" not in discovered
+    assert "pool.is_upgraded" not in discovered
+    assert "pool.ddt_prefetch" not in discovered
+
+    calls: list[tuple[str, Any]] = []
+
+    class Client:
+        def call(self, method: str, params: Any = None) -> int:
+            calls.append((method, params))
+            return 0
+
+    assert exporter._query_count(Client(), "app.image.query") == 0
+    assert calls == [("app.image.query", [[], {"count": True}])]
+    calls.clear()
+
+    with pytest.raises(RuntimeError, match="outside"):
+        exporter._query_count(Client(), "virt.instance.query")
+    assert calls == []
+
+
+def test_profile_gate_blocks_v26_removed_event_subscription(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[tuple[str, Any]] = []
+
+    class EventClient:
+        def __enter__(self) -> EventClient:
+            return self
+
+        def __exit__(self, *_args: Any) -> None:
+            return None
+
+        def authenticate(self, _api_key: str, call: Any = None) -> None:
+            if call is not None:
+                call("auth.login_with_api_key", ["redacted-test-key"])
+
+        def call(self, method: str, params: Any = None) -> bool:
+            attempts.append((method, params))
+            if method == "auth.login_with_api_key":
+                return True
+            if method == "system.version_short":
+                return "26.0.0"
+            if method == "core.subscribe" and params == ["app.stats"]:
+                raise KeyboardInterrupt
+            return True
+
+    exporter = runtime.TrueNASExporter(
+        make_config(
+            event_subscriptions=["virt.instance.metrics", "app.stats"],
+            event_read_timeout_seconds=1,
+        ),
+        compatibility_profile=PROFILE_26_0,
+    )
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: EventClient())
+
+    with pytest.raises(KeyboardInterrupt):
+        exporter._event_stream_loop()
+
+    assert ("core.subscribe", ["virt.instance.metrics"]) not in attempts
+    assert attempts == [
+        ("auth.login_with_api_key", ["redacted-test-key"]),
+        ("system.version_short", []),
+        ("core.subscribe", ["app.stats"]),
+    ]
 
 
 def test_audit_units_and_configured_default_route_replacements(

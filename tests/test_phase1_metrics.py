@@ -1142,6 +1142,8 @@ def test_full_domain_scrape_accepts_empty_read_only_fixture(monkeypatch):
     def empty_call(_client, method, _params=None):
         if method == "auth.login_with_api_key":
             return True
+        if method == "system.version_short":
+            return "25.10.2"
         if method == "system.state":
             return "READY"
         if method == "system.info" or method.endswith(".config"):
@@ -1183,6 +1185,8 @@ def test_full_domain_scrape_contains_optional_method_failures(monkeypatch):
     def failing_call(_client, method, _params=None):
         if method == "auth.login_with_api_key":
             return True
+        if method == "system.version_short":
+            return "25.10.2"
         if method == "system.state":
             return "READY"
         if method == "system.info":
@@ -1227,6 +1231,8 @@ def test_full_domain_scrape_accepts_sparse_entity_fixture(monkeypatch):
     def sparse_call(_client, method, _params=None):
         if method == "auth.login_with_api_key":
             return True
+        if method == "system.version_short":
+            return "25.10.2"
         if method == "system.state":
             return "READY"
         if method == "system.info":
@@ -1306,6 +1312,8 @@ def test_full_domain_scrape_accepts_rich_read_only_fixture(monkeypatch):
     def rich_call(_client, method, _params=None):
         if method == "auth.login_with_api_key":
             return True
+        if method == "system.version_short":
+            return "25.10.2"
         if method == "system.state":
             return "READY"
         if method == "system.info":

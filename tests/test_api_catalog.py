@@ -10,6 +10,13 @@ from truenas_exporter.api_catalog import (
     UNSAFE_EVENT_SUBSCRIPTIONS,
     UNSAFE_GENERIC_READ_METHODS,
 )
+from truenas_exporter.compat_profiles import (
+    PROFILE_25_10,
+    PROFILE_26_0,
+    PROFILE_UNKNOWN,
+    V26_REMOVED_EVENTS,
+    V26_REMOVED_METHODS,
+)
 from truenas_exporter.config import DEFAULT_EVENT_SUBSCRIPTIONS
 from truenas_exporter.method_safety import (
     SAFE_ALLOW_RE,
@@ -142,3 +149,40 @@ def test_default_event_subscriptions_are_documented() -> None:
         "system.shutdown",
     }
     assert removed_undocumented_defaults.isdisjoint(DEFAULT_EVENT_SUBSCRIPTIONS)
+
+
+def test_compatibility_profiles_encode_reviewed_intersections() -> None:
+    assert PROFILE_25_10.target_version == "25.10.2"
+    assert PROFILE_26_0.target_version == "26.0.0"
+    assert PROFILE_UNKNOWN.target_version == "common-intersection"
+
+    assert PROFILE_26_0.reviewed_methods < PROFILE_25_10.reviewed_methods
+    assert PROFILE_UNKNOWN.reviewed_methods == PROFILE_26_0.reviewed_methods
+    assert PROFILE_UNKNOWN.reviewed_events == PROFILE_26_0.reviewed_events
+
+    removed_methods = {
+        "virt.instance.query",
+        "virt.volume.query",
+        "nvmet.global.sessions",
+        "reporting.graphs",
+        "reporting.netdata_graphs",
+    }
+    assert removed_methods <= V26_REMOVED_METHODS
+    assert removed_methods <= PROFILE_25_10.reviewed_methods
+    assert removed_methods.isdisjoint(PROFILE_26_0.reviewed_methods)
+    assert removed_methods.isdisjoint(PROFILE_UNKNOWN.reviewed_methods)
+
+    assert {"virt.instance.metrics"} == V26_REMOVED_EVENTS
+    assert "virt.instance.metrics" in PROFILE_25_10.reviewed_events
+    assert "virt.instance.metrics" not in PROFILE_26_0.reviewed_events
+    assert "virt.instance.metrics" not in PROFILE_UNKNOWN.reviewed_events
+
+    assert "app.image.query" in PROFILE_25_10.reviewed_methods
+    assert "app.image.query" in PROFILE_26_0.reviewed_methods
+    assert "pool.is_upgraded" not in PROFILE_25_10.reviewed_methods
+    assert "pool.is_upgraded" not in PROFILE_26_0.reviewed_methods
+    assert "pool.ddt_prefetch" not in PROFILE_25_10.reviewed_methods
+    assert "pool.ddt_prefetch" not in PROFILE_26_0.reviewed_methods
+
+    assert PROFILE_25_10.unit_conversions["vm.get_available_memory"].source_unit == "MiB"
+    assert PROFILE_26_0.unit_conversions["vm.get_available_memory"].source_unit == "bytes"

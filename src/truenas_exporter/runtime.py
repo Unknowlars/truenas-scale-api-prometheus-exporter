@@ -246,7 +246,6 @@ from typing import Any, cast
 from prometheus_client import REGISTRY, CollectorRegistry, Gauge
 from websocket import WebSocketTimeoutException
 
-from .api_catalog import SAFE_EVENT_SUBSCRIPTIONS, TELEMETRY_CANDIDATE_METHOD_ALLOWLIST
 from .collection import (
     _as_bool,
     _as_float,
@@ -262,6 +261,7 @@ from .collection import (
     _parse_ts,
     _str_label,
 )
+from .compat_profiles import PROFILE_25_10, CompatibilityProfile, get_profile
 from .config import Config, load_config
 from .events import (
     _EVENT_METRICS,
@@ -711,8 +711,13 @@ def _set_optional_bool_gauge(gauge: Any, value: Any) -> None:
 # ---------------------------------------------------------------------------
 
 class TrueNASExporter:
-    def __init__(self, config: Config) -> None:
+    def __init__(
+        self,
+        config: Config,
+        compatibility_profile: CompatibilityProfile = PROFILE_25_10,
+    ) -> None:
         self.config = config
+        self.compatibility_profile = compatibility_profile
         self.exporter_mode = config.exporter_mode
         self._lock = threading.RLock()
         self._event_thread: threading.Thread | None = None
@@ -899,11 +904,79 @@ class TrueNASExporter:
             "ERROR", "WAITING", "ACTIVE", "PASSIVE", "OFFLINE", "ONLINE",
         }
 
-    def _collector_error(self, name: str, message: str) -> None:
+    def _collector_error(self, name: str, message: str, *, exc_info: bool = True) -> None:
         COLLECTOR_ERRORS_TOTAL.labels(collector=name).inc()
         with self._diagnostic_lock:
             self._collector_errors[name] = self._collector_errors.get(name, 0.0) + 1.0
-        LOG.debug(message, exc_info=True)
+        LOG.debug(message, exc_info=exc_info)
+
+    def _profile_for_version_short(self, version: str) -> CompatibilityProfile:
+        normalized = version.strip()
+        if normalized.startswith("TrueNAS-SCALE-"):
+            normalized = normalized.removeprefix("TrueNAS-SCALE-")
+        if normalized.startswith("25.10."):
+            return get_profile("25.10")
+        if normalized.startswith("26.0."):
+            return get_profile("26.0")
+        return get_profile("unknown")
+
+    def _bootstrap_connection(self, client: JsonRpcWsClient) -> Any | None:
+        """Authenticate and select the compatibility profile before telemetry."""
+
+        client.authenticate(
+            self.config.api_key,
+            call=lambda method, params: self._call(client, method, params),
+        )
+        try:
+            version_short = self._call(client, "system.version_short", [])
+        except Exception:
+            self.compatibility_profile = get_profile("unknown")
+            self._collector_error(
+                "version_detection",
+                "system.version_short detection failed; using unknown compatibility profile",
+                exc_info=False,
+            )
+            return None
+
+        if isinstance(version_short, str):
+            self.compatibility_profile = self._profile_for_version_short(version_short)
+            return version_short
+
+        self.compatibility_profile = get_profile("unknown")
+        self._collector_error(
+            "version_detection",
+            f"system.version_short returned malformed {type(version_short).__name__}; "
+            "using unknown compatibility profile",
+            exc_info=False,
+        )
+        return version_short
+
+    def _profile_normalized_bytes(self, method: str, value: Any) -> float | None:
+        numeric = _as_float(value)
+        if numeric is None or numeric < 0:
+            return None
+        conversion = self.compatibility_profile.unit_conversions.get(method)
+        if conversion is None:
+            return numeric
+        return numeric * conversion.multiplier
+
+    def _response_scalar(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            for field_name in ("value", "parsed", "rawvalue"):
+                if field_name in value:
+                    return self._response_scalar(value[field_name])
+        return value
+
+    def _response_field(self, item: dict[str, Any], *field_names: str) -> Any:
+        for field_name in field_names:
+            if field_name in item:
+                return self._response_scalar(item[field_name])
+        properties = item.get("properties")
+        if isinstance(properties, dict):
+            for field_name in field_names:
+                if field_name in properties:
+                    return self._response_scalar(properties[field_name])
+        return None
 
     def _event_interval_seconds(self) -> int:
         return max(2, self.config.event_interval_seconds)
@@ -937,6 +1010,7 @@ class TrueNASExporter:
         self._event_metric_series[key] = current
 
     def _call(self, client: JsonRpcWsClient, method: str, params: list[Any] | None = None) -> Any:
+        self._require_profile_method(method)
         started = time.time()
         try:
             result = client.call(method, params)
@@ -983,6 +1057,7 @@ class TrueNASExporter:
         filters: list[Any] | None = None,
         extra_options: dict[str, Any] | None = None,
     ) -> int:
+        self._require_profile_method(method)
         options: dict[str, Any] = {"count": True}
         if extra_options:
             options.update(extra_options)
@@ -994,6 +1069,28 @@ class TrueNASExporter:
                 f"{result!r} ({type(result).__name__})"
             )
         return result
+
+    def _require_profile_method(self, method: str) -> None:
+        if self.compatibility_profile.allows_method(method):
+            return
+        if method in self.compatibility_profile.removed_methods:
+            self._collector_error(
+                "profile_removed_method_suppressed",
+                f"Suppressed removed method {method!r} for {self.compatibility_profile.name} profile",
+                exc_info=False,
+            )
+            raise RuntimeError(
+                f"method {method!r} was removed and is outside the "
+                f"{self.compatibility_profile.name} compatibility profile"
+            )
+        self._collector_error(
+            "profile_method_blocked",
+            f"Blocked method {method!r} outside {self.compatibility_profile.name} profile",
+            exc_info=False,
+        )
+        raise RuntimeError(
+            f"method {method!r} is outside the {self.compatibility_profile.name} compatibility profile"
+        )
 
     def _extract_snapshot_creation_timestamp(self, snapshot: Any) -> float | None:
         if not isinstance(snapshot, dict):
@@ -1251,7 +1348,7 @@ class TrueNASExporter:
         if method in self.config.exclude_methods:
             return False
         if (
-            not is_documented_read_only_method(method)
+            not is_documented_read_only_method(method, self.compatibility_profile)
             or is_sensitive_read_method(method)
             or is_unsafe_generic_read_method(method)
         ):
@@ -1266,15 +1363,15 @@ class TrueNASExporter:
             return False
         if method.startswith("auth.") and method not in {"auth.me", "auth.sessions"}:
             return False
-        if method not in BASE_METHODS and method not in TELEMETRY_CANDIDATE_METHOD_ALLOWLIST:
+        if method not in BASE_METHODS and not self.compatibility_profile.allows_telemetry_method(method):
             return False
         if SAFE_DENY_RE.search(method):
             return False
-        return bool(SAFE_ALLOW_RE.fullmatch(method))
+        return bool(SAFE_ALLOW_RE.fullmatch(method)) and self.compatibility_profile.allows_method(method)
 
     def _auto_params(self, method: str) -> list[Any]:
         if method == "app.query":
-            return [[], {"limit": self.config.query_limit, "select": [
+            return [[], {"limit": self.compatibility_profile.query_limit_for(method, self.config.query_limit), "select": [
                 "name",
                 "state",
                 "upgrade_available",
@@ -1284,25 +1381,25 @@ class TrueNASExporter:
                 "active_workloads",
             ]}]
         if method == "disk.query":
-            return [[], {"limit": self.config.query_limit, "select": [
+            return [[], {"limit": self.compatibility_profile.query_limit_for(method, self.config.query_limit), "select": [
                 "name", "identifier", "size", "type", "rotationrate", "pool",
             ]}]
         if method == "vm.query":
-            return [[], {"limit": self.config.query_limit, "select": [
+            return [[], {"limit": self.compatibility_profile.query_limit_for(method, self.config.query_limit), "select": [
                 "id", "name", "status", "autostart", "vcpus", "memory",
             ]}]
         if method == "alertservice.query":
-            return [[], {"limit": self.config.query_limit, "select": [
+            return [[], {"limit": self.compatibility_profile.query_limit_for(method, self.config.query_limit), "select": [
                 "id", "name", "type__title", "enabled",
             ]}]
         if method.endswith(".query"):
-            return [[], {"limit": self.config.query_limit}]
+            return [[], {"limit": self.compatibility_profile.query_limit_for(method, self.config.query_limit)}]
         if method in {"nfs.get_nfs3_clients", "nfs.get_nfs4_clients",
                       "iscsi.global.sessions", "route.system_routes",
                       # core.get_jobs can return thousands of records on busy systems;
                       # apply the same query_limit guard used for .query methods.
                       "core.get_jobs"}:
-            return [[], {"limit": self.config.query_limit}]
+            return [[], {"limit": self.compatibility_profile.query_limit_for(method, self.config.query_limit)}]
         if method in {"disk.details", "ipmi.chassis.info", "zfs.resource.query"}:
             return [{}]
         if method == "vm.get_available_memory":
@@ -1871,6 +1968,7 @@ class TrueNASExporter:
     def _event_stream_loop(self) -> None:
         backoff = 2
         while not self._stop_event.is_set():
+            subscribed_events: dict[str, str] = {}
             try:
                 with JsonRpcWsClient(
                     ws_url=self.config.ws_url,
@@ -1881,26 +1979,38 @@ class TrueNASExporter:
                     verify_tls=self.config.verify_tls,
                     ca_file=self.config.ca_file,
                 ) as client:
-                    client.authenticate(self.config.api_key)
+                    self._bootstrap_connection(client)
 
-                    subscribed_events: list[str] = []
                     for event in self.config.event_subscriptions:
-                        if event not in SAFE_EVENT_SUBSCRIPTIONS:
+                        if not self.compatibility_profile.allows_event(event):
                             with self._lock:
                                 self._collector_event_stream_up[event] = 0.0
+                            if event in self.compatibility_profile.removed_events:
+                                self._collector_error(
+                                    "profile_removed_event_suppressed",
+                                    f"Suppressed removed event {event!r} for {self.compatibility_profile.name} profile",
+                                    exc_info=False,
+                                )
+                                continue
                             self._collector_error(
                                 "event_subscribe_blocked",
-                                f"Blocked undocumented or sensitive/raw event {event}",
+                                f"Blocked event {event!r} outside {self.compatibility_profile.name} profile",
+                                exc_info=False,
                             )
                             continue
+                        self._require_profile_method("core.subscribe")
                         subscribe_name = self._format_event_subscription(event)
                         try:
-                            client.call("core.subscribe", [subscribe_name])
+                            subscription_id = client.call("core.subscribe", [subscribe_name])
+                            if not isinstance(subscription_id, str) or not subscription_id.strip():
+                                raise RuntimeError(
+                                    f"Invalid subscription id for {event}: {type(subscription_id).__name__}"
+                                )
                             with self._lock:
                                 self._collector_event_stream_up[event] = 1.0
                                 if not self._is_collector_mode():
                                     self._publish_cached_events_to_default_registry()
-                            subscribed_events.append(event)
+                            subscribed_events[event] = subscription_id
                         except Exception:
                             with self._lock:
                                 self._collector_event_stream_up[event] = 0.0
@@ -1913,34 +2023,53 @@ class TrueNASExporter:
 
                     backoff = 2  # reset backoff on successful connection
 
-                    while not self._stop_event.is_set():
-                        try:
-                            msg = client.recv_json()
-                        except WebSocketTimeoutException:
+                    try:
+                        while not self._stop_event.is_set():
+                            try:
+                                msg = client.recv_json()
+                            except WebSocketTimeoutException:
+                                with self._lock:
+                                    self._expire_stale_events()
+                                continue
+                            if msg.get("method") != "collection_update":
+                                continue
+                            params = msg.get("params")
+                            if not isinstance(params, dict):
+                                continue
+                            collection = _str_label(params.get("collection"), "unknown")
+                            if collection not in subscribed_events:
+                                continue
+                            EVENT_MESSAGES_TOTAL.labels(event=collection).inc()
+                            with self._diagnostic_lock:
+                                self._event_message_counts[collection] = (
+                                    self._event_message_counts.get(collection, 0.0) + 1.0
+                                )
+                            fields = params.get("fields")
+                            payload = fields if isinstance(fields, dict) else params
+                            # Acquire the scrape lock before updating Prometheus metrics so
+                            # that a concurrent /metrics scrape sees a consistent snapshot
+                            # (all CPU sub-components from the same event cycle, etc.).
                             with self._lock:
                                 self._expire_stale_events()
-                            continue
-                        if msg.get("method") != "collection_update":
-                            continue
-                        params = msg.get("params")
-                        if not isinstance(params, dict):
-                            continue
-                        collection = _str_label(params.get("collection"), "unknown")
-                        if collection not in subscribed_events:
-                            continue
-                        EVENT_MESSAGES_TOTAL.labels(event=collection).inc()
-                        with self._diagnostic_lock:
-                            self._event_message_counts[collection] = (
-                                self._event_message_counts.get(collection, 0.0) + 1.0
-                            )
-                        fields = params.get("fields")
-                        payload = fields if isinstance(fields, dict) else params
-                        # Acquire the scrape lock before updating Prometheus metrics so
-                        # that a concurrent /metrics scrape sees a consistent snapshot
-                        # (all CPU sub-components from the same event cycle, etc.).
-                        with self._lock:
-                            self._expire_stale_events()
-                            self._dispatch_event(collection, payload)
+                                self._dispatch_event(collection, payload)
+                    finally:
+                        self._require_profile_method("core.unsubscribe")
+                        for event, subscription_id in list(subscribed_events.items()):
+                            try:
+                                client.call("core.unsubscribe", [subscription_id])
+                            except Exception:
+                                self._collector_error(
+                                    "event_unsubscribe",
+                                    f"Failed unsubscribing from {event}",
+                                )
+                            with self._lock:
+                                self._collector_event_stream_up[event] = 0.0
+                                self._clear_cached_event_metrics(event)
+                                self._clear_generic_event_metrics(event)
+                                self._event_last_monotonic.pop(event, None)
+                                self._expired_events.add(event)
+                                if not self._is_collector_mode():
+                                    self._publish_cached_events_to_default_registry()
 
             except Exception:
                 if self._stop_event.is_set():
@@ -2164,34 +2293,41 @@ class TrueNASExporter:
             if not isinstance(app_name, str) or not app_name.strip():
                 continue
             # Per-app state (e.g. RUNNING, STOPPED, DEPLOYING)
-            app_st = app.get("state")
+            app_st = self._response_field(app, "state")
             if isinstance(app_st, str) and app_st:
                 APP_STATE.labels(app=app_name, state=app_st.upper()).set(1)
 
             for raw_value, gauge in (
-                (app.get("upgrade_available"), APP_UPGRADE_AVAILABLE),
-                (app.get("image_updates_available"), APP_IMAGE_UPDATES_AVAILABLE),
-                (app.get("custom_app"), APP_CUSTOM),
-                (app.get("migrated"), APP_MIGRATED),
+                (self._response_field(app, "upgrade_available"), APP_UPGRADE_AVAILABLE),
+                (
+                    self._response_field(app, "image_updates_available"),
+                    APP_IMAGE_UPDATES_AVAILABLE,
+                ),
+                (self._response_field(app, "custom_app"), APP_CUSTOM),
+                (self._response_field(app, "migrated"), APP_MIGRATED),
             ):
                 if raw_value is not None:
                     _set_optional_bool_gauge(gauge.labels(app=app_name), raw_value)
 
-            active_workloads = app.get("active_workloads")
+            active_workloads = self._response_field(app, "active_workloads")
             if isinstance(active_workloads, dict):
-                container_count = _as_float(active_workloads.get("containers"))
+                container_count = _as_float(
+                    self._response_field(active_workloads, "containers")
+                )
                 if container_count is not None:
                     APP_CONTAINER_COUNT.labels(app=app_name).set(container_count)
 
-                used_ports = active_workloads.get("used_ports")
+                used_ports = self._response_field(active_workloads, "used_ports")
                 if isinstance(used_ports, list):
                     APP_USED_PORT_COUNT.labels(app=app_name).set(len(used_ports))
 
-                used_host_ips = active_workloads.get("used_host_ips")
+                used_host_ips = self._response_field(active_workloads, "used_host_ips")
                 if isinstance(used_host_ips, list):
                     APP_USED_HOST_IP_COUNT.labels(app=app_name).set(len(used_host_ips))
 
-                container_details = active_workloads.get("container_details")
+                container_details = self._response_field(
+                    active_workloads, "container_details"
+                )
                 if isinstance(container_details, list):
                     container_states: dict[str, int] = {}
                     for detail in container_details:
@@ -2375,7 +2511,7 @@ class TrueNASExporter:
         for index, ds in enumerate(datasets):
             if not isinstance(ds, dict):
                 continue
-            raw_name = ds.get("id")
+            raw_name = _first_not_none(ds.get("id"), ds.get("name"))
             if not isinstance(raw_name, str) or not raw_name:
                 continue
             name = raw_name
@@ -2389,7 +2525,7 @@ class TrueNASExporter:
                 (DATASET_USED_BY_DATASET_BYTES, "usedbydataset"),
                 (DATASET_USED_BY_SNAPSHOTS_BYTES, "usedbysnapshots"),
             ):
-                val = _as_float(ds.get(field))
+                val = _as_float(self._response_field(ds, field))
                 if val is not None:
                     gauge.labels(dataset=name).set(val)
 
@@ -2398,11 +2534,11 @@ class TrueNASExporter:
                 (DATASET_QUOTA_BYTES, "quota"),
                 (DATASET_REFQUOTA_BYTES, "refquota"),
             ):
-                val = _as_float(ds.get(field))
+                val = _as_float(self._response_field(ds, field))
                 if val is not None:
                     gauge.labels(dataset=name).set(val)
 
-            snap_count = _as_float(ds.get("snapshot_count"))
+            snap_count = _as_float(self._response_field(ds, "snapshot_count"))
             fallback_limit = self.config.dataset_snapshot_fallback_limit
             if snap_count is None and fallback_limit > 0 and index < min(fallback_limit, self.config.max_entity_calls):
                 try:
@@ -2412,17 +2548,17 @@ class TrueNASExporter:
             if snap_count is not None:
                 DATASET_SNAPSHOT_COUNT.labels(dataset=name).set(snap_count)
 
-            ratio_raw = ds.get("compressratio")
+            ratio_raw = self._response_field(ds, "compressratio")
             ratio = _as_ratio(ratio_raw)
             if ratio is not None:
                 DATASET_COMPRESSION_RATIO.labels(dataset=name).set(ratio)
 
             for raw_value, gauge in (
-                (ds.get("readonly"), DATASET_READONLY),
-                (ds.get("atime"), DATASET_ATIME),
-                (ds.get("exec"), DATASET_EXEC),
-                (ds.get("key_loaded"), DATASET_KEY_LOADED),
-                (ds.get("locked"), DATASET_LOCKED),
+                (self._response_field(ds, "readonly"), DATASET_READONLY),
+                (self._response_field(ds, "atime"), DATASET_ATIME),
+                (self._response_field(ds, "exec"), DATASET_EXEC),
+                (self._response_field(ds, "key_loaded"), DATASET_KEY_LOADED),
+                (self._response_field(ds, "locked"), DATASET_LOCKED),
             ):
                 if raw_value is not None:
                     _set_optional_bool_gauge(gauge.labels(dataset=name), raw_value)
@@ -2433,15 +2569,15 @@ class TrueNASExporter:
                 (DATASET_REFQUOTA_WARNING_PERCENT, "refquota_warning"),
                 (DATASET_REFQUOTA_CRITICAL_PERCENT, "refquota_critical"),
             ):
-                val = _as_percent(ds.get(field))
+                val = _as_percent(self._response_field(ds, field))
                 if val is not None:
                     gauge.labels(dataset=name).set(val)
 
-            encrypted = ds.get("encrypted")
+            encrypted = self._response_field(ds, "encrypted")
             if encrypted is not None:
                 _set_optional_bool_gauge(DATASET_ENCRYPTED.labels(dataset=name), encrypted)
 
-            creation_ts = _parse_ts(ds.get("creation"))
+            creation_ts = _parse_ts(self._response_field(ds, "creation"))
             if creation_ts is not None:
                 DATASET_CREATION_TS.labels(dataset=name).set(creation_ts)
 
@@ -2909,7 +3045,7 @@ class TrueNASExporter:
             return
 
         try:
-            methods = client.call("core.get_methods", [])
+            methods = self._call(client, "core.get_methods", [])
             names = sorted(list(methods.keys()))
             added_count = 0
 
@@ -3081,13 +3217,8 @@ class TrueNASExporter:
                     ca_file=self.config.ca_file,
                     deadline_monotonic=deadline,
                 ) as client:
-                    # --- Authentication ---
-                    # In TrueNAS 25.x, login_with_api_key returns a session dict;
-                    # in older versions it returned True. _as_bool handles both.
-                    client.authenticate(
-                        self.config.api_key,
-                        call=lambda method, params: self._call(client, method, params),
-                    )
+                    # --- Authentication and compatibility profile detection ---
+                    version_short = self._bootstrap_connection(client)
 
                     # --- Dynamic Discovery (if enabled) ---
                     if self.config.enable_generic_method_metrics:
@@ -3098,6 +3229,7 @@ class TrueNASExporter:
                     # Dedicated collectors below can read from cache to avoid making
                     # a second round-trip for the same method.
                     result_cache: dict[str, Any] = {}
+                    result_cache["system.version_short"] = version_short
                     methods_to_call = (
                         self._discover_methods(client)
                         if self.config.enable_generic_method_metrics
@@ -3160,9 +3292,11 @@ class TrueNASExporter:
                     vm_available = result_cache.get("vm.get_available_memory")
                     if vm_available is None:
                         vm_available = self._call(client, "vm.get_available_memory", [False])
-                    vm_av_val = _as_float(vm_available)
+                    vm_av_val = self._profile_normalized_bytes(
+                        "vm.get_available_memory", vm_available
+                    )
                     if vm_av_val is not None:
-                        VM_AVAILABLE_MEMORY_BYTES.set(vm_av_val * 1024**2)
+                        VM_AVAILABLE_MEMORY_BYTES.set(vm_av_val)
 
                     vm_vmemory = result_cache.get("vm.get_vmemory_in_use")
                     if vm_vmemory is None:
@@ -3170,11 +3304,13 @@ class TrueNASExporter:
                     if isinstance(vm_vmemory, dict):
                         for state_name in ("RNP", "PRD", "RPRD"):
                             state_value = vm_vmemory.get(state_name)
-                            numeric = _as_float(state_value)
+                            numeric = self._profile_normalized_bytes(
+                                "vm.get_vmemory_in_use", state_value
+                            )
                             if numeric is not None:
                                 VM_VMEMORY_IN_USE_BYTES.labels(
                                     state=state_name
-                                ).set(numeric * 1024**2)
+                                ).set(numeric)
 
                     # --- Network summary (use cache) ---
                     network_summary = result_cache.get("network.general.summary")
@@ -3284,11 +3420,11 @@ class TrueNASExporter:
                             (POOL_ALLOCATED_BYTES, "allocated"),
                             (POOL_FREE_BYTES, "free"),
                         ):
-                            val = _as_float(pool.get(field))
+                            val = _as_float(self._response_field(pool, field))
                             if val is not None:
                                 gauge.labels(pool=pool_name).set(val)
 
-                        frag = _as_percent(pool.get("fragmentation"))
+                        frag = _as_percent(self._response_field(pool, "fragmentation"))
                         if frag is not None:
                             POOL_FRAGMENTATION.labels(pool=pool_name).set(frag)
 
@@ -3306,16 +3442,22 @@ class TrueNASExporter:
 
                         # Compatibility alias: the legacy ratio-named metric has
                         # always read this byte-valued API field.
-                        dedup = _as_float(pool.get("dedup_table_size"))
+                        dedup = _as_float(
+                            self._response_field(pool, "dedup_table_size", "dedup_table_quota")
+                        )
                         if dedup is not None:
                             POOL_DEDUP_RATIO.labels(pool=pool_name).set(dedup)
                             POOL_DEDUP_TABLE_SIZE_BYTES.labels(pool=pool_name).set(dedup)
 
                         expand = pool.get("expand")
                         if isinstance(expand, dict):
-                            reflowed = _as_float(expand.get("bytes_reflowed"))
-                            total = _as_float(expand.get("bytes_to_reflow"))
-                            percent = _as_percent(expand.get("percentage"))
+                            reflowed = _as_float(
+                                self._response_field(expand, "bytes_reflowed", "reflowed")
+                            )
+                            total = _as_float(
+                                self._response_field(expand, "bytes_to_reflow", "to_reflow")
+                            )
+                            percent = _as_percent(self._response_field(expand, "percentage"))
                             if reflowed is not None:
                                 POOL_EXPAND_REFLOWED_BYTES.labels(pool=pool_name).set(reflowed)
                             if total is not None:
@@ -3326,20 +3468,26 @@ class TrueNASExporter:
 
                         scan = pool.get("scan")
                         if isinstance(scan, dict):
-                            pct = _as_float(scan.get("percentage"))
+                            pct = _as_float(self._response_field(scan, "percentage", "percent"))
                             if pct is not None:
                                 POOL_SCAN_PERCENT.labels(pool=pool_name).set(pct)
                             # Detailed scan stats (v3 addition)
-                            errors = _as_float(scan.get("errors"))
+                            errors = _as_float(self._response_field(scan, "errors"))
                             if errors is not None:
                                 POOL_SCAN_ERRORS.labels(pool=pool_name).set(errors)
-                            bytes_proc = _as_float(scan.get("bytes_processed"))
+                            bytes_proc = _as_float(
+                                self._response_field(scan, "bytes_processed", "processed_bytes")
+                            )
                             if bytes_proc is not None:
                                 POOL_SCAN_BYTES_PROCESSED.labels(pool=pool_name).set(bytes_proc)
-                            bytes_tot = _as_float(scan.get("bytes_to_process"))
+                            bytes_tot = _as_float(
+                                self._response_field(scan, "bytes_to_process", "total_bytes")
+                            )
                             if bytes_tot is not None:
                                 POOL_SCAN_BYTES_TOTAL.labels(pool=pool_name).set(bytes_tot)
-                            secs_remaining = _as_float(scan.get("total_secs_left"))
+                            secs_remaining = _as_float(
+                                self._response_field(scan, "total_secs_left", "seconds_remaining")
+                            )
                             if secs_remaining is not None:
                                 POOL_SCAN_SECONDS_REMAINING.labels(pool=pool_name).set(secs_remaining)
                             end_ts = scan.get("end_time")
@@ -3602,7 +3750,11 @@ class TrueNASExporter:
 
         # version_short
         try:
-            vs = cache.get("system.version_short") or self._call(client, "system.version_short", [])
+            vs = (
+                cache["system.version_short"]
+                if "system.version_short" in cache
+                else self._call(client, "system.version_short", [])
+            )
             if isinstance(vs, str):
                 SYSTEM_VERSION.clear()
                 SYSTEM_VERSION.labels(version=vs).set(1)

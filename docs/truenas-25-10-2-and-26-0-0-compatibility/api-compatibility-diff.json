@@ -7934,6 +7934,48 @@
       }
     },
     {
+      "changed_signature_fields": [],
+      "kind": "method",
+      "name": "core.unsubscribe",
+      "status": "present in v26 with unchanged parsed signature",
+      "v25_path": "methods/core/unsubscribe.md",
+      "v25_signature": {
+        "event_shapes": [
+          "Call parameters",
+          "Return value"
+        ],
+        "fields": {},
+        "job": false,
+        "parameters": [
+          [
+            1,
+            "id_"
+          ]
+        ],
+        "return_schema": "Result",
+        "return_type": "null",
+        "roles": []
+      },
+      "v26_path": "methods/core/unsubscribe.md",
+      "v26_signature": {
+        "event_shapes": [
+          "Call parameters",
+          "Return value"
+        ],
+        "fields": {},
+        "job": false,
+        "parameters": [
+          [
+            1,
+            "id_"
+          ]
+        ],
+        "return_schema": "Result",
+        "return_type": "null",
+        "roles": []
+      }
+    },
+    {
       "changed_signature_fields": [
         "fields"
       ],
@@ -25858,7 +25900,7 @@
   ],
   "current_exporter_summary": {
     "absent in v26": 8,
-    "present in v26 with unchanged parsed signature": 132,
+    "present in v26 with unchanged parsed signature": 133,
     "schema changed in v26": 97
   },
   "generator": "scripts/generate_api_exporter_parity.py --compat-diff",

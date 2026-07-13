@@ -69,6 +69,12 @@ def _as_optional_bool(value: Any) -> bool | None:
     """Parse a documented boolean while distinguishing missing/malformed data."""
     if value is None:
         return None
+    if isinstance(value, dict):
+        for key in ("value", "parsed", "rawvalue"):
+            nested = _as_optional_bool(value.get(key))
+            if nested is not None:
+                return nested
+        return None
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
@@ -127,6 +133,11 @@ def _as_percent(value: Any) -> float | None:
 
 def _as_ratio(value: Any) -> float | None:
     """Parse a decimal ratio, including ZFS strings such as ``"2.50x"``."""
+    if isinstance(value, dict):
+        for key in ("value", "parsed", "rawvalue"):
+            nested = _as_ratio(value.get(key))
+            if nested is not None:
+                return nested
     if isinstance(value, str):
         value = value.strip()
         if value.lower().endswith("x"):

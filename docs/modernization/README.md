@@ -54,6 +54,143 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 COMPAT-06 event lifecycle hardening: event subscriptions now
+  require a non-empty string subscription id from `core.subscribe`; invalid or
+  missing ids are treated as subscription failures and are not tracked.
+  Successful subscription ids are tracked by event and `core.unsubscribe` is
+  called for each tracked id during clean event-loop shutdown and reconnect
+  cleanup. Cleanup marks the event stream down, clears cached dedicated and
+  generic event series, removes freshness state, and preserves existing
+  reconnect backoff and diagnostics. Focused tests prove v25 keeps and
+  unsubscribes `virt.instance.metrics`, v26/unknown still do not subscribe to
+  removed `virt.instance.metrics`, invalid subscription ids are rejected
+  without unsubscribe, and cached event series are cleared on reconnect
+  cleanup. Focused checks passed:
+  `PYTHONPATH=. pytest tests/test_api_catalog.py tests/test_runtime_lifecycle.py tests/test_removed_source_suppression.py -q`
+  (35 passed). Metric contract check passed:
+  `python3 scripts/generate_metric_contract.py --check`. Generated checks
+  passed after regenerating legitimate parity artifacts with
+  `python3 scripts/generate_api_exporter_parity.py`,
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0`, and
+  `python3 scripts/generate_api_exporter_parity.py --compat-diff`:
+  `python3 scripts/generate_api_docs_manifest.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py --check`,
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`,
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`,
+  and `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`.
+  `git diff --check` passed. `./scripts/validate.sh` passed (`176 passed`,
+  90.47% coverage, dashboard validation passed, Docker image build and version
+  smoke `5.2.0` passed). No metric names, types, help text, labels,
+  dashboards, release behavior, live API calls, credentials, or hosted
+  automation changed.
+
+- 2026-07-13 COMPAT-05 removed-source suppression: removed v26/common-
+  intersection methods are now diagnosed as intentional
+  `profile_removed_method_suppressed` skips before transport invocation, and
+  the removed `virt.instance.metrics` event is diagnosed as
+  `profile_removed_event_suppressed` before subscription. Focused synthetic
+  transport tests prove `virt.instance.query`, `virt.volume.query`,
+  `nvmet.global.sessions`, `reporting.graphs`, and
+  `reporting.netdata_graphs` are not sent by collector call sites, count
+  queries, `EXTRA_METHODS`, generic discovery, dynamic discovery, or reporting
+  discovery under `26.0` and `unknown`; they also prove
+  `virt.instance.metrics` is not subscribed under those profiles. The same
+  tests prove v25 still transports the removed-in-v26 methods/events where
+  allowed, and `app.image.query` remains callable for reviewed count use.
+  Stale metric handling remains the existing reset/NaN/absent behavior; no
+  zeros or replacement v26 metrics were fabricated. Focused checks passed:
+  `PYTHONPATH=. pytest tests/test_api_catalog.py tests/test_runtime_api_parity.py tests/test_removed_source_suppression.py -q`
+  (51 passed). Metric contract check passed:
+  `python3 scripts/generate_metric_contract.py --check`. Generated checks
+  passed after regenerating the legitimate parity artifact with
+  `python3 scripts/generate_api_exporter_parity.py`: `python3 scripts/generate_api_docs_manifest.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py --check`,
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`,
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`,
+  and `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`.
+  `git diff --check` passed. `./scripts/validate.sh` passed (`173 passed`,
+  90.50% coverage, dashboard validation passed, Docker image build and version
+  smoke `5.2.0` passed). No metric names, types, help text, labels,
+  dashboards, release behavior, live API calls, credentials, or hosted
+  automation changed.
+
+- 2026-07-13 COMPAT-04 collector normalization and units: wired VM memory
+  conversion through profile-owned unit metadata so 25.10 values documented as
+  MiB are converted to bytes and 26.0/unknown profile values documented as
+  bytes are not inflated. Added bounded response-field normalization for
+  dataset, pool, and application collector shapes, including documented
+  `value`/`parsed`/`rawvalue` wrappers and `properties` containers, while
+  preserving existing labels and omitting malformed/null data. Existing
+  realtime additive parsing for `disls`/`disks` and `cpuN` shapes was preserved.
+  Added sanitized v26 VM fixtures under `tests/fixtures/api_26_0_0/` and
+  focused tests proving v25/v26/unknown VM output magnitudes, malformed VM
+  omission, and bounded dataset/app normalizers. Focused checks passed:
+  `PYTHONPATH=. pytest tests/test_runtime_api_parity.py -q` (35 passed) and
+  `PYTHONPATH=. pytest tests/test_api_catalog.py tests/test_runtime_api_parity.py tests/test_documented_api_shapes.py -q`
+  (54 passed). Metric contract check passed:
+  `python3 scripts/generate_metric_contract.py --check`. Required generated
+  checks passed: `python3 scripts/generate_api_docs_manifest.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py --check`,
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`,
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`,
+  and `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`.
+  `git diff --check` passed. `./scripts/validate.sh` passed (`163 passed`,
+  90.52% coverage, dashboard validation passed, Docker image build and version
+  smoke `5.2.0` passed). No metric names, types, help text, labels,
+  dashboards, release behavior, live API calls, credentials, or hosted
+  automation changed.
+
+- 2026-07-13 COMPAT-03 runtime version detection: authenticated bootstrap now
+  calls `system.version_short` once per scrape/event WebSocket connection before
+  collectors, generic discovery, reporting discovery, count queries, or event
+  subscriptions run. Version strings beginning with `25.10.` select the 25.10
+  profile, strings beginning with `26.0.` select the 26.0 profile, and unknown,
+  malformed, or failed detection falls back to the unknown/common-intersection
+  profile. Detection failure remains fail-closed: the unknown profile excludes
+  `virt.instance.query`, `virt.volume.query`, `virt.instance.metrics`,
+  `nvmet.global.sessions`, `reporting.graphs`, and
+  `reporting.netdata_graphs`; focused tests also assert removed methods/events
+  cannot reach the fake client and version-detection logs do not include a
+  synthetic secret. Focused checks passed:
+  `PYTHONPATH=. pytest tests/test_api_catalog.py tests/test_runtime_api_parity.py tests/test_runtime_lifecycle.py -q`
+  (55 passed) and
+  `PYTHONPATH=. pytest tests/test_phase1_metrics.py tests/test_phase3_collector_mode.py -q`
+  (42 passed). Required generated checks passed:
+  `python3 scripts/generate_api_docs_manifest.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py --check`,
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`,
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`,
+  and `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`.
+  `git diff --check` passed. `./scripts/validate.sh` passed (`161 passed`,
+  90.46% coverage, dashboard validation passed, Docker image build and version
+  smoke `5.2.0` passed). No metric names, types, help text, labels,
+  dashboards, fixtures, release behavior, live API calls, credentials, or
+  hosted automation changed.
+
+- 2026-07-13 COMPAT-02 compatibility profiles and pre-call safety gates: added
+  profile-owned 25.10, 26.0, and unknown/common-intersection method/event
+  allowlists, v26 removed-source declarations, query-limit policy data, and VM
+  unit-conversion metadata in `src/truenas_exporter/compat_profiles.py`.
+  Runtime calls, count queries, generic discovery, `EXTRA_METHODS`, reporting
+  discovery, and configured event subscriptions now fail closed against the
+  selected profile while default runtime behavior remains on the 25.10.2
+  profile until COMPAT-03 adds version detection. The v26 and unknown profiles
+  exclude `virt.instance.query`, `virt.volume.query`, `virt.instance.metrics`,
+  `nvmet.global.sessions`, `reporting.graphs`, and
+  `reporting.netdata_graphs`; `app.image.query` remains eligible for owned
+  count/select use; `pool.is_upgraded` and `pool.ddt_prefetch` remain blocked.
+  Focused profile tests passed (`PYTHONPATH=. pytest tests/test_api_catalog.py
+  tests/test_runtime_api_parity.py -q`: 33 passed). Required local checks
+  passed: `python3 scripts/generate_api_docs_manifest.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py --check`,
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`,
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`,
+  `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`,
+  `git diff --check`, and `./scripts/validate.sh` (`155 passed`, 90.36%
+  coverage, dashboard validation passed, Docker image build and version smoke
+  passed). No metric names, types, help text, labels, dashboards, fixtures,
+  release behavior, live API calls, credentials, or hosted automation changed.
+
 - 2026-07-13 COMPAT-01B v26 parity and compatibility diff: added target-aware
   v26 parity generation to `scripts/generate_api_exporter_parity.py` without
   changing the default 25.10.2 parity artifacts. Generated

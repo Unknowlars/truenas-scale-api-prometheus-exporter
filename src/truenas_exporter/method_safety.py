@@ -8,6 +8,7 @@ from .api_catalog import (
     SENSITIVE_READ_METHODS,
     UNSAFE_GENERIC_READ_METHODS,
 )
+from .compat_profiles import PROFILE_25_10, CompatibilityProfile
 
 # Keep the historical regex interface used by ``runtime.py``, but derive it
 # from exact documentation-backed membership instead of suffix heuristics.
@@ -124,10 +125,13 @@ DENY_NAMESPACE_PREFIXES: tuple[str, ...] = (
     "ec2.",      # AWS/cloud integrations
 )
 
-def is_documented_read_only_method(method: str) -> bool:
-    """Return whether *method* is in the 25.10.2 read-only allowlist."""
+def is_documented_read_only_method(
+    method: str,
+    profile: CompatibilityProfile = PROFILE_25_10,
+) -> bool:
+    """Return whether *method* is in the selected profile read-only allowlist."""
 
-    return method in READ_ONLY_METHOD_ALLOWLIST
+    return method in profile.reviewed_methods
 
 
 def is_sensitive_read_method(method: str) -> bool:
