@@ -54,6 +54,28 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 COMPAT-07 operator documentation and handoff: README,
+  `.env.example`, changelog, and the compatibility index now document automatic
+  profile selection from `system.version_short`, supported `25.10`, `26.0`,
+  and fail-closed `unknown` behavior, v26/unknown suppression for
+  `virt.instance.query`, `virt.volume.query`, `nvmet.global.sessions`,
+  `reporting.graphs`, `reporting.netdata_graphs`, and
+  `virt.instance.metrics`, unavailable metric absent/NaN behavior without
+  fabricated zeros, profile-aware event defaults, subscription-id validation
+  and unsubscribe cleanup, `app.image.query` eligibility, and the continued
+  blocks for `pool.is_upgraded` and `pool.ddt_prefetch`. Required checks
+  passed: `python3 scripts/generate_metric_contract.py --check`;
+  `python3 scripts/generate_api_docs_manifest.py --check`;
+  `python3 scripts/generate_api_exporter_parity.py --check`;
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`;
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`;
+  `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`;
+  `git diff --check`; and `./scripts/validate.sh` (`176 passed`, 90.47%
+  coverage, dashboard validation passed, Docker image build and version smoke
+  `5.2.0` passed). No runtime code, metric names/types/help text/labels,
+  dashboards, release behavior, live API calls, credentials, or hosted
+  automation changed.
+
 - 2026-07-13 COMPAT-06 event lifecycle hardening: event subscriptions now
   require a non-empty string subscription id from `core.subscribe`; invalid or
   missing ids are treated as subscription failures and are not tracked.

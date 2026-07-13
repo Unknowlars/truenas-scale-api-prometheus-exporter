@@ -4,7 +4,7 @@
 
 Standalone Prometheus exporter for the TrueNAS JSON-RPC WebSocket API, with Docker-first deployment, safe metric defaults, and an included Grafana dashboard.
 
-![TrueNAS SCALE 25.10.2](https://img.shields.io/badge/TrueNAS%20SCALE-25.10.2-0095d5?style=flat-square)
+![TrueNAS SCALE 25.10.2 and 26.0.0](https://img.shields.io/badge/TrueNAS%20SCALE-25.10.2%20%2F%2026.0.0-0095d5?style=flat-square)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776ab?style=flat-square&logo=python&logoColor=white)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)
 
@@ -68,14 +68,14 @@ It is designed to be easy to run publicly and easy to operate:
 - single-file Python exporter with minimal runtime dependencies
 - Docker and Docker Compose friendly out of the box
 - documentation-audited metric coverage across storage, hardware, services, tasks, and alerts
-- event-driven realtime updates for streams such as `reporting.realtime`, `app.stats`, and `virt.instance.metrics`
+- event-driven realtime updates for supported streams such as `reporting.realtime`, `app.stats`, and profile-eligible virtualization events
 - bundled Grafana dashboard JSON and dashboard generator source
 - conservative defaults that keep higher-cardinality options disabled unless you opt in
 
-See [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md) for the complete 25.10.2 method/field audit and [`docs/modernization/README.md`](docs/modernization/README.md) for the reliability roadmap.
+See [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md) for the complete 25.10.2 method/field audit, [`docs/truenas-25-10-2-and-26-0-0-compatibility/api-compatibility-diff.md`](docs/truenas-25-10-2-and-26-0-0-compatibility/api-compatibility-diff.md) for the pinned 25.10.2/26.0.0 diff, and [`docs/modernization/README.md`](docs/modernization/README.md) for the reliability roadmap.
 
 > [!IMPORTANT]
-> This exporter is currently maintained against TrueNAS SCALE `25.10.2`. Nearby versions may work, but collector coverage and default event subscriptions are tuned for that release.
+> This exporter is maintained against the pinned TrueNAS SCALE `25.10.2` and `26.0.0` API documentation. It selects a compatibility profile automatically from `system.version_short`; operators should not configure a manual version toggle.
 
 ## What You Get
 
@@ -91,6 +91,43 @@ See [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md) for the complet
 The committed API snapshot is audited exhaustively, not sampled: 1,011 Markdown documents, 767 methods across 114 method namespaces, and 63 event sources are inventoried in [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md). The runtime catalog contains 398 documentation-classified reads and 112 telemetry candidates. Generic discovery additionally blocks 60 sensitive full responses and 43 non-secret raw, opaque, identity-bearing, or configuration-heavy responses; only the three schema-owned event streams are subscribable.
 
 The exporter exposes 405 contract-owned metrics. Generic method/event extraction remains an opt-in diagnostic feature and is not treated as semantic telemetry coverage. Numeric values under password, token, secret, private-key, and credential paths are suppressed even when generic extraction is enabled.
+
+## TrueNAS 25.10.2 and 26.0.0 Compatibility
+
+On every scrape connection and event-stream connection, the exporter authenticates, calls `system.version_short` once, and then selects one of three profiles before collector calls, discovery, count queries, or event subscriptions are attempted:
+
+| Detected version | Selected profile | Behavior |
+| --- | --- | --- |
+| `25.10.*` | `25.10` | Uses the pinned 25.10.2 audited method and event surface. |
+| `26.0.*` | `26.0` | Uses the pinned 26.0.0 audited surface and suppresses sources removed from v26. |
+| anything else, malformed, or detection failure | `unknown` | Fails closed to the reviewed common intersection only. |
+
+The `unknown` profile is intentionally conservative. Failed or unexpected version detection never expands API access, and there is no supported stale/manual API-version configuration knob.
+
+Existing metric names, types, help text, and label sets are preserved across profiles. When a preserved metric declaration has no safe source in the selected profile, when permission is denied, or when a response is absent, malformed, non-finite, or stale, the exporter leaves the series absent or `NaN` according to the existing reset/staleness behavior. It does not emit fabricated zeros for unavailable compatibility data.
+
+The pinned v26.0.0 diff marks these current exporter sources as unavailable under `26.0` and `unknown`, so they are suppressed before transport:
+
+- `virt.instance.query`
+- `virt.volume.query`
+- `nvmet.global.sessions`
+- `reporting.graphs`
+- `reporting.netdata_graphs`
+- `virt.instance.metrics`
+
+Default event subscriptions are profile-aware:
+
+| Profile | Default event subscriptions |
+| --- | --- |
+| `25.10` | `reporting.realtime`, `app.stats`, `virt.instance.metrics` |
+| `26.0` | `reporting.realtime`, `app.stats` |
+| `unknown` | `reporting.realtime`, `app.stats` |
+
+Event lifecycle handling requires a valid string subscription ID from `core.subscribe`. Invalid or missing IDs are treated as subscription failures, and tracked IDs are passed to `core.unsubscribe` during clean shutdown and reconnect cleanup.
+
+`app.image.query` remains eligible for reviewed count use in both pinned documentation sets. `pool.is_upgraded` remains blocked because it requires a pool id, and `pool.ddt_prefetch` remains prohibited because it is action-like and unsuitable for Prometheus collection.
+
+The first 25.10/26.0 compatibility release continues to use the existing API-key authentication transport. Migration away from `auth.login_with_api_key` is a separate v27-readiness project and does not require operators to switch to password authentication for this release.
 
 ### Compatibility replacements and unavailable legacy metrics
 

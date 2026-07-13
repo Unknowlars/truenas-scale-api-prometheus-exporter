@@ -1,6 +1,7 @@
 # TrueNAS 25.10.2 and 26.0.0 Compatibility
 
-Status: planning complete; implementation not started.
+Status: COMPAT-01A through COMPAT-06 complete; operator documentation and
+handoff evidence are tracked by COMPAT-07.
 
 This package is the implementation handoff for supporting the exporter against
 the pinned TrueNAS SCALE 25.10.2 contract and the validated TrueNAS API
@@ -46,6 +47,42 @@ decisions supersede ambiguous or incorrect draft statements:
   megabytes in the pinned 25.10.2 documentation.
 - `core.subscribe` returns a subscription identifier and `core.unsubscribe`
   accepts it.
+
+## Operator behavior summary
+
+The exporter automatically selects a compatibility profile by calling
+`system.version_short` once after authentication for each scrape or event
+connection. `25.10.*` selects the `25.10` profile, `26.0.*` selects the `26.0`
+profile, and malformed, failed, denied, or unexpected detection selects the
+`unknown` profile. The `unknown` profile is fail-closed and uses only the
+reviewed common method/event intersection. There is no operator-managed version
+toggle.
+
+The pinned 26.0.0 diff removes these current exporter sources; the `26.0` and
+`unknown` profiles suppress them before transport:
+
+- `virt.instance.query`
+- `virt.volume.query`
+- `nvmet.global.sessions`
+- `reporting.graphs`
+- `reporting.netdata_graphs`
+- `virt.instance.metrics`
+
+Metric declarations are preserved. If a source is removed, denied, absent,
+malformed, stale, or has no safe semantic equivalent in the selected profile,
+the existing unavailable behavior applies: samples are absent or `NaN`; zero is
+not emitted as a substitute.
+
+Default event subscriptions are profile-aware. `25.10` uses
+`reporting.realtime`, `app.stats`, and `virt.instance.metrics`; `26.0` and
+`unknown` use `reporting.realtime` and `app.stats`. The event loop requires a
+valid string ID from `core.subscribe`, treats invalid IDs as failures, and
+calls `core.unsubscribe` for tracked IDs during clean shutdown and reconnect
+cleanup.
+
+`app.image.query` remains eligible for reviewed count use. `pool.is_upgraded`
+remains blocked because it requires a pool id, and `pool.ddt_prefetch` remains
+prohibited because it is action-like and unsuitable for Prometheus collection.
 
 Official references: [TrueNAS 26 API changes](https://www.truenas.com/docs/scale/26/gettingstarted/versionnotes/), [v26 API documentation](https://api.truenas.com/v26.0/), [v26 authentication method](https://api.truenas.com/v26.0/api_methods_auth.login_ex.html), [v26 VM memory method](https://api.truenas.com/v26.0/api_methods_vm.get_available_memory.html), and [v26 subscription method](https://api.truenas.com/v26.0/api_methods_core.subscribe.html).
 

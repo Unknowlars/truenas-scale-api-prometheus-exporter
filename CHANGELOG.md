@@ -28,6 +28,7 @@ All notable changes to this project are documented here.
 - `/readyz` readiness endpoint and graceful signal-driven shutdown
 - installable `src/` package, console command, and Python 3.14 container image
 - MIT license, security and support policies, metric contract, API-doc manifest, and modernization roadmap
+- automatic TrueNAS 25.10, 26.0, and fail-closed unknown compatibility profiles selected from `system.version_short`
 - exhaustive machine/human-readable API parity artifacts covering all 1,011 API Markdown files, 767 methods, 63 event sources, 114 namespaces, and every dedicated metric
 - documentation-derived catalogs for 398 read-only methods, 112 telemetry candidates, 60 sensitive reads, 43 non-secret generic-response exclusions, and 63 documented events
 - fixture-based 25.10.2 regressions for full, sparse, null, false, zero, malformed, timestamp, count, fallback, optional-failure, stale-event, and recovery shapes
@@ -40,7 +41,9 @@ All notable changes to this project are documented here.
 - container startup now uses the `truenas-exporter` entrypoint; Compose `command:` overrides that repeated `python /app/truenas_exporter.py` must be removed
 - configuration parsing is strict: values such as `TRUENAS_VERIFY_TLS=maybe`, HTTP URLs, invalid ports, and relative filesystem paths now abort startup instead of being tolerated
 - generic method selection now requires membership in both the 25.10.2 read catalog and the reviewed telemetry/base set; mutators, unsafe/entity-specific operations, and sensitive full responses cannot be enabled through discovery or `EXTRA_METHODS`
-- default event subscriptions now contain only the three documented streams with owned schema parsers; eight undocumented/version-mismatched and seven unowned or sensitive full-payload defaults were removed
+- default event subscriptions are profile-aware: 25.10 keeps `reporting.realtime`, `app.stats`, and `virt.instance.metrics`; 26.0 and unknown use `reporting.realtime` and `app.stats`
+- v26 and unknown profiles suppress removed sources before transport: `virt.instance.query`, `virt.volume.query`, `nvmet.global.sessions`, `reporting.graphs`, `reporting.netdata_graphs`, and `virt.instance.metrics`
+- event streams now require valid string `core.subscribe` IDs and unsubscribe tracked IDs with `core.unsubscribe` during clean shutdown and reconnect cleanup
 - the generated dashboard now uses verified producers only, removes fabricated `or vector(0)` fallbacks, and migrates panels to the compatibility replacements
 
 ### Deprecated
