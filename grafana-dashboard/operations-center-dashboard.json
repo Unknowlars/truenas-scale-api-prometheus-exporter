@@ -1437,8 +1437,8 @@
         {
           "type": "timeseries",
           "id": 24,
-          "title": "CPU Breakdown",
-          "description": "CPU time breakdown by category. I/O wait indicates storage bottlenecks.",
+          "title": "CPU Usage",
+          "description": "Total and per-core CPU usage. TrueNAS 25.10 no longer reports CPU mode splits.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -1449,8 +1449,8 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "avg(truenas_cpu_user_percent{instance=~\"$instance\"})",
-              "legendFormat": "User %",
+              "expr": "truenas_cpu_core_usage_percent{instance=~\"$instance\"}",
+              "legendFormat": "Core {{core}}",
               "refId": "A"
             },
             {
@@ -1458,36 +1458,9 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "avg(truenas_cpu_system_percent{instance=~\"$instance\"})",
-              "legendFormat": "System %",
+              "expr": "avg(truenas_cpu_usage_percent{instance=~\"$instance\"})",
+              "legendFormat": "Total",
               "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "expr": "avg(truenas_cpu_iowait_percent{instance=~\"$instance\"})",
-              "legendFormat": "I/O Wait %",
-              "refId": "C"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "expr": "avg(truenas_cpu_interrupt_percent{instance=~\"$instance\"})",
-              "legendFormat": "Interrupt %",
-              "refId": "D"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
-              },
-              "expr": "avg(truenas_cpu_idle_percent{instance=~\"$instance\"})",
-              "legendFormat": "Idle %",
-              "refId": "E"
             }
           ],
           "fieldConfig": {
@@ -1505,7 +1478,7 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "normal"
+                  "mode": "none"
                 },
                 "barAlignment": 0,
                 "barWidthFactor": 0.6,

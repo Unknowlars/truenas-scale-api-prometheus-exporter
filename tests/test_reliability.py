@@ -19,10 +19,8 @@ def test_collector_realtime_zero_replaces_previous_value():
     exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 0.0}}})
 
     assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 0.0
-    # The CPU object is opaque in the 25.10.2 schema. Total use must not be
-    # relabelled as user-space CPU use when a user field is absent.
-    assert exporter_module.CPU_USER_PERCENT._name not in exporter._collector_event_scalars
-    assert exporter_module.CPU_IDLE_PERCENT._name not in exporter._collector_event_scalars
+    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 0.0
+    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 100.0
 
 
 def test_legacy_app_and_vm_zero_values_are_exported():

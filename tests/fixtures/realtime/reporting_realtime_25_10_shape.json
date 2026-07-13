@@ -1,0 +1,46 @@
+{
+  "cpu": {
+    "cpu": {
+      "usage": 25.0,
+      "temp": 47.0
+    },
+    "cpu0": {
+      "usage": 18.0,
+      "temp": 46.0
+    },
+    "cpu1": {
+      "usage": 32.0,
+      "temp": 48.0
+    }
+  },
+  "memory": {
+    "physical_memory_total": 33564585984,
+    "physical_memory_available": 3850489856,
+    "arc_size": 15965502736,
+    "arc_free_memory": 2456612864,
+    "arc_available_memory": 1231847552
+  },
+  "disks": {
+    "read_ops": 0.64,
+    "read_bytes": 10504,
+    "write_ops": 175,
+    "write_bytes": 5710878,
+    "busy": 1.67
+  },
+  "interfaces": {
+    "enp8s0": {
+      "link_state": "LINK_STATE_UP",
+      "speed": 1000,
+      "received_bytes_rate": 33830,
+      "sent_bytes_rate": 61204
+    }
+  },
+  "pools": {
+    "big_data": {
+      "available": 3188529774592,
+      "used": 8690991542272,
+      "total": 11879521316864
+    }
+  },
+  "zfs": {}
+}

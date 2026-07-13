@@ -2025,8 +2025,8 @@
         "kind": "Panel",
         "spec": {
           "id": 418,
-          "title": "CPU Breakdown",
-          "description": "Stacked CPU time by mode.",
+          "title": "CPU Usage",
+          "description": "Total and per-core CPU usage. TrueNAS 25.10 no longer reports CPU mode splits.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2045,8 +2045,8 @@
                         "name": "${DS_PROMETHEUS}"
                       },
                       "spec": {
-                        "expr": "avg((truenas_cpu_user_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "User"
+                        "expr": "(truenas_cpu_core_usage_percent{instance=~\"$instance\"} >= 0)",
+                        "legendFormat": "Core {{core}}"
                       }
                     }
                   }
@@ -2064,46 +2064,8 @@
                         "name": "${DS_PROMETHEUS}"
                       },
                       "spec": {
-                        "expr": "avg((truenas_cpu_system_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "System"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "C",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "avg((truenas_cpu_iowait_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "I/O Wait"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "D",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "avg((truenas_cpu_interrupt_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "Interrupt"
+                        "expr": "avg((truenas_cpu_usage_percent{instance=~\"$instance\"} >= 0))",
+                        "legendFormat": "Total"
                       }
                     }
                   }
@@ -2138,14 +2100,14 @@
                     "drawStyle": "line",
                     "lineInterpolation": "smooth",
                     "lineWidth": 1,
-                    "fillOpacity": 45,
+                    "fillOpacity": 35,
                     "gradientMode": "none",
                     "showPoints": "never",
                     "pointSize": 5,
                     "spanNulls": 900000,
                     "axisSoftMin": 0,
                     "stacking": {
-                      "mode": "normal",
+                      "mode": "none",
                       "group": "A"
                     },
                     "thresholdsStyle": {
@@ -2173,23 +2135,7 @@
                     ]
                   }
                 },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byName",
-                      "options": "I/O Wait"
-                    },
-                    "properties": [
-                      {
-                        "id": "color",
-                        "value": {
-                          "mode": "fixed",
-                          "fixedColor": "#FF9830"
-                        }
-                      }
-                    ]
-                  }
-                ]
+                "overrides": []
               }
             }
           }
@@ -4277,8 +4223,8 @@
         "kind": "Panel",
         "spec": {
           "id": 24,
-          "title": "CPU Breakdown",
-          "description": "CPU time breakdown by category. I/O wait indicates storage bottlenecks.",
+          "title": "CPU Usage",
+          "description": "Total and per-core CPU usage. TrueNAS 25.10 no longer reports CPU mode splits.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4297,8 +4243,8 @@
                         "name": "${DS_PROMETHEUS}"
                       },
                       "spec": {
-                        "expr": "avg((truenas_cpu_user_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "User %"
+                        "expr": "(truenas_cpu_core_usage_percent{instance=~\"$instance\"} >= 0)",
+                        "legendFormat": "Core {{core}}"
                       }
                     }
                   }
@@ -4316,65 +4262,8 @@
                         "name": "${DS_PROMETHEUS}"
                       },
                       "spec": {
-                        "expr": "avg((truenas_cpu_system_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "System %"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "C",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "avg((truenas_cpu_iowait_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "I/O Wait %"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "D",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "avg((truenas_cpu_interrupt_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "Interrupt %"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "E",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "avg((truenas_cpu_idle_percent{instance=~\"$instance\"} >= 0))",
-                        "legendFormat": "Idle %"
+                        "expr": "avg((truenas_cpu_usage_percent{instance=~\"$instance\"} >= 0))",
+                        "legendFormat": "Total"
                       }
                     }
                   }
@@ -4420,7 +4309,7 @@
                     "spanNulls": 900000,
                     "stacking": {
                       "group": "A",
-                      "mode": "normal"
+                      "mode": "none"
                     },
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -4594,6 +4483,253 @@
                   }
                 },
                 "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-26": {
+        "kind": "Panel",
+        "spec": {
+          "id": 26,
+          "title": "Per-Core CPU Usage",
+          "description": "Per-core utilization. Helps identify single-threaded bottlenecks.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "spec": {
+                        "expr": "(truenas_cpu_core_usage_percent{instance=~\"$instance\"} >= 0)",
+                        "legendFormat": "Core {{core}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "lastNotNull",
+                    "max"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "drawStyle": "line",
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "fillOpacity": 15,
+                    "gradientMode": "opacity",
+                    "showPoints": "auto",
+                    "spanNulls": 900000,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    },
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "axisSoftMin": 0
+                  },
+                  "mappings": [],
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-27": {
+        "kind": "Panel",
+        "spec": {
+          "id": 27,
+          "title": "CPU Temperature per Core",
+          "description": "Per-core CPU temperatures. Sustained high temps indicate cooling issues.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "spec": {
+                        "expr": "(truenas_cpu_temperature_celsius{instance=~\"$instance\"} >= 0)",
+                        "legendFormat": "Core {{core}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "lastNotNull",
+                    "max"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "drawStyle": "line",
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "fillOpacity": 15,
+                    "gradientMode": "opacity",
+                    "showPoints": "auto",
+                    "spanNulls": 900000,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    },
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "axisSoftMin": 0
+                  },
+                  "mappings": [],
+                  "unit": "celsius",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      }
+                    ]
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byType",
+                      "options": "number"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "yellow",
+                              "value": 70
+                            },
+                            {
+                              "color": "red",
+                              "value": 85
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "custom.thresholdsStyle",
+                        "value": {
+                          "mode": "line+area"
+                        }
+                      }
+                    ]
+                  }
+                ]
               }
             }
           }
@@ -5434,253 +5570,6 @@
                   }
                 },
                 "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-26": {
-        "kind": "Panel",
-        "spec": {
-          "id": 26,
-          "title": "Per-Core CPU Usage",
-          "description": "Per-core utilization. Helps identify single-threaded bottlenecks.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "A",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "(truenas_cpu_core_usage_percent{instance=~\"$instance\"} >= 0)",
-                        "legendFormat": "Core {{core}}"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "",
-            "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [
-                    "lastNotNull",
-                    "max"
-                  ],
-                  "displayMode": "table",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "desc"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "drawStyle": "line",
-                    "lineInterpolation": "smooth",
-                    "lineWidth": 2,
-                    "fillOpacity": 15,
-                    "gradientMode": "opacity",
-                    "showPoints": "auto",
-                    "spanNulls": 900000,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    },
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "axisSoftMin": 0
-                  },
-                  "mappings": [],
-                  "unit": "percent",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      }
-                    ]
-                  }
-                },
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-27": {
-        "kind": "Panel",
-        "spec": {
-          "id": 27,
-          "title": "CPU Temperature per Core",
-          "description": "Per-core CPU temperatures. Sustained high temps indicate cooling issues.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "A",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "(truenas_cpu_temperature_celsius{instance=~\"$instance\"} >= 0)",
-                        "legendFormat": "Core {{core}}"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "",
-            "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [
-                    "lastNotNull",
-                    "max"
-                  ],
-                  "displayMode": "table",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "desc"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "drawStyle": "line",
-                    "lineInterpolation": "smooth",
-                    "lineWidth": 2,
-                    "fillOpacity": 15,
-                    "gradientMode": "opacity",
-                    "showPoints": "auto",
-                    "spanNulls": 900000,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    },
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "axisSoftMin": 0
-                  },
-                  "mappings": [],
-                  "unit": "celsius",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      }
-                    ]
-                  }
-                },
-                "overrides": [
-                  {
-                    "matcher": {
-                      "id": "byType",
-                      "options": "number"
-                    },
-                    "properties": [
-                      {
-                        "id": "thresholds",
-                        "value": {
-                          "mode": "absolute",
-                          "steps": [
-                            {
-                              "color": "green",
-                              "value": 0
-                            },
-                            {
-                              "color": "yellow",
-                              "value": 70
-                            },
-                            {
-                              "color": "red",
-                              "value": 85
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "id": "custom.thresholdsStyle",
-                        "value": {
-                          "mode": "line+area"
-                        }
-                      }
-                    ]
-                  }
-                ]
               }
             }
           }
@@ -7490,6 +7379,237 @@
           }
         }
       },
+      "panel-52": {
+        "kind": "Panel",
+        "spec": {
+          "id": 52,
+          "title": "Pool Expansion Progress",
+          "description": "Completion percentage for active pool expansion reflow.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "spec": {
+                        "expr": "(truenas_pool_expand_percent{instance=~\"$instance\", pool=~\"$pool\"} >= 0)",
+                        "legendFormat": "{{pool}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "lastNotNull",
+                    "max"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "drawStyle": "line",
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "fillOpacity": 15,
+                    "gradientMode": "opacity",
+                    "showPoints": "auto",
+                    "spanNulls": 900000,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    },
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "axisSoftMin": 0
+                  },
+                  "mappings": [],
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-53": {
+        "kind": "Panel",
+        "spec": {
+          "id": 53,
+          "title": "Pool Realtime I/O",
+          "description": "Per-pool read/write throughput.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "spec": {
+                        "expr": "(truenas_pool_realtime_read_bytes_per_second{instance=~\"$instance\", pool=~\"$pool\"} >= 0)",
+                        "legendFormat": "{{pool}} read"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "B",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "spec": {
+                        "expr": "(truenas_pool_realtime_write_bytes_per_second{instance=~\"$instance\", pool=~\"$pool\"} >= 0)",
+                        "legendFormat": "{{pool}} write"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "calcs": [
+                    "lastNotNull",
+                    "max"
+                  ],
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "drawStyle": "line",
+                    "lineInterpolation": "smooth",
+                    "lineWidth": 2,
+                    "fillOpacity": 15,
+                    "gradientMode": "opacity",
+                    "showPoints": "auto",
+                    "spanNulls": 900000,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    },
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "axisSoftMin": 0
+                  },
+                  "mappings": [],
+                  "unit": "Bps",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
       "panel-55": {
         "kind": "Panel",
         "spec": {
@@ -8769,237 +8889,6 @@
           }
         }
       },
-      "panel-52": {
-        "kind": "Panel",
-        "spec": {
-          "id": 52,
-          "title": "Pool Expansion Progress",
-          "description": "Completion percentage for active pool expansion reflow.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "A",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "(truenas_pool_expand_percent{instance=~\"$instance\", pool=~\"$pool\"} >= 0)",
-                        "legendFormat": "{{pool}}"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "",
-            "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [
-                    "lastNotNull",
-                    "max"
-                  ],
-                  "displayMode": "table",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "desc"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "drawStyle": "line",
-                    "lineInterpolation": "smooth",
-                    "lineWidth": 2,
-                    "fillOpacity": 15,
-                    "gradientMode": "opacity",
-                    "showPoints": "auto",
-                    "spanNulls": 900000,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    },
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "axisSoftMin": 0
-                  },
-                  "mappings": [],
-                  "unit": "percent",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      }
-                    ]
-                  }
-                },
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-53": {
-        "kind": "Panel",
-        "spec": {
-          "id": 53,
-          "title": "Pool Realtime I/O",
-          "description": "Per-pool read/write throughput.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "A",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "(truenas_pool_realtime_read_bytes_per_second{instance=~\"$instance\", pool=~\"$pool\"} >= 0)",
-                        "legendFormat": "{{pool}} read"
-                      }
-                    }
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "B",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "(truenas_pool_realtime_write_bytes_per_second{instance=~\"$instance\", pool=~\"$pool\"} >= 0)",
-                        "legendFormat": "{{pool}} write"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "",
-            "spec": {
-              "options": {
-                "legend": {
-                  "calcs": [
-                    "lastNotNull",
-                    "max"
-                  ],
-                  "displayMode": "table",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "multi",
-                  "sort": "desc"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "drawStyle": "line",
-                    "lineInterpolation": "smooth",
-                    "lineWidth": 2,
-                    "fillOpacity": 15,
-                    "gradientMode": "opacity",
-                    "showPoints": "auto",
-                    "spanNulls": 900000,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    },
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "axisSoftMin": 0
-                  },
-                  "mappings": [],
-                  "unit": "Bps",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      }
-                    ]
-                  }
-                },
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
       "panel-277": {
         "kind": "Panel",
         "spec": {
@@ -9192,6 +9081,102 @@
           }
         }
       },
+      "panel-279": {
+        "kind": "Panel",
+        "spec": {
+          "id": 279,
+          "title": "Dataset Snapshot Counts",
+          "description": "Datasets with most snapshots.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "spec": {
+                        "expr": "topk(15, truenas_dataset_snapshot_count{instance=~\"$instance\", dataset=~\"$dataset\"} > 0)",
+                        "legendFormat": "{{dataset}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "bargauge",
+            "version": "",
+            "spec": {
+              "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "namePlacement": "auto",
+                "valueMode": "color",
+                "showUnfilled": true,
+                "sizing": "auto",
+                "minVizHeight": 16,
+                "maxVizHeight": 300,
+                "minVizWidth": 8,
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": false
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-blues"
+                  },
+                  "mappings": [],
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "yellow",
+                        "value": 70
+                      },
+                      {
+                        "color": "red",
+                        "value": 90
+                      }
+                    ]
+                  },
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
       "panel-280": {
         "kind": "Panel",
         "spec": {
@@ -9313,6 +9298,102 @@
                       },
                       "spec": {
                         "expr": "topk(15, truenas_dataset_used_by_snapshots_bytes{instance=~\"$instance\", dataset=~\"$dataset\"} > 0)",
+                        "legendFormat": "{{dataset}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "bargauge",
+            "version": "",
+            "spec": {
+              "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "namePlacement": "auto",
+                "valueMode": "color",
+                "showUnfilled": true,
+                "sizing": "auto",
+                "minVizHeight": 16,
+                "maxVizHeight": 300,
+                "minVizWidth": 8,
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": false
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "continuous-blues"
+                  },
+                  "mappings": [],
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "yellow",
+                        "value": 70
+                      },
+                      {
+                        "color": "red",
+                        "value": 90
+                      }
+                    ]
+                  },
+                  "unit": "bytes"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-282": {
+        "kind": "Panel",
+        "spec": {
+          "id": 282,
+          "title": "Datasets with Reservations",
+          "description": "Datasets with explicit ZFS reservations.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "spec": {
+                        "expr": "topk(15, truenas_dataset_reservation_bytes{instance=~\"$instance\", dataset=~\"$dataset\"} > 0)",
                         "legendFormat": "{{dataset}}"
                       }
                     }
@@ -10650,198 +10731,6 @@
                     ]
                   }
                 ]
-              }
-            }
-          }
-        }
-      },
-      "panel-279": {
-        "kind": "Panel",
-        "spec": {
-          "id": 279,
-          "title": "Dataset Snapshot Counts",
-          "description": "Datasets with most snapshots.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "A",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "topk(15, truenas_dataset_snapshot_count{instance=~\"$instance\", dataset=~\"$dataset\"} > 0)",
-                        "legendFormat": "{{dataset}}"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "bargauge",
-            "version": "",
-            "spec": {
-              "options": {
-                "displayMode": "gradient",
-                "orientation": "horizontal",
-                "namePlacement": "auto",
-                "valueMode": "color",
-                "showUnfilled": true,
-                "sizing": "auto",
-                "minVizHeight": 16,
-                "maxVizHeight": 300,
-                "minVizWidth": 8,
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "bottom",
-                  "showLegend": false
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "thresholds"
-                  },
-                  "mappings": [],
-                  "min": 0,
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "yellow",
-                        "value": 70
-                      },
-                      {
-                        "color": "red",
-                        "value": 90
-                      }
-                    ]
-                  },
-                  "unit": "short"
-                },
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-282": {
-        "kind": "Panel",
-        "spec": {
-          "id": 282,
-          "title": "Datasets with Reservations",
-          "description": "Datasets with explicit ZFS reservations.",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "refId": "A",
-                    "hidden": false,
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "spec": {
-                        "expr": "topk(15, truenas_dataset_reservation_bytes{instance=~\"$instance\", dataset=~\"$dataset\"} > 0)",
-                        "legendFormat": "{{dataset}}"
-                      }
-                    }
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "bargauge",
-            "version": "",
-            "spec": {
-              "options": {
-                "displayMode": "gradient",
-                "orientation": "horizontal",
-                "namePlacement": "auto",
-                "valueMode": "color",
-                "showUnfilled": true,
-                "sizing": "auto",
-                "minVizHeight": 16,
-                "maxVizHeight": 300,
-                "minVizWidth": 8,
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "placement": "bottom",
-                  "showLegend": false
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "thresholds"
-                  },
-                  "mappings": [],
-                  "min": 0,
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "yellow",
-                        "value": 70
-                      },
-                      {
-                        "color": "red",
-                        "value": 90
-                      }
-                    ]
-                  },
-                  "unit": "bytes"
-                },
-                "overrides": []
               }
             }
           }
@@ -35420,6 +35309,32 @@
                                     "name": "panel-25"
                                   }
                                 }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 8,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-26"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 8,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-27"
+                                  }
+                                }
                               }
                             ]
                           }
@@ -35542,46 +35457,6 @@
                           }
                         },
                         "title": "Memory & Swap"
-                      }
-                    },
-                    {
-                      "kind": "RowsLayoutRow",
-                      "spec": {
-                        "layout": {
-                          "kind": "GridLayout",
-                          "spec": {
-                            "items": [
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-26"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 12,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-27"
-                                  }
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        "title": "🚫 Not collected on this system",
-                        "collapse": true
                       }
                     }
                   ]
@@ -35785,6 +35660,32 @@
                                     "name": "panel-51"
                                   }
                                 }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 0,
+                                  "y": 30,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-52"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 30,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-53"
+                                  }
+                                }
                               }
                             ]
                           }
@@ -35947,46 +35848,6 @@
                         },
                         "title": "ZFS ARC & Cache"
                       }
-                    },
-                    {
-                      "kind": "RowsLayoutRow",
-                      "spec": {
-                        "layout": {
-                          "kind": "GridLayout",
-                          "spec": {
-                            "items": [
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-52"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 12,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-53"
-                                  }
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        "title": "🚫 Not collected on this system",
-                        "collapse": true
-                      }
                     }
                   ]
                 }
@@ -36037,6 +35898,19 @@
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
+                                  "x": 0,
+                                  "y": 8,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-279"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
                                   "x": 12,
                                   "y": 8,
                                   "width": 12,
@@ -36057,6 +35931,19 @@
                                   "element": {
                                     "kind": "ElementReference",
                                     "name": "panel-281"
+                                  }
+                                }
+                              },
+                              {
+                                "kind": "GridLayoutItem",
+                                "spec": {
+                                  "x": 12,
+                                  "y": 16,
+                                  "width": 12,
+                                  "height": 8,
+                                  "element": {
+                                    "kind": "ElementReference",
+                                    "name": "panel-282"
                                   }
                                 }
                               },
@@ -36090,46 +35977,6 @@
                           }
                         },
                         "hideHeader": true
-                      }
-                    },
-                    {
-                      "kind": "RowsLayoutRow",
-                      "spec": {
-                        "layout": {
-                          "kind": "GridLayout",
-                          "spec": {
-                            "items": [
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 0,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-279"
-                                  }
-                                }
-                              },
-                              {
-                                "kind": "GridLayoutItem",
-                                "spec": {
-                                  "x": 12,
-                                  "y": 0,
-                                  "width": 12,
-                                  "height": 8,
-                                  "element": {
-                                    "kind": "ElementReference",
-                                    "name": "panel-282"
-                                  }
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        "title": "🚫 Not collected on this system",
-                        "collapse": true
                       }
                     }
                   ]
@@ -37763,25 +37610,12 @@
                                     "name": "panel-162"
                                   }
                                 }
-                              }
-                            ]
-                          }
-                        },
-                        "hideHeader": true
-                      }
-                    },
-                    {
-                      "kind": "RowsLayoutRow",
-                      "spec": {
-                        "layout": {
-                          "kind": "GridLayout",
-                          "spec": {
-                            "items": [
+                              },
                               {
                                 "kind": "GridLayoutItem",
                                 "spec": {
-                                  "x": 0,
-                                  "y": 0,
+                                  "x": 12,
+                                  "y": 8,
                                   "width": 12,
                                   "height": 8,
                                   "element": {
@@ -37794,7 +37628,7 @@
                                 "kind": "GridLayoutItem",
                                 "spec": {
                                   "x": 0,
-                                  "y": 8,
+                                  "y": 16,
                                   "width": 24,
                                   "height": 8,
                                   "element": {
@@ -37806,8 +37640,7 @@
                             ]
                           }
                         },
-                        "title": "🚫 Not collected on this system",
-                        "collapse": true
+                        "hideHeader": true
                       }
                     }
                   ]

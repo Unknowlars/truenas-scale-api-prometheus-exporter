@@ -542,16 +542,13 @@ def build_dashboard():
     panels.append(row("CPU & Load", y))
     y += 1
     panels.append(timeseries(
-        "CPU Breakdown",
+        "CPU Usage",
         [
-            tgt(f'avg(truenas_cpu_user_percent{{instance=~"{I}"}})', 'User %', 'A'),
-            tgt(f'avg(truenas_cpu_system_percent{{instance=~"{I}"}})', 'System %', 'B'),
-            tgt(f'avg(truenas_cpu_iowait_percent{{instance=~"{I}"}})', 'I/O Wait %', 'C'),
-            tgt(f'avg(truenas_cpu_interrupt_percent{{instance=~"{I}"}})', 'Interrupt %', 'D'),
-            tgt(f'avg(truenas_cpu_idle_percent{{instance=~"{I}"}})', 'Idle %', 'E'),
+            tgt(f'truenas_cpu_core_usage_percent{{instance=~"{I}"}}', 'Core {{core}}', 'A'),
+            tgt(f'avg(truenas_cpu_usage_percent{{instance=~"{I}"}})', 'Total', 'B'),
         ],
-        0, y, unit="percent", stacked=True,
-        desc="CPU time breakdown by category. I/O wait indicates storage bottlenecks.",
+        0, y, unit="percent",
+        desc="Total and per-core CPU usage. TrueNAS 25.10 no longer reports CPU mode splits.",
     ))
     panels.append(timeseries(
         "Load Average",

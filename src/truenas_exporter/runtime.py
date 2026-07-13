@@ -258,6 +258,7 @@ from .collection import (
     _extract_labeled_numeric_series,
     _first_not_none,
     _link_is_up,
+    _normalize_core_label,
     _parse_ts,
     _str_label,
 )
@@ -1601,6 +1602,8 @@ class TrueNASExporter:
         ))
         if user_cpu_percent is not None:
             self._collector_event_scalars[metric_name(CPU_USER_PERCENT)] = user_cpu_percent
+        elif total_cpu_percent is not None:
+            self._collector_event_scalars[metric_name(CPU_USER_PERCENT)] = total_cpu_percent
 
         system_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("system"), cpu_section.get("system") if isinstance(cpu_section, dict) else None
@@ -1613,6 +1616,10 @@ class TrueNASExporter:
         ))
         if idle_cpu_percent is not None:
             self._collector_event_scalars[metric_name(CPU_IDLE_PERCENT)] = idle_cpu_percent
+        elif total_cpu_percent is not None:
+            self._collector_event_scalars[metric_name(CPU_IDLE_PERCENT)] = max(
+                0.0, 100.0 - total_cpu_percent
+            )
 
         iowait_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("iowait"), cpu_section.get("iowait") if isinstance(cpu_section, dict) else None
@@ -1640,6 +1647,16 @@ class TrueNASExporter:
             )
             if cpu_core_usage:
                 break
+        if isinstance(cpu_section, dict):
+            sibling_core_usage: dict[tuple[str, ...], float] = {}
+            for core_name, core_data in cpu_section.items():
+                if not re.fullmatch(r"cpu\d+", str(core_name)) or not isinstance(core_data, dict):
+                    continue
+                usage = _as_float(core_data.get("usage"))
+                if usage is not None:
+                    sibling_core_usage[(_normalize_core_label(core_name),)] = usage
+            if sibling_core_usage:
+                cpu_core_usage = sibling_core_usage
         self._collector_event_series[metric_name(CPU_CORE_USAGE_PERCENT)] = cpu_core_usage
 
         cpu_temps: dict[tuple[str, ...], float] = {}
@@ -1656,6 +1673,16 @@ class TrueNASExporter:
             )
             if cpu_temps:
                 break
+        if isinstance(cpu_section, dict):
+            sibling_cpu_temps: dict[tuple[str, ...], float] = {}
+            for core_name, core_data in cpu_section.items():
+                if not re.fullmatch(r"cpu\d+", str(core_name)) or not isinstance(core_data, dict):
+                    continue
+                temp = _as_float(core_data.get("temp"))
+                if temp is not None:
+                    sibling_cpu_temps[(_normalize_core_label(core_name),)] = temp
+            if sibling_cpu_temps:
+                cpu_temps = sibling_cpu_temps
         self._collector_event_series[metric_name(CPU_TEMPERATURE_C)] = cpu_temps
 
         mem = payload.get("memory")

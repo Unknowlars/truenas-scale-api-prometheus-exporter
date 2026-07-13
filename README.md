@@ -205,6 +205,17 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 > [!NOTE]
 > Higher-cardinality and discovery-heavy options are intentionally conservative by default. `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, and `EXTRA_METHODS` cannot bypass the documentation-derived read/candidate/sensitive-method policy. Review `.env.example` before enabling generic extraction or filesystem list operations in production.
 
+For an intentional, read-only coverage pass, an operator may opt in locally:
+
+```dotenv
+SCRAPE_ALL_METRICS=true
+DATASET_SNAPSHOT_FALLBACK_LIMIT=100
+```
+
+These settings increase API calls and series count; leave generic method/event
+metrics and automatic discovery disabled unless they are needed for bounded
+diagnostics.
+
 ## Architecture Modes
 
 The exporter now supports two runtime modes behind `EXPORTER_MODE`:
@@ -342,6 +353,7 @@ Observed against TrueNAS SCALE 25.10.3 (July 2026):
 | `docs/api-exporter-parity.json` | Machine-readable exhaustive parity audit |
 | `docs/metrics-contract.json` | Machine-readable Prometheus metric contract |
 | `docs/modernization/README.md` | Tracked reliability and architecture roadmap |
+| `docs/realtime-metrics-fix-plan.md` | Diagnosis + fix plan for 25.10 realtime parser gaps (handover) |
 | `tests/` | Unit tests for collector and event behavior |
 
 ## Testing

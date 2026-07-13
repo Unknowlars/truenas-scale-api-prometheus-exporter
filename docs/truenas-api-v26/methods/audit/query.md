@@ -1,0 +1,620 @@
+---
+title: audit.query
+kind: method
+source_rst: _sources/api_methods_audit.query.rst.txt
+source_html: api_methods_audit.query.html
+required_roles:
+  - SYSTEM_AUDIT_READ
+---
+
+# audit.query
+
+## Summary
+
+Query contents of audit databases specified by `services`.
+
+## Required Roles
+
+- `SYSTEM_AUDIT_READ`
+
+## Schema
+
+- Type: object
+
+### Call parameters
+
+- Type: array
+- No Additional Items
+- Schema name: `Tuple Validation`
+
+#### Parameter 1: data
+
+#### data
+
+- Schema name: `data`
+- Type: object
+- Default:
+```json
+{
+  "services": [
+    "MIDDLEWARE"
+  ],
+  "query-filters": [],
+  "query-options": {
+    "count": false,
+    "extra": {},
+    "force_sql_filters": false,
+    "get": false,
+    "limit": 0,
+    "offset": 0,
+    "order_by": [],
+    "select": []
+  },
+  "remote_controller": false
+}
+```
+
+Audit query configuration specifying services, filters, and options.
+- No Additional Properties
+##### services
+
+- Schema name: `Services`
+- Type: array of enum (of string)
+- Default: ["MIDDLEWARE"]
+
+Array of services to include in the audit query.
+- No Additional Items
+
+###### Each item of this array must be:
+
+- Type: enum (of string)
+
+##### query-filters
+
+- Schema name: `Query-Filters`
+- Type: array
+- Default: []
+
+Array of filters to apply to the audit query results.
+- No Additional Items
+
+###### Each item of this array must be:
+
+- Type: object
+
+Examples:
+
+```json
+[
+    [
+        "name",
+        "=",
+        "bob"
+    ]
+]
+```
+Examples:
+
+```json
+[
+    [
+        "OR",
+        [
+            [
+                "name",
+                "=",
+                "bob"
+            ],
+            [
+                "name",
+                "=",
+                "larry"
+            ]
+        ]
+    ]
+]
+```
+
+##### query-options
+
+- Schema name: `QueryOptions`
+- Type: object
+- Default:
+```json
+{
+  "extra": {},
+  "order_by": [],
+  "select": [],
+  "count": false,
+  "get": false,
+  "offset": 0,
+  "limit": 0,
+  "force_sql_filters": false
+}
+```
+
+If the query-option `force_sql_filters` is true, then the query will be converted into a more efficient form for better performance. This will not be possible if filters use keys within `svc_data` and `event_data`.
+- No Additional Properties
+###### extra
+
+- Schema name: `Extra`
+- Type: object
+- Default: {}
+
+Extra options are defined on a per-endpoint basis and are described in the documentation for the associated query method.
+
+###### order_by
+
+- Schema name: `Order By`
+- Type: array of string
+- Default: []
+
+An array of field names describing the manner in which query results should be ordered. The field names may also have one of more of the following special prefixes: `-` (reverse sort direction), `nulls_first:` (place any null values at the head of the results list), `nulls_last:` (place any null values at the tail of the results list).
+- No Additional Items
+
+####### Each item of this array must be:
+
+- Type: string
+
+Examples:
+
+```json
+[
+    "size",
+    "-devname",
+    "nulls_first:-expiretime"
+]
+```
+
+###### select
+
+- Schema name: `Select`
+- Type: array
+- Default: []
+
+An array of field names specifying the exact fields to include in the query return. The dot character `.` may be used to explicitly select only subkeys of the query result.
+- No Additional Items
+
+####### Each item of this array must be:
+
+######## Any of
+
+######### Option 1
+
+- Type: string
+
+######### Option 2
+
+- Type: array
+- No Additional Items
+
+########## Each item of this array must be:
+
+- Type: object
+
+Examples:
+
+```json
+[
+    "username",
+    "Authentication.status"
+]
+```
+
+###### count
+
+- Schema name: `Count`
+- Type: boolean
+- Default: false
+
+Return a numeric value representing the number of items that match the specified `query-filters`.
+
+###### get
+
+- Schema name: `Get`
+- Type: boolean
+- Default: false
+
+Return the JSON object of the first result matching the specified `query-filters`. The query fails if there specified `query-filters` return no results.
+
+###### offset
+
+- Schema name: `Offset`
+- Type: integer
+- Default: 0
+
+This specifies the beginning offset of the results array. When combined with the `limit` query-option it may be used to implement pagination of large results arrays. WARNING: some query methods provide volatile results and the onus is on the developer to understand whether pagination is appropriate for a particular query API method.
+- Value must be greater or equal to `0`
+
+###### limit
+
+- Schema name: `Limit`
+- Type: integer
+- Default: 0
+
+This specifies the maximum number of results matching the specified `query-filters` to return. When combined wtih the `offset` query-option it may be used to implement pagination of large results arrays. WARNING: Some query methods provide volatile results and the onus is on the developer to understand whether pagination is appropriate for a particular query API method.
+- Value must be greater or equal to `0` and lesser or equal to `10000`
+
+###### force_sql_filters
+
+- Schema name: `Force Sql Filters`
+- Type: boolean
+- Default: false
+
+Force use of SQL for result filtering to reduce response time. May not work for all methods.
+
+##### remote_controller
+
+- Schema name: `Remote Controller`
+- Type: boolean
+- Default: false
+
+HA systems may direct the query to the 'remote' controller by including 'remote_controller=True'. The default is the 'current' controller.
+
+### Return value
+
+- Schema name: `Result`
+#### Any of
+
+##### Option 1
+
+- Type: array of object
+- No Additional Items
+
+###### Each item of this array must be:
+
+###### AuditQueryResultItem
+
+- Schema name: `AuditQueryResultItem`
+- Type: object
+####### audit_id (required)
+
+- Schema name: `Audit Id`
+
+GUID uniquely identifying this specific audit event.
+######## Any of
+
+######### Option 1
+
+- Type: string
+
+######### Option 2
+
+- Type: integer
+
+######### Option 3
+
+- Type: null
+
+####### message_timestamp (required)
+
+- Schema name: `Message Timestamp`
+- Type: integer
+
+Unix timestamp for when the audit event was written to the auditing database.
+
+####### timestamp (required)
+
+- Schema name: `Timestamp`
+- Type: string
+- Type: Format: date-time
+
+Converted ISO-8601 timestamp from application recording when event occurred.
+
+####### address (required)
+
+- Schema name: `Address`
+- Type: string
+
+IP address of client performing action that generated the audit message.
+
+####### username (required)
+
+- Schema name: `Username`
+- Type: string
+
+Username used by client performing action.
+
+####### session (required)
+
+- Schema name: `Session`
+
+GUID uniquely identifying the client session.
+######## Any of
+
+######### Option 1
+
+- Type: string
+
+######### Option 2
+
+- Type: integer
+
+######### Option 3
+
+- Type: null
+
+####### service (required)
+
+- Schema name: `Service`
+- Type: enum (of string)
+
+Name of the service that generated the message. This will be one of the names specified in `services`.
+
+####### service_data (required)
+
+- Schema name: `Service Data`
+
+JSON object containing variable data depending on the particular service. See TrueNAS auditing documentation for the service in question.
+######## Any of
+
+######### Option 1
+
+- Type: object
+
+######### Option 2
+
+- Type: null
+
+####### event (required)
+
+- Schema name: `Event`
+- Type: string
+
+Name of the event type that generated the audit record. Each service has its own unique event identifiers.
+
+####### event_data (required)
+
+- Schema name: `Event Data`
+
+JSON object containing variable data depending on the particular event type. See TrueNAS auditing documentation for the service in question.
+######## Any of
+
+######### Option 1
+
+- Type: object
+
+######### Option 2
+
+- Type: null
+
+####### success (required)
+
+- Schema name: `Success`
+- Type: boolean
+
+The action generating the event message succeeded.
+
+####### Additional Properties
+
+Additional Properties of any type are allowed.
+- Type: object
+
+##### AuditQueryResultItem
+
+- Type: string
+
+##### Option 3
+
+- Type: integer
+
+##### Option 4
+
+- Type: null
+
+##### Option 5
+
+- Type: string
+
+##### Option 1
+
+- Type: integer
+
+##### Option 2
+
+- Type: null
+
+##### Option 3
+
+- Type: object
+
+##### Option 1
+
+- Type: null
+
+##### Option 2
+
+- Type: object
+
+##### Option 3
+
+- Type: null
+
+##### Option 1
+
+- Schema name: `AuditQueryResultItem`
+- Type: object
+###### audit_id (required)
+
+- Schema name: `Audit Id`
+
+GUID uniquely identifying this specific audit event.
+####### Any of
+
+######## Option 1
+
+- Type: string
+
+######## Option 2
+
+- Type: integer
+
+######## Option 3
+
+- Type: null
+
+###### message_timestamp (required)
+
+- Schema name: `Message Timestamp`
+- Type: integer
+
+Unix timestamp for when the audit event was written to the auditing database.
+
+###### timestamp (required)
+
+- Schema name: `Timestamp`
+- Type: string
+- Type: Format: date-time
+
+Converted ISO-8601 timestamp from application recording when event occurred.
+
+###### address (required)
+
+- Schema name: `Address`
+- Type: string
+
+IP address of client performing action that generated the audit message.
+
+###### username (required)
+
+- Schema name: `Username`
+- Type: string
+
+Username used by client performing action.
+
+###### session (required)
+
+- Schema name: `Session`
+
+GUID uniquely identifying the client session.
+####### Any of
+
+######## Option 1
+
+- Type: string
+
+######## Option 2
+
+- Type: integer
+
+######## Option 3
+
+- Type: null
+
+###### service (required)
+
+- Schema name: `Service`
+- Type: enum (of string)
+
+Name of the service that generated the message. This will be one of the names specified in `services`.
+
+###### service_data (required)
+
+- Schema name: `Service Data`
+
+JSON object containing variable data depending on the particular service. See TrueNAS auditing documentation for the service in question.
+####### Any of
+
+######## Option 1
+
+- Type: object
+
+######## Option 2
+
+- Type: null
+
+###### event (required)
+
+- Schema name: `Event`
+- Type: string
+
+Name of the event type that generated the audit record. Each service has its own unique event identifiers.
+
+###### event_data (required)
+
+- Schema name: `Event Data`
+
+JSON object containing variable data depending on the particular event type. See TrueNAS auditing documentation for the service in question.
+####### Any of
+
+######## Option 1
+
+- Type: object
+
+######## Option 2
+
+- Type: null
+
+###### success (required)
+
+- Schema name: `Success`
+- Type: boolean
+
+The action generating the event message succeeded.
+
+###### Additional Properties
+
+Additional Properties of any type are allowed.
+- Type: object
+
+##### Option 2
+
+- Type: string
+
+##### Option 1
+
+- Type: integer
+
+##### Option 2
+
+- Type: null
+
+##### Option 1
+
+- Type: string
+
+##### Option 2
+
+- Type: integer
+
+##### Option 3
+
+- Type: null
+
+##### Option 1
+
+- Type: object
+
+##### Option 2
+
+- Type: null
+
+##### Option 3
+
+- Type: object
+
+##### Option 1
+
+- Type: null
+
+##### Option 2
+
+- Type: array of object
+- No Additional Items
+
+###### Each item of this array must be:
+
+- Type: object
+
+##### Option 1
+
+- Type: object
+
+##### Option 2
+
+- Type: integer
+
+## Related Docs
+
+- JSON-RPC transport: [JSON-RPC 2.0 over WebSocket API](../../shared/jsonrpc.md)
+- Query filters and options: [Query Methods](../../shared/query_methods.md)

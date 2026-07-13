@@ -54,6 +54,18 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 realtime metrics fix: implemented sibling `cpuN` usage and
+  temperature parsing, documented user/idle CPU fallbacks, and preserved the
+  existing `disls`/`disks`, aggregate-disk, interface, and legacy pool-I/O
+  compatibility paths. Added a synthetic 25.10-shaped fixture and regenerated
+  both dashboards so CPU usage is shown by total and core. The focused event,
+  parity, and documented-shape suite passed 44 tests. Realtime pool capacity
+  remains intentionally unexported because no compatible metric owner exists;
+  ZFS hit-ratio semantics remain deferred with the dashboard counter-derived
+  workaround. The required local validation passed, including the Docker image
+  build and version smoke; no live smoke was run because no read-only API key
+  was provided.
+
 - 2026-07-12 exhaustive API parity: 1,012 files checked against manifest
   aggregate `377d24c74fa0836d43505f6c4db1f9ca12c105219abfeda34b6ac7d63c3f2cda`;
   767 method rows, 63 event rows, 114 method namespaces, and 405 field/metric

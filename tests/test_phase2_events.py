@@ -1,9 +1,13 @@
+import json
 import time
+from pathlib import Path
 
 import pytest
 from conftest import make_config
 
 import truenas_exporter as exporter_module
+
+REALTIME_FIXTURE = Path(__file__).parent / "fixtures" / "realtime" / "reporting_realtime_25_10_shape.json"
 
 
 def reset_metric(metric):
@@ -222,3 +226,29 @@ def test_realtime_event_accepts_alternative_cpu_core_and_temperature_shapes():
     assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "1") == 27.0
     assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "0") == 44.0
     assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "1") == 46.5
+
+
+def test_realtime_event_parses_25_10_sibling_cores_and_aggregate_rates():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    payload = json.loads(REALTIME_FIXTURE.read_text(encoding="utf-8"))
+
+    exporter._dispatch_event("reporting.realtime", payload)
+
+    assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 25.0
+    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 25.0
+    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 75.0
+    assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "0") == 18.0
+    assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "1") == 32.0
+    assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "0") == 46.0
+    assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "1") == 48.0
+
+    assert labeled_value(exporter_module.DISK_READ_OPS_RATE, "total") == 0.64
+    assert labeled_value(exporter_module.DISK_READ_BYTES_RATE, "total") == 10504.0
+    assert labeled_value(exporter_module.DISK_WRITE_OPS_RATE, "total") == 175.0
+    assert labeled_value(exporter_module.DISK_WRITE_BYTES_RATE, "total") == 5710878.0
+    assert labeled_value(exporter_module.DISK_BUSY_PERCENT, "total") == 1.67
+    assert labeled_value(exporter_module.NETWORK_RX_BYTES_RATE, "enp8s0") == 33830.0
+    assert labeled_value(exporter_module.NETWORK_TX_BYTES_RATE, "enp8s0") == 61204.0
+
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_READ_BYTES._metrics
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_WRITE_BYTES._metrics

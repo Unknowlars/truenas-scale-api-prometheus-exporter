@@ -761,21 +761,15 @@ def build_overview(elements: dict, snapshot_panels: list,
 
     # --- Trend band -------------------------------------------------------
     add(0, 15, 12, 8, panel_element(
-        next_id(), "timeseries", "CPU Breakdown",
-        "Stacked CPU time by mode.",
-        [panel_query(f"avg(truenas_cpu_user_percent{{{inst}}})", "A", "User"),
-         panel_query(f"avg(truenas_cpu_system_percent{{{inst}}})", "B", "System"),
-         panel_query(f"avg(truenas_cpu_iowait_percent{{{inst}}})", "C", "I/O Wait"),
-         panel_query(f"avg(truenas_cpu_interrupt_percent{{{inst}}})", "D",
-                     "Interrupt")],
+        next_id(), "timeseries", "CPU Usage",
+        "Total and per-core CPU usage. TrueNAS 25.10 no longer reports CPU mode splits.",
+        [panel_query(f"truenas_cpu_core_usage_percent{{{inst}}}", "A", "Core {{core}}"),
+         panel_query(f"avg(truenas_cpu_usage_percent{{{inst}}})", "B", "Total")],
         TS_OPTIONS,
         {"unit": "percent", "min": 0,
-         "custom": ts_custom(stacking={"mode": "normal", "group": "A"},
-                             fillOpacity=45, gradientMode="none",
-                             lineWidth=1),
+         "custom": ts_custom(fillOpacity=35, gradientMode="none", lineWidth=1),
          "color": {"mode": "palette-classic-by-name"},
-         "thresholds": thresholds(("green", None))},
-        overrides=[color_override("I/O Wait", ORANGE)]))
+         "thresholds": thresholds(("green", None))}))
 
     add(12, 15, 12, 8, panel_element(
         next_id(), "timeseries", "Memory & ZFS ARC",

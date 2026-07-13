@@ -1,0 +1,413 @@
+---
+title: pool.snapshottask.create
+kind: method
+source_rst: _sources/api_methods_pool.snapshottask.create.rst.txt
+source_html: api_methods_pool.snapshottask.create.html
+required_roles:
+  - SNAPSHOT_TASK_WRITE
+---
+
+# pool.snapshottask.create
+
+## Summary
+
+Create a periodic snapshot task.
+
+Snapshots are automatically destroyed after their configured lifetime. If multiple periodic tasks create a snapshot at the same time (for example, an hourly and a daily task at 00:00), the snapshot is kept until the last of those tasks reaches its expiry time.
+
+## Required Roles
+
+- `SNAPSHOT_TASK_WRITE`
+
+## Schema
+
+- Type: object
+
+### Call parameters
+
+- Type: array
+- No Additional Items
+- Schema name: `Tuple Validation`
+
+#### Parameter 1: data
+
+#### data
+
+- Schema name: `data`
+- Type: object
+
+Configuration for the new periodic snapshot task.
+- No Additional Properties
+##### dataset (required)
+
+- Schema name: `Dataset`
+- Type: string
+
+The dataset to take snapshots of.
+
+##### recursive
+
+- Schema name: `Recursive`
+- Type: boolean
+- Default: false
+
+Whether to recursively snapshot child datasets.
+
+##### lifetime_value
+
+- Schema name: `Lifetime Value`
+- Type: integer
+- Default: 2
+
+Number of time units to retain snapshots. `lifetime_unit` gives the time unit.
+
+##### lifetime_unit
+
+- Schema name: `Lifetime Unit`
+- Type: enum (of string)
+- Default: "WEEK"
+
+Unit of time for snapshot retention.
+
+##### enabled
+
+- Schema name: `Enabled`
+- Type: boolean
+- Default: true
+
+Whether this periodic snapshot task is enabled.
+
+##### exclude
+
+- Schema name: `Exclude`
+- Type: array of string
+- Default: []
+
+Array of dataset patterns to exclude from recursive snapshots.
+- No Additional Items
+
+###### Each item of this array must be:
+
+- Type: string
+
+##### naming_schema
+
+- Schema name: `Naming Schema`
+- Type: string
+- Default: "auto-%Y-%m-%d_%H-%M"
+
+Naming pattern for generated snapshots using strftime format.
+
+##### allow_empty
+
+- Schema name: `Allow Empty`
+- Type: boolean
+- Default: true
+
+Whether to take snapshots even if no data has changed.
+
+##### schedule
+
+- Schema name: `PoolSnapshotTaskCron`
+- Type: object
+
+Cron schedule for when snapshots should be taken.
+- No Additional Properties
+###### minute
+
+- Schema name: `Minute`
+- Type: string
+- Default: "00"
+
+Minute when snapshots should be taken (cron format).
+
+###### hour
+
+- Schema name: `Hour`
+- Type: string
+- Default: "*"
+
+"00" - "23".
+
+###### dom
+
+- Schema name: `Dom`
+- Type: string
+- Default: "*"
+
+"1" - "31".
+
+###### month
+
+- Schema name: `Month`
+- Type: string
+- Default: "*"
+
+"1" (January) - "12" (December).
+
+###### dow
+
+- Schema name: `Dow`
+- Type: string
+- Default: "*"
+
+"1" (Monday) - "7" (Sunday).
+
+###### begin
+
+- Schema name: `Begin`
+- Type: string
+- Default: "00:00"
+
+Start time of the window when snapshots can be taken.
+Examples:
+
+```json
+"00:00"
+```
+Examples:
+
+```json
+"06:30"
+```
+Examples:
+
+```json
+"18:00"
+```
+Examples:
+
+```json
+"23:00"
+```
+
+###### end
+
+- Schema name: `End`
+- Type: string
+- Default: "23:59"
+
+End time of the window when snapshots can be taken.
+Examples:
+
+```json
+"00:00"
+```
+Examples:
+
+```json
+"06:30"
+```
+Examples:
+
+```json
+"18:00"
+```
+Examples:
+
+```json
+"23:00"
+```
+
+### Return value
+
+- Schema name: `PeriodicSnapshotTaskEntry`
+- Type: object
+
+The newly created periodic snapshot task configuration.
+- No Additional Properties
+#### id (required)
+
+- Schema name: `Id`
+- Type: integer
+
+Unique identifier for the periodic snapshot task.
+
+#### dataset (required)
+
+- Schema name: `Dataset`
+- Type: string
+
+The dataset to take snapshots of.
+
+#### recursive
+
+- Schema name: `Recursive`
+- Type: boolean
+- Default: false
+
+Whether to recursively snapshot child datasets.
+
+#### lifetime_value
+
+- Schema name: `Lifetime Value`
+- Type: integer
+- Default: 2
+
+Number of time units to retain snapshots. `lifetime_unit` gives the time unit.
+
+#### lifetime_unit
+
+- Schema name: `Lifetime Unit`
+- Type: enum (of string)
+- Default: "WEEK"
+
+Unit of time for snapshot retention.
+
+#### enabled
+
+- Schema name: `Enabled`
+- Type: boolean
+- Default: true
+
+Whether this periodic snapshot task is enabled.
+
+#### exclude
+
+- Schema name: `Exclude`
+- Type: array of string
+- Default: []
+
+Array of dataset patterns to exclude from recursive snapshots.
+- No Additional Items
+
+##### Each item of this array must be:
+
+- Type: string
+
+#### naming_schema
+
+- Schema name: `Naming Schema`
+- Type: string
+- Default: "auto-%Y-%m-%d_%H-%M"
+
+Naming pattern for generated snapshots using strftime format.
+
+#### allow_empty
+
+- Schema name: `Allow Empty`
+- Type: boolean
+- Default: true
+
+Whether to take snapshots even if no data has changed.
+
+#### schedule
+
+- Schema name: `PoolSnapshotTaskCron`
+- Type: object
+
+Cron schedule for when snapshots should be taken.
+- No Additional Properties
+##### minute
+
+- Schema name: `Minute`
+- Type: string
+- Default: "00"
+
+Minute when snapshots should be taken (cron format).
+
+##### hour
+
+- Schema name: `Hour`
+- Type: string
+- Default: "*"
+
+"00" - "23".
+
+##### dom
+
+- Schema name: `Dom`
+- Type: string
+- Default: "*"
+
+"1" - "31".
+
+##### month
+
+- Schema name: `Month`
+- Type: string
+- Default: "*"
+
+"1" (January) - "12" (December).
+
+##### dow
+
+- Schema name: `Dow`
+- Type: string
+- Default: "*"
+
+"1" (Monday) - "7" (Sunday).
+
+##### begin
+
+- Schema name: `Begin`
+- Type: string
+- Default: "00:00"
+
+Start time of the window when snapshots can be taken.
+Examples:
+
+```json
+"00:00"
+```
+Examples:
+
+```json
+"06:30"
+```
+Examples:
+
+```json
+"18:00"
+```
+Examples:
+
+```json
+"23:00"
+```
+
+##### end
+
+- Schema name: `End`
+- Type: string
+- Default: "23:59"
+
+End time of the window when snapshots can be taken.
+Examples:
+
+```json
+"00:00"
+```
+Examples:
+
+```json
+"06:30"
+```
+Examples:
+
+```json
+"18:00"
+```
+Examples:
+
+```json
+"23:00"
+```
+
+#### vmware_sync (required)
+
+- Schema name: `Vmware Sync`
+- Type: boolean
+
+Whether VMware VMs are synced before taking snapshots.
+
+#### state (required)
+
+- Schema name: `State`
+- Type: object
+
+Detailed state information for the task.
+
+## Related Docs
+
+- JSON-RPC transport: [JSON-RPC 2.0 over WebSocket API](../../../shared/jsonrpc.md)
