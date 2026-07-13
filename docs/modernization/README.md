@@ -54,6 +54,34 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 COMPAT-08 full validation and release gate: focused
+  compatibility tests passed:
+  `PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/test_api_catalog.py tests/test_documented_api_shapes.py tests/test_runtime_api_parity.py tests/test_phase2_events.py tests/test_transport.py`
+  (`68 passed`). Full test suite passed:
+  `PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q` (`174 passed`,
+  `2 skipped`; skipped tests are optional cache/coverage checks). Required
+  generated and dashboard checks passed:
+  `python3 scripts/generate_metric_contract.py --check`;
+  `python3 scripts/generate_truenas_dashboard.py --check`;
+  `python3 scripts/validate_dashboard.py` (`dashboard_ok panels=313
+  metric_references=282`);
+  `python3 scripts/generate_api_docs_manifest.py --check`;
+  `python3 scripts/generate_api_exporter_parity.py --check`;
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`;
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`;
+  and `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`.
+  `git diff --check` passed. `./scripts/validate.sh` passed (`176 passed`,
+  90.47% coverage, dashboard validation passed, Docker image build and version
+  smoke `5.2.0` passed, `validation_ok`). `./scripts/release.sh` was run
+  without `--publish` and printed the dry-run multi-arch `docker buildx build`
+  command only. `./scripts/test_python_matrix.sh` initially exposed that the
+  validation container omitted `docs/` and `grafana-dashboard/`; after adding
+  those test inputs to `Dockerfile.test`, the matrix passed on Python 3.12,
+  3.13, and 3.14 (`176 passed` in each image build). Optional live smoke was
+  skipped because no read-only live TrueNAS credentials or target were provided.
+  No runtime code, metric names/types/help text/labels, dashboards, live API
+  calls, credentials, hosted automation, or publish operation changed.
+
 - 2026-07-13 COMPAT-07 operator documentation and handoff: README,
   `.env.example`, changelog, and the compatibility index now document automatic
   profile selection from `system.version_short`, supported `25.10`, `26.0`,

@@ -13,5 +13,7 @@ COPY .env.example docker-compose.yml /workspace/
 COPY src /workspace/src
 COPY truenas_exporter.py /workspace/truenas_exporter.py
 COPY scripts /workspace/scripts
+COPY docs /workspace/docs
+COPY grafana-dashboard /workspace/grafana-dashboard
 COPY tests /workspace/tests
 RUN python -m pytest -q -p no:cacheprovider
