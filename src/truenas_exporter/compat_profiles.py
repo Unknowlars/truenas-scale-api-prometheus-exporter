@@ -93,10 +93,16 @@ _V26_TELEMETRY_METHODS = _V25_TELEMETRY_METHODS - V26_REMOVED_METHODS
 _V25_EVENTS = frozenset(DEFAULT_SAFE_EVENT_SUBSCRIPTIONS)
 _V26_EVENTS = _V25_EVENTS - V26_REMOVED_EVENTS
 
+# The pinned 25.10.2 documentation says these VM memory methods return
+# "megabytes", but a live TrueNAS SCALE 25.10.3 system returns raw *bytes*
+# (observed 17,390,127,315 = 16.2 GiB on a 31.3 GiB host, 2026-07-13). The
+# documentation contradicts reality; a MiB multiplier inflated
+# ``truenas_vm_available_memory_bytes`` by 1024**2. Treat 25.10 as bytes to
+# match the live API and the 26.0 profile.
 _V25_UNIT_CONVERSIONS = MappingProxyType(
     {
-        "vm.get_available_memory": UnitConversion("MiB", "bytes", 1024.0 * 1024.0),
-        "vm.get_vmemory_in_use": UnitConversion("MiB", "bytes", 1024.0 * 1024.0),
+        "vm.get_available_memory": UnitConversion("bytes", "bytes"),
+        "vm.get_vmemory_in_use": UnitConversion("bytes", "bytes"),
     }
 )
 _V26_UNIT_CONVERSIONS = MappingProxyType(

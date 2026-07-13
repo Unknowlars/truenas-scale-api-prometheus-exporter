@@ -57,9 +57,13 @@ as an ordinary API failure.
 Keep global mutation, credential, filesystem, entity-ID, and opaque-response
 blocks unchanged unless the v26 diff proves a narrower safe rule.
 
-Clamp effective query limits to the selected profile's documented bounds. The
-current default of 200 is valid for v26; oversized operator configuration must
-not generate invalid requests.
+Guard effective query limits per profile so every profile-gated query method
+receives a valid positive limit (`query_limit_for` floors the configured limit
+to at least 1). The default of 200 is valid for both the 25.10 and v26
+families, and neither documented corpus imposes a smaller hard maximum, so no
+downward clamp is applied; if a future corpus documents a lower ceiling, add it
+to the profile's limit policy so oversized operator configuration cannot
+generate invalid requests.
 
 ## Authentication scope
 

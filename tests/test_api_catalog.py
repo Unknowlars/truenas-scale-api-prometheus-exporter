@@ -184,5 +184,6 @@ def test_compatibility_profiles_encode_reviewed_intersections() -> None:
     assert "pool.ddt_prefetch" not in PROFILE_25_10.reviewed_methods
     assert "pool.ddt_prefetch" not in PROFILE_26_0.reviewed_methods
 
-    assert PROFILE_25_10.unit_conversions["vm.get_available_memory"].source_unit == "MiB"
+    assert PROFILE_25_10.unit_conversions["vm.get_available_memory"].source_unit == "bytes"
+    assert PROFILE_25_10.unit_conversions["vm.get_available_memory"].multiplier == 1.0
     assert PROFILE_26_0.unit_conversions["vm.get_available_memory"].source_unit == "bytes"

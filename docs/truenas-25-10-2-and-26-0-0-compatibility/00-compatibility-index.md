@@ -1,7 +1,9 @@
 # TrueNAS 25.10.2 and 26.0.0 Compatibility
 
-Status: COMPAT-01A through COMPAT-06 complete; operator documentation and
-handoff evidence are tracked by COMPAT-07.
+Status: COMPAT-01A through COMPAT-08 complete. Operator documentation and
+handoff evidence (COMPAT-07) and the full validation/release gate (COMPAT-08)
+are recorded in `docs/modernization/README.md` and the
+[task board](05-agent-task-board.md).
 
 This package is the implementation handoff for supporting the exporter against
 the pinned TrueNAS SCALE 25.10.2 contract and the validated TrueNAS API
@@ -43,8 +45,11 @@ decisions supersede ambiguous or incorrect draft statements:
   optional generic collector calls `reporting.graphs` and
   `reporting.netdata_graphs`. They are not interchangeable without bounded
   graph selection and semantic review.
-- `vm.get_available_memory` and `vm.get_vmemory_in_use` are bytes in v26 and
-  megabytes in the pinned 25.10.2 documentation.
+- `vm.get_available_memory` and `vm.get_vmemory_in_use` are documented as
+  bytes in v26. The pinned 25.10.2 documentation says "megabytes", but a live
+  25.10.3 system returns raw bytes (16.2 GiB observed on a 31.3 GiB host,
+  2026-07-13). Both profiles therefore treat these methods as bytes; the earlier
+  25.10 MiB assumption inflated `truenas_vm_available_memory_bytes` by 1024².
 - `core.subscribe` returns a subscription identifier and `core.unsubscribe`
   accepts it.
 

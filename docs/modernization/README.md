@@ -54,6 +54,25 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 live-review VM memory unit fix: a read-only scrape of a live
+  TrueNAS SCALE 25.10.3 system (the operator's running exporter) showed
+  `truenas_vm_available_memory_bytes` reporting ~1.83e16 (16.2 PiB). Direct
+  read-only calls confirmed `vm.get_available_memory` returns raw bytes
+  (17,388,047,459 = 16.19 GiB on a 31.3 GiB host), so the pinned 25.10.2 doc's
+  "megabytes" claim is wrong and the `25.10` profile's `1024**2` multiplier
+  inflated the metric. Fixed the `25.10` profile to treat both VM memory methods
+  as bytes (matching `26.0`); with the fix the same live value normalizes to
+  16.19 GiB. Metric names/types/help/labels are unchanged
+  (`python3 scripts/generate_metric_contract.py --check` passed). Focused tests
+  passed:
+  `PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/test_api_catalog.py tests/test_documented_api_shapes.py tests/test_runtime_api_parity.py`
+  (54 passed); full suite and `./scripts/validate.sh` re-run recorded below.
+  A sanitized pre-upgrade metric baseline was captured to
+  `docs/truenas-25-10-2-and-26-0-0-compatibility/baseline-live-25.10.3.{md,json}`
+  (no credentials, hostnames, IDs, serials, IPs, or raw responses). No live
+  responses were saved; no dashboards, release behavior, hosted automation, or
+  credentials changed.
+
 - 2026-07-13 COMPAT-08 full validation and release gate: focused
   compatibility tests passed:
   `PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/test_api_catalog.py tests/test_documented_api_shapes.py tests/test_runtime_api_parity.py tests/test_phase2_events.py tests/test_transport.py`
@@ -250,7 +269,10 @@ below; it is not treated as a code or test pass.
   aggregate `32acc76d9ec44593ae17a53571a29b5cbc33526741feff3b2062b645b9c88855`.
   The compatibility diff records 87 methods added in v26, 49 methods removed,
   22 events added, 5 events removed, and current exporter surfaces partitioned
-  as 8 absent in v26, 97 schema-changed, and 132 unchanged by parsed signature.
+  as 8 absent in v26, 97 schema-changed, and 133 unchanged by parsed signature
+  (the unchanged count was 132 at COMPAT-01B generation time and became 133
+  after the legitimate parity/diff artifact was regenerated during COMPAT-05/06;
+  the checked-in `api-compatibility-diff.json` now records 133).
   Required checks for `app.image.query`, `pool.is_upgraded`,
   `pool.ddt_prefetch`, `nvmet.global.sessions`, `reporting.graphs`,
   `reporting.netdata_graphs`, `virt.instance.query`, `virt.volume.query`, and

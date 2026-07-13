@@ -242,6 +242,7 @@ import signal
 import threading
 import time
 from typing import Any, cast
+from urllib.parse import urlparse
 
 from prometheus_client import REGISTRY, CollectorRegistry, Gauge
 from websocket import WebSocketTimeoutException
@@ -740,6 +741,14 @@ class TrueNASExporter:
         self._last_scrape_attempt_monotonic: float | None = None
         self._snapshot_lock = threading.Lock()
         self._reset_poll_metrics()
+        # Event-owned realtime scalar gauges are excluded from _reset_poll_metrics
+        # (the event stream owns their lifecycle), so before the first event they
+        # would read the prometheus_client default of 0.0. In collector mode the
+        # initial snapshot below is served on /metrics until the first scrape
+        # completes; force these to NaN so that window reports "absent" rather than
+        # a fabricated zero (e.g. free-memory 0 / cpu-idle 0 triggering false alerts).
+        for event_scalar in _REALTIME_EVENT_SCALAR_METRICS:
+            event_scalar.set(float("nan"))
         self._metric_snapshot = tuple(REGISTRY.collect())
         self._scrape_thread: threading.Thread | None = None
         # Tracks the last-seen boot ID so we can increment the reboot counter
@@ -4956,9 +4965,13 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     config = _load_config()
+    # Log the endpoint scheme/path but never the target hostname (safety invariant:
+    # no hostname is ever logged — it can leak into container/aggregated logs).
+    _parsed_ws_url = urlparse(config.ws_url)
+    _safe_ws_url = f"{_parsed_ws_url.scheme}://<redacted-host>{_parsed_ws_url.path}"
     LOG.info(
         "Starting TrueNAS exporter v%s — mode=%s url=%s verify_tls=%s port=%s",
-        EXPORTER_VERSION, config.exporter_mode, config.ws_url, config.verify_tls, config.exporter_port,
+        EXPORTER_VERSION, config.exporter_mode, _safe_ws_url, config.verify_tls, config.exporter_port,
     )
     exporter = TrueNASExporter(config)
     server: Any

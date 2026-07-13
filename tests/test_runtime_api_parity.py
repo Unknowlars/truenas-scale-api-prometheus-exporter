@@ -170,9 +170,11 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
     assert value(runtime.SCRAPE_SUCCESS) == 1
     assert value(runtime.SYSTEM_READY) == 0
     assert labeled(runtime.HOST_INFO, "synthetic-nas", "TrueNAS-SCALE-25.10.2", "SCALE") == 1
-    assert value(runtime.VM_AVAILABLE_MEMORY_BYTES) == 8192 * 1024**2
+    # 25.10 VM memory methods return bytes on live systems (see compat_profiles);
+    # the profile multiplier is 1.0, so values pass through unchanged.
+    assert value(runtime.VM_AVAILABLE_MEMORY_BYTES) == 8192
     assert labeled(runtime.VM_VMEMORY_IN_USE_BYTES, "RNP") == 0
-    assert labeled(runtime.VM_VMEMORY_IN_USE_BYTES, "PRD") == 1024 * 1024**2
+    assert labeled(runtime.VM_VMEMORY_IN_USE_BYTES, "PRD") == 1024
     vmemory_states = {
         sample.labels["state"]
         for sample in list(runtime.VM_VMEMORY_IN_USE_BYTES.collect())[0].samples
@@ -446,8 +448,9 @@ def test_profile_vm_memory_units_and_malformed_values() -> None:
     v26 = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_26_0)
     unknown = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_UNKNOWN)
 
-    assert v25._profile_normalized_bytes("vm.get_available_memory", 8192) == 8192 * 1024**2
-    assert v25._profile_normalized_bytes("vm.get_vmemory_in_use", {"parsed": 1024}) == 1024 * 1024**2
+    # 25.10 returns bytes (live-verified); multiplier is 1.0, values pass through.
+    assert v25._profile_normalized_bytes("vm.get_available_memory", 8192) == 8192
+    assert v25._profile_normalized_bytes("vm.get_vmemory_in_use", {"parsed": 1024}) == 1024
 
     v26_available = fixture_v26("vm_get_available_memory.json")
     v26_vmemory = fixture_v26("vm_get_vmemory_in_use.json")

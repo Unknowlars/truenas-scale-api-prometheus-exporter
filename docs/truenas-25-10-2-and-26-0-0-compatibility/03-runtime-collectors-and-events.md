@@ -7,10 +7,12 @@ documented API shapes.
 
 ## VM units
 
-The current runtime multiplies both VM memory methods by `1024**2`. Change this
-to profile-owned normalization:
+VM memory normalization is profile-owned:
 
-- 25.10.2: interpret the documented result as MB and convert to bytes;
+- 25.10.x: the pinned doc says "megabytes", but a live 25.10.3 system returns
+  raw bytes (verified 2026-07-13), so the profile passes bytes through unchanged
+  (multiplier `1.0`). The former `1024**2` multiplier inflated
+  `truenas_vm_available_memory_bytes` by ~1,048,576× and has been removed;
 - 26.0.0: interpret the documented result as bytes and do not multiply;
 - malformed, negative, null, or non-finite values: omit the sample.
 

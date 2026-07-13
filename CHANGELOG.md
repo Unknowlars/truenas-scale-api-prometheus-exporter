@@ -6,6 +6,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- stop inflating `truenas_vm_available_memory_bytes` (and `truenas_vm_vmemory_in_use_bytes`) by 1024² on TrueNAS 25.10: live 25.10.3 returns these VM memory methods in bytes despite the pinned docs saying megabytes, so the `25.10` profile now passes bytes through unchanged, matching the `26.0` profile (metric name, type, help, and labels unchanged)
 - preserve valid numeric zero and boolean false values when parsing alternative API fields
 - expire stale event-derived telemetry instead of retaining disconnected values indefinitely
 - reset polling gauges to a fresh snapshot so optional-method failures cannot retain stale values or look like zero

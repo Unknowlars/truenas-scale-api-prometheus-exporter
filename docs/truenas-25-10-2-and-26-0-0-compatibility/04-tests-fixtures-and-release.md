@@ -9,7 +9,8 @@ unredacted live responses.
 Required fixture categories:
 
 - `system.version_short` for 25.10, 26.0, unknown, malformed, and failed detection;
-- VM memory scalar/object results demonstrating MB versus bytes;
+- VM memory scalar/object results (bytes for both profiles; 25.10.x returns
+  bytes on live systems despite the doc saying megabytes);
 - v26 structured realtime event data;
 - v25 `disls` realtime data and compatibility aliases;
 - dataset list/object/nested responses;

@@ -171,20 +171,19 @@ def test_update_and_reboot_documented_nested_shapes() -> None:
     assert set(reboot["reboot_required_reasons"][0]) == {"code", "reason"}
 
 
-def test_vm_memory_responses_are_megabytes_and_preserve_zero() -> None:
-    mibibyte = 1024**2
-    available_mb = load_fixture("vm_get_available_memory.json")
-    in_use_mb = load_fixture("vm_get_vmemory_in_use.json")
+def test_vm_memory_responses_are_scalar_and_object_preserving_zero() -> None:
+    # The pinned 25.10.2 doc labels these "megabytes", but live 25.10.x returns
+    # bytes, so the 25.10 profile applies a bytes multiplier of 1.0 (no scaling).
+    # This test pins the documented response *shape* — a scalar and an
+    # RNP/PRD/RPRD object — and that a real zero is preserved, not the unit math.
+    available = load_fixture("vm_get_available_memory.json")
+    in_use = load_fixture("vm_get_vmemory_in_use.json")
 
-    assert isinstance(available_mb, int)
-    assert available_mb * mibibyte == 8 * 1024**3
-    assert set(in_use_mb) == {"RNP", "PRD", "RPRD"}
-    assert in_use_mb["RNP"] == 0
-    assert {key: value * mibibyte for key, value in in_use_mb.items()} == {
-        "RNP": 0,
-        "PRD": 1024**3,
-        "RPRD": 2 * 1024**3,
-    }
+    assert isinstance(available, int)
+    assert available >= 0
+    assert set(in_use) == {"RNP", "PRD", "RPRD"}
+    assert in_use["RNP"] == 0
+    assert all(isinstance(value, int) and value >= 0 for value in in_use.values())
 
 
 def test_pool_dataset_and_disk_documented_field_shapes() -> None:

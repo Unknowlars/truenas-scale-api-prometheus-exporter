@@ -50,8 +50,8 @@ The diff must explicitly capture these exporter-relevant cases:
 
 | Surface | v26 decision |
 | --- | --- |
-| `vm.get_available_memory` | Keep; bytes require profile conversion |
-| `vm.get_vmemory_in_use` | Keep; bytes require profile conversion |
+| `vm.get_available_memory` | Keep; bytes in v26 and (live-verified) in 25.10.x, so both profiles pass bytes through unchanged |
+| `vm.get_vmemory_in_use` | Keep; bytes in v26 and (live-verified) in 25.10.x, so both profiles pass bytes through unchanged |
 | `virt.instance.query`, `virt.volume.query` | Suppress; no v26 equivalent approved |
 | `virt.instance.metrics` | Suppress; removed event |
 | `nvmet.global.sessions` | Suppress for v26.0.0; no approved equivalent |
