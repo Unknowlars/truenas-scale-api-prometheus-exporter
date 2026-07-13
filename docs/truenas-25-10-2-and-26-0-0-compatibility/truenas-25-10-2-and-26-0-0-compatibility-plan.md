@@ -99,7 +99,11 @@ The complete `./scripts/validate.sh` gate was not run during discovery because i
 
 The 25.10 tree has a checked-in `MANIFEST.json` identifying target version 25.10.2, source type, generator, file count, and aggregate hash. It also has generated parity JSON and Markdown artifacts.
 
-The converted v26 tree has 805 method leaves and 80 event leaves corresponding to the checked-in raw v26 documentation source files. However, it currently has no equivalent v26 manifest, parity artifact, target constant, or integrated generator check. The v26 README is descriptive but does not establish exact release provenance.
+The converted v26 tree has 805 method leaves and 80 event leaves under
+`docs/truenas-api-v26/`. The raw `truenas-v26.0.0-docs/` source tree is not
+checked in, and the converted tree currently has no equivalent v26 manifest,
+parity artifact, target constant, or integrated generator check. The v26 README
+is descriptive but does not establish exact release provenance.
 
 Therefore, the v26 documentation should be treated as a generated candidate corpus until the following are completed:
 
@@ -137,7 +141,6 @@ Potential read-only additions require individual review for permissions, respons
 
 Methods relevant to current exporter behavior that are removed from v26 include:
 
-- `app.image.query`
 - `nvmet.global.sessions`
 - `virt.instance.query`
 - `virt.volume.query`
@@ -148,6 +151,10 @@ Methods relevant to current exporter behavior that are removed from v26 include:
 The v26 corpus also removes the wider `virt.instance.*`, `virt.volume.*`, and `virt.global.*` families and several service or snapshot mutation methods.
 
 The v25 documentation already marked service lifecycle methods and `pool.dataset.destroy_snapshots` for removal. Those methods are not safe exporter surfaces and must remain excluded.
+
+`app.image.query` is not removed. It exists in the checked-in v26 corpus and
+remains eligible only after profile safety, permission, count-mode, and schema
+review.
 
 ### 3.4 Added and removed events
 
@@ -256,7 +263,7 @@ Collectors must treat authorization failures as unavailable data. They must not 
 | `runtime.py` VM memory collection | Multiplies values by `1024**2` | v26 values are bytes | Add profile-specific normalization |
 | `runtime.py` virtual metrics | Calls `virt.instance.query` and `virt.volume.query` | Methods removed | Suppress calls; preserve metrics as unavailable |
 | `runtime.py` NVMe metrics | Calls `nvmet.global.sessions` | Method removed | Suppress calls; preserve metric as unavailable |
-| `runtime.py` miscellaneous configs | Calls `app.image.query` | Method removed | Suppress call; do not substitute registry query |
+| `runtime.py` miscellaneous configs | Calls `app.image.query` | Method exists in v26; schema/permission still requires review | Keep eligible under a reviewed profile; do not substitute registry query |
 | `runtime.py` generic reporting | Calls graph methods when enabled | Methods removed | Skip under v26 profile |
 | `events.py` | Subscribes to v25 event set | `virt.instance.metrics` removed | Profile-specific subscriptions |
 | `collection.py` | Parses mostly flat responses | v26 nested/union responses | Add bounded normalizers |

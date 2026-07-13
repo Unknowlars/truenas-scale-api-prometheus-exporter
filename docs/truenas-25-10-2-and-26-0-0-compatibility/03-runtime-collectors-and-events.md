@@ -42,7 +42,11 @@ For v26, suppress and clear stale data for:
 - Incus/legacy `virt.instance.*` and `virt.volume.*` collectors/events;
 - `nvmet.global.sessions`;
 - optional plural reporting graph discovery;
-- `pool.is_upgraded` and `pool.ddt_prefetch`.
+- generic or unreviewed calls to `pool.is_upgraded` and `pool.ddt_prefetch`.
+
+`pool.is_upgraded` and `pool.ddt_prefetch` exist in the checked-in v26 corpus,
+but they remain blocked/suppressed: `pool.is_upgraded` requires a pool id, and
+`pool.ddt_prefetch` is action-like and unsuitable for Prometheus collection.
 
 Do not substitute `container.*` for VM/virt metrics. Do not create zero-valued
 compatibility series. Existing metric declarations remain present but emit

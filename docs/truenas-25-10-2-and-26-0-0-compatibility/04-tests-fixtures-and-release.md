@@ -35,6 +35,11 @@ Add or extend tests for:
 - subscription identifier tracking and clean unsubscribe;
 - auth compatibility without secret logging;
 - unchanged metric names, types, help text, and labels.
+- failed, denied, malformed, empty, and unknown version detection cannot expand
+  profile permissions;
+- `EXTRA_METHODS`, generic discovery, reporting discovery, count queries, and
+  configured `EVENT_SUBSCRIPTIONS` cannot enable v25-only or v26-only
+  methods/events outside the selected profile.
 
 ## Verification commands
 
