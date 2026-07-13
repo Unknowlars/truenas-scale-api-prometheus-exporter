@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the exhaustive TrueNAS 25.10.2 API/exporter parity audit.
+"""Generate target-aware TrueNAS API/exporter parity audits.
 
 The generator treats the committed Markdown API snapshot, the documentation-
 derived runtime safety catalog, the public metric contract, exporter source,
@@ -29,6 +29,14 @@ METRIC_CONTRACT_PATH = REPO_ROOT / "docs" / "metrics-contract.json"
 DASHBOARD_PATH = REPO_ROOT / "grafana-dashboard" / "operations-center-dashboard.json"
 OUTPUT_MD = REPO_ROOT / "docs" / "api-exporter-parity.md"
 OUTPUT_JSON = REPO_ROOT / "docs" / "api-exporter-parity.json"
+V26_OUTPUT_MD = REPO_ROOT / "docs" / "api-exporter-parity-v26.md"
+V26_OUTPUT_JSON = REPO_ROOT / "docs" / "api-exporter-parity-v26.json"
+COMPAT_DIFF_MD = (
+    REPO_ROOT / "docs" / "truenas-25-10-2-and-26-0-0-compatibility" / "api-compatibility-diff.md"
+)
+COMPAT_DIFF_JSON = (
+    REPO_ROOT / "docs" / "truenas-25-10-2-and-26-0-0-compatibility" / "api-compatibility-diff.json"
+)
 TARGET_VERSION = "25.10.2"
 EXPECTED_MANIFEST_FILE_COUNT = 1011
 EXPECTED_TREE_FILE_COUNT = 1012
@@ -61,9 +69,9 @@ from truenas_exporter.api_catalog import (  # noqa: E402
 )
 
 try:  # noqa: E402
-    from .tooling import check_or_write
+    from .tooling import TRUENAS_API_VERSION, check_or_write, resolve_api_docs_target
 except ImportError:  # direct script execution
-    from tooling import check_or_write
+    from tooling import TRUENAS_API_VERSION, check_or_write, resolve_api_docs_target
 
 
 METHOD_COLUMNS = (
@@ -437,6 +445,18 @@ class SourceAnalysis:
     base_methods: frozenset[str]
 
 
+@dataclass(frozen=True)
+class TargetInventory:
+    target_version: str
+    docs_root: Path
+    manifest_path: Path
+    manifest: dict[str, Any]
+    file_rows: list[dict[str, Any]]
+    methods: list[ApiPage]
+    events: list[ApiPage]
+    evidence: dict[str, Any]
+
+
 def _stable_set_sha(values: Iterable[str]) -> str:
     return hashlib.sha256(("\n".join(sorted(values)) + "\n").encode()).hexdigest()
 
@@ -503,7 +523,7 @@ def _parse_field_types(schema_text: str) -> dict[str, tuple[str, ...]]:
     return {key: tuple(sorted(values)) for key, values in sorted(fields.items())}
 
 
-def parse_api_page(path: Path) -> ApiPage:
+def parse_api_page(path: Path, docs_root: Path = DOCS_ROOT) -> ApiPage:
     text = path.read_text(encoding="utf-8")
     front = _frontmatter(text)
     summary = _section(text, "## Summary", 2)
@@ -519,7 +539,7 @@ def parse_api_page(path: Path) -> ApiPage:
     roles = tuple(roles_value) if isinstance(roles_value, list) else ()
     event_shapes = tuple(re.findall(r"^###\s+([^\n]+)$", _section(text, "## Schema", 2), re.M))
     return ApiPage(
-        path=path.relative_to(DOCS_ROOT).as_posix(),
+        path=path.relative_to(docs_root).as_posix(),
         title=str(front.get("title", "")),
         kind=str(front.get("kind", "")),
         summary=_summary_excerpt(summary),
@@ -531,6 +551,105 @@ def parse_api_page(path: Path) -> ApiPage:
         event_shapes=event_shapes,
         job="This method is a job" in text,
     )
+
+
+def _target_docs_root(target_version: str) -> Path:
+    return REPO_ROOT / "docs" / resolve_api_docs_target(target_version).docs_dir
+
+
+def _manifest_target_version(manifest: dict[str, Any]) -> str:
+    return str(manifest.get("target_version") or manifest.get("truenas_version") or "")
+
+
+def inventory_docs_for_target(target_version: str) -> TargetInventory:
+    docs_root = _target_docs_root(target_version)
+    manifest_path = docs_root / "MANIFEST.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if _manifest_target_version(manifest) != target_version:
+        raise ValueError(f"API manifest target must be {target_version}")
+
+    listed = {entry["path"]: entry for entry in manifest["files"]}
+    disk_files = sorted(path for path in docs_root.rglob("*") if path.is_file())
+    disk_relative = {path.relative_to(docs_root).as_posix() for path in disk_files}
+    if disk_relative - {"MANIFEST.json"} != set(listed):
+        raise ValueError(f"{target_version} manifest paths and committed API documentation paths differ")
+
+    aggregate = hashlib.sha256()
+    file_rows: list[dict[str, Any]] = []
+    pages: list[ApiPage] = []
+    for path in disk_files:
+        relative = path.relative_to(docs_root).as_posix()
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        entry = listed.get(relative)
+        if entry is not None:
+            if entry["sha256"] != digest or entry["bytes"] != len(data):
+                raise ValueError(f"{target_version} API documentation hash/size mismatch: {relative}")
+            aggregate.update(relative.encode("utf-8"))
+            aggregate.update(b"\0")
+            aggregate.update(digest.encode("ascii"))
+            aggregate.update(b"\n")
+
+        document_class = "manifest (self-excluded)"
+        title = ""
+        kind = ""
+        if path.suffix == ".md":
+            text = data.decode("utf-8")
+            front = _frontmatter(text)
+            title = str(front.get("title", ""))
+            kind = str(front.get("kind", ""))
+            if relative == "README.md":
+                document_class = "snapshot README"
+            elif relative.endswith("/index.md"):
+                document_class = f"{relative.split('/', 1)[0]} namespace/index"
+            elif kind:
+                document_class = f"{kind} leaf"
+                pages.append(parse_api_page(path, docs_root))
+            else:
+                raise ValueError(f"unclassified API Markdown file: {relative}")
+        file_rows.append(
+            {
+                "path": relative,
+                "document_class": document_class,
+                "title": title,
+                "kind": kind,
+                "bytes": len(data),
+                "sha256": digest,
+                "manifest_tracked": entry is not None,
+                "manifest_hash_and_size_match": entry is not None,
+            }
+        )
+
+    if aggregate.hexdigest() != manifest["aggregate_sha256"]:
+        raise ValueError(f"{target_version} documentation aggregate changed; regenerate the manifest first")
+    if len(listed) != manifest["file_count"]:
+        raise ValueError(f"{target_version} manifest file count does not match listed files")
+
+    methods = sorted((page for page in pages if page.kind == "method"), key=lambda page: page.title)
+    events = sorted((page for page in pages if page.kind == "event"), key=lambda page: page.title)
+    shared = [page for page in pages if page.kind == "shared"]
+    if len({page.title for page in methods}) != len(methods):
+        raise ValueError(f"duplicate method titles in {target_version} API documentation")
+    if len({page.title for page in events}) != len(events):
+        raise ValueError(f"duplicate event titles in {target_version} API documentation")
+
+    method_namespaces = {page.title.rsplit(".", 1)[0] for page in methods}
+    event_namespaces = {page.title.rsplit(".", 1)[0] for page in events}
+    evidence = {
+        "target_version": target_version,
+        "manifest_schema_version": manifest.get("schema_version"),
+        "manifest_file_count": manifest["file_count"],
+        "tree_file_count_including_manifest": len(file_rows),
+        "manifest_aggregate_sha256": manifest["aggregate_sha256"],
+        "method_leaf_count": len(methods),
+        "event_leaf_count": len(events),
+        "shared_leaf_count": len(shared),
+        "method_namespace_count": len(method_namespaces),
+        "event_namespace_count": len(event_namespaces),
+        "docs_path": docs_root.relative_to(REPO_ROOT).as_posix(),
+        "manifest_path": manifest_path.relative_to(REPO_ROOT).as_posix(),
+    }
+    return TargetInventory(target_version, docs_root, manifest_path, manifest, file_rows, methods, events, evidence)
 
 
 def inventory_docs() -> tuple[list[dict[str, Any]], list[ApiPage], list[ApiPage], dict[str, Any]]:
@@ -2613,6 +2732,420 @@ def render_markdown(audit: dict[str, Any]) -> str:
     return rendered
 
 
+def _page_signature(page: ApiPage) -> dict[str, Any]:
+    return {
+        "roles": list(page.roles),
+        "parameters": [[position, name] for position, name in page.parameters],
+        "return_schema": page.return_schema,
+        "return_type": page.return_type,
+        "fields": {field: list(types) for field, types in page.fields.items()},
+        "event_shapes": list(page.event_shapes),
+        "job": page.job,
+    }
+
+
+def _signature_changes(old: ApiPage, new: ApiPage) -> list[str]:
+    old_sig = _page_signature(old)
+    new_sig = _page_signature(new)
+    changes = [key for key in old_sig if old_sig[key] != new_sig[key]]
+    return changes
+
+
+def _current_exporter_methods(v25_audit: dict[str, Any]) -> set[str]:
+    result: set[str] = set()
+    for row in v25_audit["methods"]:
+        if (
+            not row["Exporter usage"].startswith("not referenced")
+            or row["Dedicated metrics"] != "none"
+            or row["Generic coverage"] != "none; not in the generic base plan"
+            or row["Response fields used"].startswith("no reachable producer")
+        ):
+            result.add(row["Method"])
+    return result
+
+
+def _current_exporter_events(v25_audit: dict[str, Any]) -> set[str]:
+    result: set[str] = set()
+    for row in v25_audit["events"]:
+        if row["exporter_usage"] or row["dedicated_metrics"]:
+            result.add(row["event"])
+    return result
+
+
+def _required_surface_checks(
+    v25_methods: dict[str, ApiPage],
+    v26_methods: dict[str, ApiPage],
+    v25_events: dict[str, ApiPage],
+    v26_events: dict[str, ApiPage],
+) -> list[dict[str, str]]:
+    expectations = [
+        ("method", "app.image.query", "present in v26; keep eligible only after schema/permission review"),
+        ("method", "pool.is_upgraded", "present in v26; keep blocked because a pool id is required"),
+        ("method", "pool.ddt_prefetch", "present in v26; keep prohibited because it is action-like"),
+        ("method", "nvmet.global.sessions", "absent in v26; suppress under v26 profile"),
+        ("method", "reporting.graphs", "absent in v26; do not auto-substitute singular reporting.graph"),
+        (
+            "method",
+            "reporting.netdata_graphs",
+            "absent in v26; do not auto-substitute singular reporting.netdata_graph",
+        ),
+        ("method", "virt.instance.query", "absent in v26; suppress under v26 profile"),
+        ("method", "virt.volume.query", "absent in v26; suppress under v26 profile"),
+        ("event", "virt.instance.metrics", "absent in v26; do not subscribe under v26 profile"),
+    ]
+    rows: list[dict[str, str]] = []
+    for kind, name, decision in expectations:
+        old_pages = v25_events if kind == "event" else v25_methods
+        new_pages = v26_events if kind == "event" else v26_methods
+        rows.append(
+            {
+                "kind": kind,
+                "name": name,
+                "v25": "present" if name in old_pages else "absent",
+                "v26": "present" if name in new_pages else "absent",
+                "decision": decision,
+            }
+        )
+    return rows
+
+
+def build_v26_parity(v25_audit: dict[str, Any] | None = None) -> dict[str, Any]:
+    if v25_audit is None:
+        v25_audit = build_audit()
+    inventory = inventory_docs_for_target("26.0.0")
+    current_methods = _current_exporter_methods(v25_audit)
+    current_events = _current_exporter_events(v25_audit)
+    v25_method_names = {row["Method"] for row in v25_audit["methods"]}
+    v25_event_names = {row["event"] for row in v25_audit["events"]}
+
+    method_rows: list[dict[str, Any]] = []
+    for page in inventory.methods:
+        if page.title in current_methods:
+            exporter_relevance = "current exporter surface; requires COMPAT-02 profile review before v26 use"
+        elif page.title in v25_method_names:
+            exporter_relevance = "common documented method; no current exporter ownership"
+        else:
+            exporter_relevance = "v26-only method; inventory only, no first-release metric mapping approved"
+        method_rows.append(
+            {
+                "namespace": page.title.rsplit(".", 1)[0],
+                "method": page.title,
+                "documentation_path": page.path,
+                "roles": list(page.roles),
+                "parameter_count": len(page.parameters),
+                "parameters": [[position, name] for position, name in page.parameters],
+                "return_schema": page.return_schema,
+                "return_type": page.return_type,
+                "field_count": len(page.fields),
+                "current_exporter_surface": page.title in current_methods,
+                "present_in_25_10_2": page.title in v25_method_names,
+                "decision": exporter_relevance,
+            }
+        )
+
+    event_rows: list[dict[str, Any]] = []
+    for page in inventory.events:
+        if page.title in current_events:
+            exporter_relevance = "current exporter event; requires COMPAT-02/06 profile review before v26 subscription"
+        elif page.title in v25_event_names:
+            exporter_relevance = "common documented event; no current dedicated exporter ownership"
+        else:
+            exporter_relevance = "v26-only event; inventory only, subscription prohibited until reviewed"
+        event_rows.append(
+            {
+                "namespace": page.title.rsplit(".", 1)[0],
+                "event": page.title,
+                "documentation_path": page.path,
+                "roles": list(page.roles),
+                "documented_shapes": list(page.event_shapes),
+                "current_exporter_surface": page.title in current_events,
+                "present_in_25_10_2": page.title in v25_event_names,
+                "decision": exporter_relevance,
+            }
+        )
+
+    method_decisions = Counter(row["decision"] for row in method_rows)
+    event_decisions = Counter(row["decision"] for row in event_rows)
+    return {
+        "schema_version": 1,
+        "target_version": "26.0.0",
+        "source_target": TRUENAS_API_VERSION,
+        "generator": "scripts/generate_api_exporter_parity.py --target 26.0.0",
+        "evidence": inventory.evidence,
+        "method_decision_partition": dict(sorted(method_decisions.items())),
+        "event_decision_partition": dict(sorted(event_decisions.items())),
+        "files": inventory.file_rows,
+        "methods": method_rows,
+        "events": event_rows,
+    }
+
+
+def render_v26_parity_markdown(audit: dict[str, Any]) -> str:
+    evidence = audit["evidence"]
+    file_classes = Counter(row["document_class"] for row in audit["files"])
+    parts = [
+        "# TrueNAS SCALE 26.0.0 API parity inventory",
+        "",
+        "This file is generated by `python3 scripts/generate_api_exporter_parity.py --target 26.0.0`. "
+        "It pins the checked-in v26 documentation corpus for compatibility work and performs no live API access.",
+        "",
+        "## Pinned evidence",
+        "",
+        _markdown_table(
+            ("Evidence", "Value"),
+            (
+                ("TrueNAS target", evidence["target_version"]),
+                ("Manifest path", evidence["manifest_path"]),
+                ("Manifest-tracked Markdown files", evidence["manifest_file_count"]),
+                ("Tree files including self-excluded MANIFEST.json", evidence["tree_file_count_including_manifest"]),
+                ("Manifest aggregate SHA-256", evidence["manifest_aggregate_sha256"]),
+                ("Documented method leaves", evidence["method_leaf_count"]),
+                ("Documented event leaves", evidence["event_leaf_count"]),
+                ("Method namespaces", evidence["method_namespace_count"]),
+                ("Event namespaces", evidence["event_namespace_count"]),
+            ),
+        ),
+        "",
+        _markdown_table(("File class", "Count"), sorted(file_classes.items())),
+        "",
+        "## Exporter relevance partitions",
+        "",
+        _markdown_table(("Method decision", "Count"), audit["method_decision_partition"].items()),
+        "",
+        _markdown_table(("Event decision", "Count"), audit["event_decision_partition"].items()),
+        "",
+        "## Every documented v26 API method",
+        "",
+        _markdown_table(
+            (
+                "Namespace",
+                "Method",
+                "Path",
+                "Parameters",
+                "Return schema/type",
+                "Fields",
+                "Current exporter surface",
+                "Present in 25.10.2",
+                "Decision",
+            ),
+            (
+                (
+                    row["namespace"],
+                    row["method"],
+                    f"truenas-api-v26/{row['documentation_path']}",
+                    row["parameter_count"],
+                    f"{row['return_schema'] or 'schema union'} / {row['return_type'] or 'schema-defined type'}",
+                    row["field_count"],
+                    row["current_exporter_surface"],
+                    row["present_in_25_10_2"],
+                    row["decision"],
+                )
+                for row in audit["methods"]
+            ),
+        ),
+        "",
+        "## Every documented v26 API event",
+        "",
+        _markdown_table(
+            (
+                "Namespace",
+                "Event",
+                "Path",
+                "Shapes",
+                "Current exporter surface",
+                "Present in 25.10.2",
+                "Decision",
+            ),
+            (
+                (
+                    row["namespace"],
+                    row["event"],
+                    f"truenas-api-v26/{row['documentation_path']}",
+                    ", ".join(row["documented_shapes"]),
+                    row["current_exporter_surface"],
+                    row["present_in_25_10_2"],
+                    row["decision"],
+                )
+                for row in audit["events"]
+            ),
+        ),
+        "",
+    ]
+    return "\n".join(parts)
+
+
+def build_compat_diff(v25_audit: dict[str, Any] | None = None) -> dict[str, Any]:
+    if v25_audit is None:
+        v25_audit = build_audit()
+    v25_inventory = inventory_docs_for_target("25.10.2")
+    v26_inventory = inventory_docs_for_target("26.0.0")
+    v25_methods = {page.title: page for page in v25_inventory.methods}
+    v26_methods = {page.title: page for page in v26_inventory.methods}
+    v25_events = {page.title: page for page in v25_inventory.events}
+    v26_events = {page.title: page for page in v26_inventory.events}
+    current_methods = _current_exporter_methods(v25_audit)
+    current_events = _current_exporter_events(v25_audit)
+
+    def compare_pages(kind: str, current_names: set[str], old_pages: dict[str, ApiPage], new_pages: dict[str, ApiPage]):
+        rows: list[dict[str, Any]] = []
+        for name in sorted(current_names):
+            old = old_pages.get(name)
+            new = new_pages.get(name)
+            if old is None:
+                status = "current surface not present in 25.10.2 docs"
+                changes = ["missing_25_10_2"]
+            elif new is None:
+                status = "absent in v26"
+                changes = ["removed"]
+            else:
+                changes = _signature_changes(old, new)
+                status = "schema changed in v26" if changes else "present in v26 with unchanged parsed signature"
+            rows.append(
+                {
+                    "kind": kind,
+                    "name": name,
+                    "status": status,
+                    "changed_signature_fields": changes,
+                    "v25_path": old.path if old else "",
+                    "v26_path": new.path if new else "",
+                    "v25_signature": _page_signature(old) if old else {},
+                    "v26_signature": _page_signature(new) if new else {},
+                }
+            )
+        return rows
+
+    method_rows = compare_pages("method", current_methods, v25_methods, v26_methods)
+    event_rows = compare_pages("event", current_events, v25_events, v26_events)
+    all_method_names = set(v25_methods) | set(v26_methods)
+    all_event_names = set(v25_events) | set(v26_events)
+    corpus_summary = {
+        "methods_added_in_v26": len(set(v26_methods) - set(v25_methods)),
+        "methods_removed_in_v26": len(set(v25_methods) - set(v26_methods)),
+        "events_added_in_v26": len(set(v26_events) - set(v25_events)),
+        "events_removed_in_v26": len(set(v25_events) - set(v26_events)),
+        "common_methods": len(set(v25_methods) & set(v26_methods)),
+        "common_events": len(set(v25_events) & set(v26_events)),
+        "common_methods_with_parsed_signature_changes": sum(
+            bool(_signature_changes(v25_methods[name], v26_methods[name]))
+            for name in sorted(set(v25_methods) & set(v26_methods))
+        ),
+        "common_events_with_parsed_signature_changes": sum(
+            bool(_signature_changes(v25_events[name], v26_events[name]))
+            for name in sorted(set(v25_events) & set(v26_events))
+        ),
+    }
+    current_summary = dict(sorted(Counter(row["status"] for row in [*method_rows, *event_rows]).items()))
+    return {
+        "schema_version": 1,
+        "generator": "scripts/generate_api_exporter_parity.py --compat-diff",
+        "targets": {
+            "source": v25_inventory.evidence,
+            "target": v26_inventory.evidence,
+        },
+        "corpus_summary": corpus_summary,
+        "current_exporter_summary": current_summary,
+        "required_surface_checks": _required_surface_checks(v25_methods, v26_methods, v25_events, v26_events),
+        "current_exporter_methods": method_rows,
+        "current_exporter_events": event_rows,
+        "all_method_name_partition": {
+            "added_in_v26": sorted(set(v26_methods) - set(v25_methods)),
+            "removed_in_v26": sorted(set(v25_methods) - set(v26_methods)),
+            "common": sorted(set(v25_methods) & set(v26_methods)),
+        },
+        "all_event_name_partition": {
+            "added_in_v26": sorted(set(v26_events) - set(v25_events)),
+            "removed_in_v26": sorted(set(v25_events) - set(v26_events)),
+            "common": sorted(set(v25_events) & set(v26_events)),
+        },
+        "all_surface_count": len(all_method_names) + len(all_event_names),
+    }
+
+
+def render_compat_diff_markdown(diff: dict[str, Any]) -> str:
+    source = diff["targets"]["source"]
+    target = diff["targets"]["target"]
+    parts = [
+        "# TrueNAS SCALE 25.10.2 to 26.0.0 API compatibility diff",
+        "",
+        "This file is generated by `python3 scripts/generate_api_exporter_parity.py --compat-diff`. "
+        "It compares the pinned local documentation corpora and the current exporter surfaces without live API access.",
+        "",
+        "## Pinned inputs",
+        "",
+        _markdown_table(
+            ("Input", "Version", "Manifest", "Files", "Aggregate SHA-256"),
+            (
+                (
+                    "source",
+                    source["target_version"],
+                    source["manifest_path"],
+                    source["manifest_file_count"],
+                    source["manifest_aggregate_sha256"],
+                ),
+                (
+                    "target",
+                    target["target_version"],
+                    target["manifest_path"],
+                    target["manifest_file_count"],
+                    target["manifest_aggregate_sha256"],
+                ),
+            ),
+        ),
+        "",
+        "## Corpus summary",
+        "",
+        _markdown_table(("Diff item", "Count"), diff["corpus_summary"].items()),
+        "",
+        "## Current exporter surface summary",
+        "",
+        _markdown_table(("Status", "Count"), diff["current_exporter_summary"].items()),
+        "",
+        "## Required COMPAT-01B surface checks",
+        "",
+        _markdown_table(
+            ("Kind", "Name", "25.10.2", "26.0.0", "Decision"),
+            (
+                (row["kind"], row["name"], row["v25"], row["v26"], row["decision"])
+                for row in diff["required_surface_checks"]
+            ),
+        ),
+        "",
+        "## Current exporter methods",
+        "",
+        _markdown_table(
+            ("Method", "Status", "Changed parsed signature fields", "25.10.2 path", "26.0.0 path"),
+            (
+                (
+                    row["name"],
+                    row["status"],
+                    ", ".join(row["changed_signature_fields"]) or "none",
+                    f"truenas-api/{row['v25_path']}" if row["v25_path"] else "",
+                    f"truenas-api-v26/{row['v26_path']}" if row["v26_path"] else "",
+                )
+                for row in diff["current_exporter_methods"]
+            ),
+        ),
+        "",
+        "## Current exporter events",
+        "",
+        _markdown_table(
+            ("Event", "Status", "Changed parsed signature fields", "25.10.2 path", "26.0.0 path"),
+            (
+                (
+                    row["name"],
+                    row["status"],
+                    ", ".join(row["changed_signature_fields"]) or "none",
+                    f"truenas-api/{row['v25_path']}" if row["v25_path"] else "",
+                    f"truenas-api-v26/{row['v26_path']}" if row["v26_path"] else "",
+                )
+                for row in diff["current_exporter_events"]
+            ),
+        ),
+        "",
+    ]
+    return "\n".join(parts)
+
+
 def build_audit() -> dict[str, Any]:
     file_rows, methods, events, evidence = inventory_docs()
     metrics = load_metric_contract()
@@ -2644,8 +3177,73 @@ def build_audit() -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--target",
+        default=TARGET_VERSION,
+        help="Parity target to generate/check: 25.10.2 (default) or 26.0.0.",
+    )
+    parser.add_argument(
+        "--compat-diff",
+        action="store_true",
+        help="Generate/check the 25.10.2-to-26.0.0 compatibility diff artifacts.",
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
+    if args.compat_diff:
+        diff = build_compat_diff()
+        rendered_json = json.dumps(diff, indent=2, sort_keys=True) + "\n"
+        rendered_markdown = render_compat_diff_markdown(diff)
+        check_or_write(
+            COMPAT_DIFF_JSON,
+            rendered_json,
+            check=args.check,
+            description="API compatibility diff JSON",
+        )
+        check_or_write(
+            COMPAT_DIFF_MD,
+            rendered_markdown,
+            check=args.check,
+            description="API compatibility diff Markdown",
+        )
+        print(
+            json.dumps(
+                {
+                    "current_exporter_summary": diff["current_exporter_summary"],
+                    "events": len(diff["current_exporter_events"]),
+                    "methods": len(diff["current_exporter_methods"]),
+                    "required_surface_checks": len(diff["required_surface_checks"]),
+                },
+                sort_keys=True,
+            )
+        )
+        return
+
+    try:
+        target = resolve_api_docs_target(args.target)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    if target.version == "26.0.0":
+        audit = build_v26_parity()
+        rendered_json = json.dumps(audit, indent=2, sort_keys=True) + "\n"
+        rendered_markdown = render_v26_parity_markdown(audit)
+        check_or_write(V26_OUTPUT_JSON, rendered_json, check=args.check, description="v26 API parity JSON")
+        check_or_write(V26_OUTPUT_MD, rendered_markdown, check=args.check, description="v26 API parity Markdown")
+        print(
+            json.dumps(
+                {
+                    "files": len(audit["files"]),
+                    "methods": len(audit["methods"]),
+                    "events": len(audit["events"]),
+                    "method_decisions": audit["method_decision_partition"],
+                    "event_decisions": audit["event_decision_partition"],
+                },
+                sort_keys=True,
+            )
+        )
+        return
+    if target.version != TARGET_VERSION:
+        raise SystemExit(f"Parity target {target.version} is not supported")
+
     audit = build_audit()
     rendered_json = json.dumps(audit, indent=2, sort_keys=True) + "\n"
     rendered_markdown = render_markdown(audit)

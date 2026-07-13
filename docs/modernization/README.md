@@ -54,6 +54,27 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 COMPAT-01B v26 parity and compatibility diff: added target-aware
+  v26 parity generation to `scripts/generate_api_exporter_parity.py` without
+  changing the default 25.10.2 parity artifacts. Generated
+  `docs/api-exporter-parity-v26.{json,md}` and
+  `docs/truenas-25-10-2-and-26-0-0-compatibility/api-compatibility-diff.{json,md}`.
+  The v26 parity inventory records 805 methods, 80 events, and the v26 manifest
+  aggregate `32acc76d9ec44593ae17a53571a29b5cbc33526741feff3b2062b645b9c88855`.
+  The compatibility diff records 87 methods added in v26, 49 methods removed,
+  22 events added, 5 events removed, and current exporter surfaces partitioned
+  as 8 absent in v26, 97 schema-changed, and 132 unchanged by parsed signature.
+  Required checks for `app.image.query`, `pool.is_upgraded`,
+  `pool.ddt_prefetch`, `nvmet.global.sessions`, `reporting.graphs`,
+  `reporting.netdata_graphs`, `virt.instance.query`, `virt.volume.query`, and
+  `virt.instance.metrics` are captured in the generated diff. The checks
+  `python3 scripts/generate_api_exporter_parity.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`,
+  `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`,
+  `git diff --check`, and `./scripts/validate.sh` passed. No runtime, metrics,
+  dashboards, fixtures, manifests, release behavior, credentials, live API
+  calls, or hosted automation were changed.
+
 - 2026-07-13 COMPAT-01A v26 API documentation manifest: added target-aware
   manifest support while preserving the default 25.10.2 manifest behavior.
   Generated `docs/truenas-api-v26/MANIFEST.json` for target `26.0.0` with
