@@ -1,121 +1,96 @@
 <div align="center">
 
-# 📊 TrueNAS Prometheus Exporter
+# TrueNAS Prometheus Exporter
 
-### Turn your TrueNAS SCALE box into a beautiful, fully-monitored dashboard in minutes — safely, read-only, with zero changes to your NAS.
+A read-only Prometheus exporter for TrueNAS SCALE. Point it at your NAS, import the bundled Grafana dashboard, and get 400+ metrics without installing anything on TrueNAS itself.
 
 ![TrueNAS SCALE 25.10.2 and 26.0.0](https://img.shields.io/badge/TrueNAS%20SCALE-25.10.2%20%2F%2026.0.0-0095d5?style=flat-square)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776ab?style=flat-square&logo=python&logoColor=white)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)
-![Read-only](https://img.shields.io/badge/access-100%25%20read--only-3fb950?style=flat-square)
-![Metrics](https://img.shields.io/badge/metrics-400%2B-8957e5?style=flat-square)
+![Read-only](https://img.shields.io/badge/access-read--only-3fb950?style=flat-square)
 
-**[⚡ Quick Start](#-quick-start-5-minutes)** • **[📈 Grafana Dashboards](#-see-it-in-grafana)** • **[⚙️ Configuration](#️-configuration)** • **[🩺 Troubleshooting](#-troubleshooting)**
+[Quick start](#quick-start) • [Grafana dashboards](#grafana-dashboards) • [Configuration](#configuration) • [Troubleshooting](#troubleshooting)
 
 </div>
 
 ![System overview and CPU and load dashboard](.github/images/System_overview_and_CPU_and_Load.png)
 
----
+## Overview
 
-## ✨ Why you'll love it
+This exporter connects to a TrueNAS SCALE system over its JSON-RPC WebSocket API, collects inventory and state data, and serves it as Prometheus metrics on `/metrics`. It runs as a small container (or a plain Python process) alongside your existing Prometheus and Grafana stack.
 
-- 🔒 **100% read-only, zero risk.** The exporter only ever calls documented read-only TrueNAS methods — it can never create, change, or delete anything on your NAS. Every method is checked against an allow-list *before* it ever hits the wire.
-- 🚀 **Up and running in ~5 minutes.** Copy one file, paste two values, run one command. No plugins to install on TrueNAS, no config files to hand-write.
-- 📊 **400+ metrics out of the box.** Pools, datasets, snapshots, disks & temperatures, ZFS ARC, CPU/RAM/network, SMB/NFS/iSCSI, apps & Docker, VMs, tasks, alerts, certificates, UPS, and more.
-- 🎨 **Gorgeous Grafana dashboards included.** Two ready-to-import dashboards — import one JSON file and you have a full mission-control view of your NAS.
-- 🧠 **Auto-detects your TrueNAS version.** Works on SCALE `25.10.x` and `26.0.x`, picking the right compatibility profile automatically. Nothing to configure.
-- 🛡️ **Hardened by default.** Ships as a locked-down, read-only container (`cap_drop: ALL`, `no-new-privileges`) with conservative, low-cardinality defaults.
+- **Read-only by design.** Every API method is checked against a documentation-derived allow-list and a mutating-verb deny-list *before* the call is made. The exporter cannot create, modify, or delete anything on your NAS.
+- **No agent on TrueNAS.** Nothing is installed on the NAS itself; you only need a read-only API key.
+- **Broad coverage.** 400+ metrics spanning pools, datasets, snapshots, disks and temperatures, ZFS ARC, CPU/memory/network, SMB/NFS/iSCSI, apps and Docker, VMs, tasks, alerts, certificates, and UPS.
+- **Version-aware.** Detects TrueNAS SCALE `25.10.x` and `26.0.x` from `system.version_short` and selects the correct compatibility profile automatically — no manual toggle.
+- **Bundled dashboards.** Two importable Grafana dashboards are included.
+- **Hardened defaults.** Ships as a read-only container (`cap_drop: ALL`, `no-new-privileges`) with conservative, low-cardinality collection defaults.
 
 > [!NOTE]
-> Honesty first: this exporter was built mostly with AI over a few weeks, running against a real home TrueNAS SCALE setup, and validated live against a real `25.10.3` system. It is strictly read-only and follows the official TrueNAS API docs.
+> This project was developed largely with AI assistance against a live home TrueNAS SCALE system and validated against a real `25.10.3` box. It is strictly read-only and follows the official TrueNAS API documentation.
 
----
+## Quick start
 
-## ⚡ Quick Start (5 minutes)
+The recommended path is Docker Compose. You will need a TrueNAS SCALE system (`25.10.x` or `26.0.x`) reachable on your network, a host with Docker and Docker Compose, and your NAS's IP or hostname.
 
-The easiest way to run it is **Docker Compose**. If you can copy/paste four commands, you can do this. 🙌
+### 1. Create a read-only API key on TrueNAS
 
-### Before you begin
+1. Open the TrueNAS web UI.
+2. Open the account menu in the top-right corner and choose **API Keys**. Depending on your version this may instead be under **Settings → API Keys** or **Credentials → Users**.
+3. Click **Add** and give the key a name, for example `prometheus-exporter`.
+4. If your TrueNAS version supports per-key roles, attach it to an account with a **Read-only** role.
+5. Save the key and copy it now — TrueNAS displays it only once.
 
-You need:
+The exporter never issues anything but read-only calls, so a full-access key is still used safely; scoping the key to a read-only account is defense-in-depth.
 
-- 🖥️ A **TrueNAS SCALE** system (version `25.10.x` or `26.0.x`) you can reach on your network.
-- 🐳 A machine with **Docker + Docker Compose** (your NAS, a Raspberry Pi, a VM — anything on the same network).
-- 🌐 The IP address or hostname of your TrueNAS (e.g. `192.168.1.50` or `truenas.local`).
+### 2. Configure the exporter
 
----
-
-### Step 1 — Create a read-only API key on TrueNAS 🔑
-
-1. Open the **TrueNAS web UI** in your browser.
-2. Click your **account menu in the top-right corner** and choose **API Keys**.
-   *(Depending on your version this may live under **Settings ⚙ → API Keys** or **Credentials → Users**.)*
-3. Click **Add**, give it a name like `prometheus-exporter`.
-4. If your TrueNAS version supports **per-key roles**, attach it to an account with a **Read-only** role — extra peace of mind.
-5. Click **Save** and **copy the key now** — TrueNAS shows it **only once**. 📋
-
-> [!TIP]
-> The exporter *never* issues anything but read-only calls, so it's safe even with a full-access key — but a read-only-scoped account is good defense-in-depth.
-
----
-
-### Step 2 — Tell the exporter where your NAS is 📝
-
-In a terminal, from this project folder:
+From the project directory:
 
 ```bash
 cp .env.example .env
 ```
 
-Now open `.env` in any text editor and set just **two** values:
+Edit `.env` and set two values:
 
 ```dotenv
-# Your TrueNAS address with /api/current on the end.
-# Use wss:// for an HTTPS box (recommended), or ws:// for plain HTTP.
+# Your TrueNAS address with /api/current appended.
+# Use wss:// for an HTTPS box (recommended) or ws:// for plain HTTP.
 TRUENAS_WS_URL=wss://192.168.1.50/api/current
 
-# The read-only API key you copied in Step 1.
-TRUENAS_API_KEY=1-your-long-api-key-here
+# The read-only API key from step 1.
+TRUENAS_API_KEY=1-your-api-key-here
 ```
 
-That's it — everything else has sensible defaults.
+Everything else has a sensible default.
 
 > [!IMPORTANT]
-> **Self-signed certificate?** Most home TrueNAS boxes use one by default. If the exporter can't connect over `wss://`, add this line to `.env` (fine on a trusted home LAN):
-> ```dotenv
-> TRUENAS_VERIFY_TLS=false
-> ```
-> For a production setup, instead trust your CA with `TRUENAS_CA_FILE=/path/to/ca.pem` and keep verification on.
+> TrueNAS ships a self-signed certificate by default. If the exporter cannot establish a `wss://` connection, set `TRUENAS_VERIFY_TLS=false` in `.env` for a trusted LAN, or keep verification on and point `TRUENAS_CA_FILE` at your CA bundle.
 
----
-
-### Step 3 — Start it 🚀
+### 3. Start it
 
 ```bash
 docker compose up -d --build
 ```
 
-Docker builds and launches a small, hardened container named `truenas-exporter`.
+This builds and runs a hardened container named `truenas-exporter`.
 
----
-
-### Step 4 — Confirm it works ✅
+### 4. Verify
 
 ```bash
-curl http://localhost:9108/healthz     # → ok
-curl http://localhost:9108/metrics     # → lots of "truenas_..." metrics
+curl http://localhost:9108/healthz     # returns: ok
+curl http://localhost:9108/metrics     # returns Prometheus metrics
 ```
 
-If you see `truenas_up 1` in the metrics output — **🎉 you're done!** Your NAS is now exporting metrics.
+If the metrics output includes `truenas_up 1`, the exporter is connected and scraping.
 
 <details>
-<summary>👀 Prefer to run it without Compose? (plain Docker image or Python)</summary>
+<summary>Alternatives: plain Docker image or local Python</summary>
 
-**Plain Docker image**
+**Docker image**
 
 ```bash
-cp .env.example .env      # edit TRUENAS_WS_URL + TRUENAS_API_KEY
+cp .env.example .env      # set TRUENAS_WS_URL and TRUENAS_API_KEY
 docker pull ghcr.io/unknowlars/truenas-scale-api-prometheus-exporter:latest
 docker run --rm --env-file .env -p 9108:9108 \
   ghcr.io/unknowlars/truenas-scale-api-prometheus-exporter:latest
@@ -127,96 +102,16 @@ docker run --rm --env-file .env -p 9108:9108 \
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env       # edit TRUENAS_WS_URL + TRUENAS_API_KEY
+cp .env.example .env       # set TRUENAS_WS_URL and TRUENAS_API_KEY
 python3 truenas_exporter.py
 ```
 
 </details>
 
----
+## Connect Prometheus
 
-## 📈 See it in Grafana
-
-This is the fun part. The repo ships **two ready-to-import dashboards** in [`grafana-dashboard/`](grafana-dashboard/) — no building required, just import a JSON file.
-
-| Dashboard | File | Best for |
-| --- | --- | --- |
-| 🛰️ **TrueNAS · Mission Control** (tabbed flagship) | `truenas-mission-control.json` | The full experience — 12 tabs covering everything. **Grafana 13+** (schema v2). |
-| 🗂️ **TrueNAS Operations Center** (classic rows) | `operations-center-dashboard.json` | Any recent Grafana version. |
-
-**To import** (takes 20 seconds):
-
-1. In Grafana, go to **Dashboards → New → Import**.
-2. **Upload** one of the JSON files above.
-3. Pick your **Prometheus data source** and click **Import**.
-
-> First, make sure Prometheus (or Grafana Alloy) is scraping the exporter — see [Connect Prometheus](#-connect-prometheus) below.
-
-### A peek at what you get
-
-| System & CPU | Memory | Storage & Pools |
-| --- | --- | --- |
-| ![System overview and CPU and load dashboard](.github/images/System_overview_and_CPU_and_Load.png) | ![Memory dashboard](.github/images/Memory.png) | ![Storage and pools dashboard 1](.github/images/Storage_and_Pools_1.png) |
-
-| Disks & Temperatures | ZFS ARC Cache | Network Interfaces |
-| --- | --- | --- |
-| ![Disks and temperatures dashboard](.github/images/Disks_Temperatures.png) | ![ZFS ARC cache dashboard](.github/images/ZFS_ARC_Cache.png) | ![Network interfaces dashboard](.github/images/Network_Interfaces.png) |
-
-| Apps & Docker | Services & Shares | Virtualization |
-| --- | --- | --- |
-| ![Apps and Docker dashboard](.github/images/Apps_and_Docker.png) | ![Services and shares dashboard](.github/images/Services_Shares.png) | ![Virtualization dashboard](.github/images/Virtualization.png) |
-
-<details>
-<summary>🖼️ Show all dashboard tabs (13 more views)</summary>
-
-| Storage Deep Dive | Dataset Deep Dive |
-| --- | --- |
-| ![Storage and pools dashboard 2](.github/images/Storage_and_Pools_2.png) | ![Dataset deep dive dashboard](.github/images/Dataset_Deep_Dive.png) |
-
-| Apps & Docker (Details) | Alerts, Tasks & Updates |
-| --- | --- |
-| ![Apps and Docker details dashboard](.github/images/Apps_and_Docker_2.png) | ![Alerts, tasks, and updates dashboard](.github/images/Alerts_andTasks_andUpdates.png) |
-
-| Audit & Directory Services | Security & Platform |
-| --- | --- |
-| ![Audit and directory services dashboard](.github/images/Audit_Directory_Services.png) | ![Security and platform dashboard](.github/images/Security_and_Platform.png) |
-
-| System Configuration | Advanced Protocols (NVMe-oF, FC, HA) |
-| --- | --- |
-| ![System configuration dashboard](.github/images/System_Configuration.png) | ![Advanced protocols dashboard](.github/images/Advanced_Protocols_NVMe-oF_FC_HA.png) |
-
-| Boot Environment | |
-| --- | --- |
-| ![Boot environment dashboard](.github/images/Boot_Environment.png) | |
-
-</details>
-
-<details>
-<summary>⚙️ Advanced: rebuild / push the Mission Control dashboard</summary>
-
-The Mission Control dashboard is generated code. Edit and re-run
-`grafana-dashboard/build_mission_control.py` (needs only Python 3) rather than hand-editing the JSON. It harvests panel queries from the classic Operations Center dashboard, so query fixes should land there first.
-
-Push it via the Grafana App Platform API:
-
-```bash
-curl -X POST -H "Authorization: Bearer $GRAFANA_SA_TOKEN" \
-  -H "Content-Type: application/json" \
-  --data-binary @grafana-dashboard/truenas-mission-control.json \
-  "https://<grafana-host>/apis/dashboard.grafana.app/v2beta1/namespaces/default/dashboards"
-```
-
-To update an already-imported copy, delete the old dashboard and re-import the regenerated JSON (it keeps the same `metadata.name`/URL), or `PUT` it to
-`/apis/dashboard.grafana.app/v2beta1/namespaces/default/dashboards/truenas-mission-control`.
-
-</details>
-
----
-
-## 🔌 Connect Prometheus
-
-Point Prometheus at the exporter by adding a scrape job (or start from
-[`deploy/prometheus/prometheus.truenas-example.yml`](deploy/prometheus/prometheus.truenas-example.yml)):
+Add a scrape job pointing at the exporter, or start from
+[`deploy/prometheus/prometheus.truenas-example.yml`](deploy/prometheus/prometheus.truenas-example.yml):
 
 ```yaml
 scrape_configs:
@@ -228,7 +123,7 @@ scrape_configs:
 ```
 
 <details>
-<summary>Using Grafana Alloy instead of a Prometheus scrape config?</summary>
+<summary>Grafana Alloy instead of a Prometheus scrape config</summary>
 
 ```hcl
 prometheus.scrape "truenasexporter" {
@@ -239,70 +134,127 @@ prometheus.scrape "truenasexporter" {
 }
 ```
 
-Replace the address with your exporter host/port, and point `forward_to` at your existing Alloy `prometheus.remote_write` component. The repo also includes `deploy/prometheus/docker-compose.prometheus.yml` and `deploy/prometheus/prometheus.yml` for local experiments — update the targets before using them.
+Replace the address with your exporter host and port, and point `forward_to` at your existing Alloy `prometheus.remote_write` component. The repo also includes `deploy/prometheus/docker-compose.prometheus.yml` and `deploy/prometheus/prometheus.yml` for local experiments; update their targets before use.
 
 </details>
 
----
+## Grafana dashboards
 
-## ⚙️ Configuration
+Two importable dashboards are included in [`grafana-dashboard/`](grafana-dashboard/):
 
-Every option lives in [`.env.example`](.env.example) with inline comments. These are the ones most people touch:
+| Dashboard | File | Requires |
+| --- | --- | --- |
+| TrueNAS · Mission Control (tabbed, 12 tabs) | `truenas-mission-control.json` | Grafana 13+ (schema v2) |
+| TrueNAS Operations Center (classic rows) | `operations-center-dashboard.json` | Any recent Grafana |
+
+To import: in Grafana, go to **Dashboards → New → Import**, upload one of the JSON files, select your Prometheus data source, and import. Make sure Prometheus is already scraping the exporter (see above).
+
+| System and CPU | Memory | Storage and pools |
+| --- | --- | --- |
+| ![System overview and CPU and load dashboard](.github/images/System_overview_and_CPU_and_Load.png) | ![Memory dashboard](.github/images/Memory.png) | ![Storage and pools dashboard 1](.github/images/Storage_and_Pools_1.png) |
+
+| Disks and temperatures | ZFS ARC cache | Network interfaces |
+| --- | --- | --- |
+| ![Disks and temperatures dashboard](.github/images/Disks_Temperatures.png) | ![ZFS ARC cache dashboard](.github/images/ZFS_ARC_Cache.png) | ![Network interfaces dashboard](.github/images/Network_Interfaces.png) |
+
+| Apps and Docker | Services and shares | Virtualization |
+| --- | --- | --- |
+| ![Apps and Docker dashboard](.github/images/Apps_and_Docker.png) | ![Services and shares dashboard](.github/images/Services_Shares.png) | ![Virtualization dashboard](.github/images/Virtualization.png) |
+
+<details>
+<summary>Remaining dashboard views</summary>
+
+| Storage deep dive | Dataset deep dive |
+| --- | --- |
+| ![Storage and pools dashboard 2](.github/images/Storage_and_Pools_2.png) | ![Dataset deep dive dashboard](.github/images/Dataset_Deep_Dive.png) |
+
+| Apps and Docker (details) | Alerts, tasks, and updates |
+| --- | --- |
+| ![Apps and Docker details dashboard](.github/images/Apps_and_Docker_2.png) | ![Alerts, tasks, and updates dashboard](.github/images/Alerts_andTasks_andUpdates.png) |
+
+| Audit and directory services | Security and platform |
+| --- | --- |
+| ![Audit and directory services dashboard](.github/images/Audit_Directory_Services.png) | ![Security and platform dashboard](.github/images/Security_and_Platform.png) |
+
+| System configuration | Advanced protocols (NVMe-oF, FC, HA) |
+| --- | --- |
+| ![System configuration dashboard](.github/images/System_Configuration.png) | ![Advanced protocols dashboard](.github/images/Advanced_Protocols_NVMe-oF_FC_HA.png) |
+
+| Boot environment | |
+| --- | --- |
+| ![Boot environment dashboard](.github/images/Boot_Environment.png) | |
+
+</details>
+
+<details>
+<summary>Rebuilding and pushing the Mission Control dashboard</summary>
+
+The Mission Control dashboard is generated code. Edit and re-run `grafana-dashboard/build_mission_control.py` (Python 3, no extra dependencies) rather than hand-editing the JSON. It harvests panel queries from the classic Operations Center dashboard, so query fixes should land there first.
+
+Push it via the Grafana App Platform API:
+
+```bash
+curl -X POST -H "Authorization: Bearer $GRAFANA_SA_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data-binary @grafana-dashboard/truenas-mission-control.json \
+  "https://<grafana-host>/apis/dashboard.grafana.app/v2beta1/namespaces/default/dashboards"
+```
+
+To update an imported copy, delete the old dashboard and re-import the regenerated JSON (it keeps the same `metadata.name`/URL), or `PUT` it to `/apis/dashboard.grafana.app/v2beta1/namespaces/default/dashboards/truenas-mission-control`.
+
+</details>
+
+## Configuration
+
+Every option is documented with inline comments in [`.env.example`](.env.example). The settings most deployments touch:
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `TRUENAS_WS_URL` | ✅ **yes** | — | TrueNAS WebSocket URL, e.g. `wss://192.168.1.50/api/current` |
-| `TRUENAS_API_KEY` | ✅ **yes*** | — | Your read-only API key (*or use `TRUENAS_API_KEY_FILE`) |
-| `TRUENAS_API_KEY_FILE` | no | — | Path to a mounted file containing the API key (for Docker/K8s secrets) |
-| `TRUENAS_VERIFY_TLS` | no | `true` | Set `false` only for a trusted LAN with a self-signed cert |
+| `TRUENAS_WS_URL` | yes | — | TrueNAS WebSocket URL, e.g. `wss://192.168.1.50/api/current` |
+| `TRUENAS_API_KEY` | yes* | — | Read-only API key (*or provide `TRUENAS_API_KEY_FILE`) |
+| `TRUENAS_API_KEY_FILE` | no | — | Path to a mounted file containing the API key (Docker/Kubernetes secrets) |
+| `TRUENAS_VERIFY_TLS` | no | `true` | Set `false` only on a trusted LAN with a self-signed certificate |
 | `TRUENAS_CA_FILE` | no | — | Path to a custom CA bundle for TLS verification |
-| `EXPORTER_PORT` | no | `9108` | Port for `/metrics`, `/healthz`, `/readyz` |
-| `SCRAPE_INTERVAL_SECONDS` | no | `30` | How often the exporter polls TrueNAS |
-| `SCRAPE_BUDGET_SECONDS` | no | `25` | Hard deadline for one scrape |
+| `EXPORTER_PORT` | no | `9108` | HTTP port for `/metrics`, `/healthz`, `/readyz` |
+| `SCRAPE_INTERVAL_SECONDS` | no | `30` | Poll interval for collectors |
+| `SCRAPE_BUDGET_SECONDS` | no | `25` | Hard deadline for a single scrape |
 | `LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
-| `ENABLE_DATASET_METRICS` | no | `true` | Per-dataset space/quota metrics |
-| `ENABLE_TASK_METRICS` | no | `true` | Replication / cloudsync / snapshot task metrics |
-| `ENABLE_IPMI_METRICS` | no | `true` | IPMI chassis/sensor metrics when available |
+| `ENABLE_DATASET_METRICS` | no | `true` | Per-dataset space and quota metrics |
+| `ENABLE_TASK_METRICS` | no | `true` | Replication, cloudsync, rsync, and snapshot task metrics |
+| `ENABLE_IPMI_METRICS` | no | `true` | IPMI chassis and sensor metrics when available |
 
 > [!NOTE]
-> The defaults are deliberately safe and low-cardinality. High-cardinality options (`ENABLE_GENERIC_METHOD_METRICS`, `ENABLE_GENERIC_EVENT_METRICS`, `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`) are **off** by default and can never bypass the read-only method policy. See the [Advanced](#-advanced--how-it-works) section before enabling them.
+> Defaults are intentionally conservative and low-cardinality. The high-cardinality options (`ENABLE_GENERIC_METHOD_METRICS`, `ENABLE_GENERIC_EVENT_METRICS`, `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`) are disabled by default and cannot bypass the read-only method policy. See [How it works](#how-it-works) before enabling them.
 
----
-
-## 📦 What you get
-
-A quick tour of the coverage:
+## Metric coverage
 
 - **System** — identity, version, uptime, readiness, pending updates, reboot state.
-- **Storage** — pools, datasets, snapshots, scrub schedules, resilver config, expansion progress, capacity, fragmentation, dedup.
-- **Disks** — per-disk I/O rates, busy %, temperatures.
-- **Memory & ZFS** — physical memory, ZFS ARC size, and ARC/L2ARC demand hit/miss rates.
-- **Sharing & protocols** — SMB, NFS, iSCSI, NVMe-oF.
-- **Workloads** — apps & Docker (incl. DockerHub pull limits), VMs, jobs, replication.
-- **Health & governance** — alerts, certificates, directory-service health, audit retention, NTP, UPS, security posture.
-- **Exporter self-health** — API call failures, collector error counters, scrape duration.
+- **Storage** — pools, datasets, snapshots, scrub schedules, resilver configuration, expansion progress, capacity, fragmentation, and dedup.
+- **Disks** — per-disk I/O rates, busy percentage, and temperatures.
+- **Memory and ZFS** — physical memory, ZFS ARC size, and ARC/L2ARC demand hit/miss rates.
+- **Sharing and protocols** — SMB, NFS, iSCSI, and NVMe-oF.
+- **Workloads** — apps and Docker (including DockerHub pull limits), VMs, jobs, and replication.
+- **Health and governance** — alerts, certificates, directory-service health, audit retention, NTP, UPS, and security posture.
+- **Exporter self-health** — API call failures, collector error counters, and scrape duration.
 
----
+## Troubleshooting
 
-## 🩺 Troubleshooting
-
-| Symptom | Fix |
+| Symptom | Resolution |
 | --- | --- |
-| ❌ Connection / TLS error over `wss://` | Self-signed cert? Set `TRUENAS_VERIFY_TLS=false` (trusted LAN) or point `TRUENAS_CA_FILE` at your CA. |
-| ❌ Auth fails / `truenas_up 0` | Re-check `TRUENAS_API_KEY`; make sure the URL ends in **`/api/current`**. |
-| ❌ Container won't start | `docker compose logs -f truenas-exporter` shows the reason (usually a `.env` typo). |
-| ⚠️ Some metrics are missing | Many collectors only emit when that TrueNAS service/subsystem is enabled — that's normal, not a fault. |
-| ⚠️ Metrics flicker to `NaN` in Grafana | Realtime series update between event ticks; filter them, e.g. `avg((truenas_cpu_user_percent >= 0))`. The Mission Control dashboard already does this. |
+| Connection or TLS error over `wss://` | Self-signed certificate: set `TRUENAS_VERIFY_TLS=false` on a trusted LAN, or point `TRUENAS_CA_FILE` at your CA. |
+| Authentication fails, or `truenas_up 0` | Re-check `TRUENAS_API_KEY` and confirm the URL ends in `/api/current`. |
+| Container will not start | Check `docker compose logs -f truenas-exporter`; this is usually a `.env` typo. |
+| Some metrics are missing | Many collectors only emit when the related TrueNAS service or subsystem is enabled. This is expected. |
+| Metrics flicker to `NaN` in Grafana | Realtime series update between event ticks. Filter them, e.g. `avg((truenas_cpu_user_percent >= 0))`. The Mission Control dashboard already applies this. |
 
-**Health endpoints:**
-- `GET /healthz` — the process is serving HTTP (does *not* mean the last scrape succeeded).
+Health endpoints:
+
+- `GET /healthz` — the process is serving HTTP. It does not guarantee the last scrape succeeded.
 - `GET /readyz` — returns `200` only after a recent successful scrape, otherwise `503`.
 
-Still stuck? [Open an issue](https://github.com/Unknowlars/truenas-scale-api-prometheus-exporter/issues) with your TrueNAS version, the relevant config toggles, and the metric/API response you expected.
+If a metric or API response is missing, [open an issue](https://github.com/Unknowlars/truenas-scale-api-prometheus-exporter/issues) with your TrueNAS version, the relevant config toggles, and the expected result.
 
----
-
-## 🧪 Testing & contributing
+## Testing
 
 ```bash
 python3 -m venv .venv
@@ -311,40 +263,38 @@ pip install -r requirements-dev.txt
 ./scripts/validate.sh
 ```
 
-`validate.sh` runs linting, static typing, branch-covered tests, generated-asset checks, Compose validation, and a container build. Set `RUN_PYTHON_MATRIX=1` to test Python 3.12 / 3.13 / 3.14 in local containers. No hosted CI is used by design.
+`validate.sh` runs linting, static typing, branch-covered tests, generated-asset checks, Compose validation, and a container build. Set `RUN_PYTHON_MATRIX=1` to test Python 3.12, 3.13, and 3.14 in local containers. No hosted CI is used by design.
 
 Repository: [`github.com/Unknowlars/truenas-scale-api-prometheus-exporter`](https://github.com/Unknowlars/truenas-scale-api-prometheus-exporter)
 
----
-
-## 🔬 Advanced — how it works
+## How it works
 
 <details>
-<summary><b>Runtime modes</b> (<code>EXPORTER_MODE</code>)</summary>
+<summary>Runtime modes (<code>EXPORTER_MODE</code>)</summary>
 
 <br>
 
-- **`collector`** (default): a background single-flight scrape publishes complete, atomic snapshots; `/metrics` serves a cached in-memory snapshot (~10 ms) and never blocks on TrueNAS. This prevents torn reads and keeps health/readiness responsive even when the NAS is slow.
-- **`legacy`**: the previous global-registry coordinator, retained for the 5.2 release.
+- `collector` (default): a background single-flight scrape publishes complete, atomic snapshots. `/metrics` serves a cached in-memory snapshot (about 10 ms) and never blocks on TrueNAS, which prevents torn reads and keeps the health and readiness endpoints responsive when the NAS is slow.
+- `legacy`: the previous global-registry coordinator, retained for the 5.2 release.
 
-`truenas_scrape_duration_seconds` measures the *background* collection cycle (often 15–20 s), **not** HTTP latency — short Prometheus scrape timeouts are fine.
+`truenas_scrape_duration_seconds` measures the background collection cycle (typically 15–20 s), not HTTP latency, so short Prometheus scrape timeouts are fine.
 
 </details>
 
 <details>
-<summary><b>Automatic version detection & compatibility profiles</b></summary>
+<summary>Version detection and compatibility profiles</summary>
 
 <br>
 
-On every connection the exporter authenticates, calls `system.version_short` once, and selects a profile **before** any collector call, discovery, or event subscription:
+On every connection the exporter authenticates, calls `system.version_short` once, and selects a profile before any collector call, discovery, or event subscription:
 
 | Detected version | Profile | Behavior |
 | --- | --- | --- |
-| `25.10.*` | `25.10` | Uses the pinned 25.10.2 audited method/event surface. |
-| `26.0.*` | `26.0` | Uses the pinned 26.0.0 surface; suppresses sources removed in v26. |
-| anything else / malformed / detection failure | `unknown` | Fails closed to the reviewed common intersection only. |
+| `25.10.*` | `25.10` | Uses the pinned 25.10.2 audited method and event surface. |
+| `26.0.*` | `26.0` | Uses the pinned 26.0.0 surface and suppresses sources removed in v26. |
+| Anything else, malformed, or detection failure | `unknown` | Fails closed to the reviewed common intersection only. |
 
-Failed detection never *expands* API access, and there is no manual version knob. Sources removed in v26 (`virt.instance.query`, `virt.volume.query`, `nvmet.global.sessions`, `reporting.graphs`, `reporting.netdata_graphs`, `virt.instance.metrics`) are suppressed before transport under `26.0`/`unknown`.
+Failed detection never expands API access, and there is no manual version toggle. Sources removed in v26 (`virt.instance.query`, `virt.volume.query`, `nvmet.global.sessions`, `reporting.graphs`, `reporting.netdata_graphs`, `virt.instance.metrics`) are suppressed before transport under `26.0` and `unknown`.
 
 Default event subscriptions are profile-aware:
 
@@ -356,42 +306,42 @@ Default event subscriptions are profile-aware:
 </details>
 
 <details>
-<summary><b>Safety model & API parity</b></summary>
+<summary>Safety model and API parity</summary>
 
 <br>
 
-- **Read-only, enforced pre-transport.** Every method is checked against a documentation-derived allow-list and a mutating-verb deny-list *before* the WebSocket call. `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, and `EXTRA_METHODS` cannot bypass this policy.
-- **No fabricated data.** When a metric has no safe source in the active profile, or a response is denied/absent/malformed/stale, the series is left **absent or `NaN`** — never a fake `0`.
+- **Read-only, enforced before transport.** Every method is checked against a documentation-derived allow-list and a mutating-verb deny-list before the WebSocket call. `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`, and `EXTRA_METHODS` cannot bypass this policy.
+- **No fabricated data.** When a metric has no safe source in the active profile, or a response is denied, absent, malformed, or stale, the series is left absent or `NaN` rather than reporting a fake `0`.
 - **Secrets suppressed.** Values under password, token, secret, private-key, and credential paths are never emitted, even with generic extraction enabled.
-- **Audited, not sampled.** The committed API snapshot inventories 767 methods across 114 namespaces and 63 event sources — see [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md). The pinned 25.10.2/26.0.0 diff is in [`docs/truenas-25-10-2-and-26-0-0-compatibility/`](docs/truenas-25-10-2-and-26-0-0-compatibility/), and the reliability roadmap in [`docs/modernization/README.md`](docs/modernization/README.md).
+- **Audited, not sampled.** The committed API snapshot inventories 767 methods across 114 namespaces and 63 event sources; see [`docs/api-exporter-parity.md`](docs/api-exporter-parity.md). The pinned 25.10.2/26.0.0 diff is in [`docs/truenas-25-10-2-and-26-0-0-compatibility/`](docs/truenas-25-10-2-and-26-0-0-compatibility/), and the reliability roadmap in [`docs/modernization/README.md`](docs/modernization/README.md).
 
 Existing metric names, types, help text, and label sets are preserved across profiles and releases; replacements ship as compatibility aliases with documented deprecations.
 
 </details>
 
 <details>
-<summary><b>Cardinality & series impact</b></summary>
+<summary>Cardinality and series impact</summary>
 
 <br>
 
 | Option | Default | Impact |
 | --- | --- | --- |
-| `ENABLE_GENERIC_METHOD_METRICS` | `false` | **High** — `METHOD_*` series with `[method, path]` labels; 50k–500k+ with discovery. |
-| `ENABLE_GENERIC_EVENT_METRICS` | `false` | **High** — `EVENT_*` series with `[event, path]` labels. |
-| `AUTO_DISCOVER_METHODS` | `false` | **High** — feeds safe, non-sensitive telemetry candidates through generic extraction. |
-| `SCRAPE_ALL_METRICS` | `false` | **High** — adds reviewed telemetry candidates beyond the base set. |
-| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `0` | **Medium** — up to N extra API calls per scrape for per-dataset snapshot counts. |
-| `ENABLE_FILESYSTEM_LISTDIR` | `false` | **Medium** — per-path directory-listing metrics. |
-| `ENABLE_DATASET_METRICS` | `true` | **Low–Medium** — one gauge set per dataset. |
-| `ENABLE_TASK_METRICS` | `true` | **Low** — one set per configured task. |
-| `ENABLE_IPMI_METRICS` | `true` | **Low** — fixed IPMI sensor set. |
+| `ENABLE_GENERIC_METHOD_METRICS` | `false` | High — `METHOD_*` series with `[method, path]` labels; 50k–500k+ with discovery. |
+| `ENABLE_GENERIC_EVENT_METRICS` | `false` | High — `EVENT_*` series with `[event, path]` labels. |
+| `AUTO_DISCOVER_METHODS` | `false` | High — feeds safe, non-sensitive telemetry candidates through generic extraction. |
+| `SCRAPE_ALL_METRICS` | `false` | High — adds reviewed telemetry candidates beyond the base set. |
+| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `0` | Medium — up to N extra API calls per scrape for per-dataset snapshot counts. |
+| `ENABLE_FILESYSTEM_LISTDIR` | `false` | Medium — per-path directory-listing metrics. |
+| `ENABLE_DATASET_METRICS` | `true` | Low–Medium — one gauge set per dataset. |
+| `ENABLE_TASK_METRICS` | `true` | Low — one set per configured task. |
+| `ENABLE_IPMI_METRICS` | `true` | Low — fixed IPMI sensor set. |
 
-When enabling high-cardinality options, watch `prometheus_tsdb_head_series` and plan TSDB storage. Start with the defaults; enable generic extraction only for bounded debugging.
+When enabling high-cardinality options, monitor `prometheus_tsdb_head_series` and plan TSDB storage accordingly. Start with the defaults and enable generic extraction only for bounded debugging.
 
 </details>
 
 <details>
-<summary><b>Included files</b></summary>
+<summary>Repository layout</summary>
 
 <br>
 
@@ -399,24 +349,16 @@ When enabling high-cardinality options, watch `prometheus_tsdb_head_series` and 
 | --- | --- |
 | `truenas_exporter.py` | Source-checkout compatibility launcher |
 | `src/truenas_exporter/` | Exporter package implementation |
-| `Dockerfile` / `docker-compose.yml` | Container image build & deployment |
+| `Dockerfile`, `docker-compose.yml` | Container image build and deployment |
 | `.env.example` | Example environment configuration |
-| `deploy/prometheus/` | Example Prometheus scrape configs & compose |
+| `deploy/prometheus/` | Example Prometheus scrape configs and compose |
 | `grafana-dashboard/*.json` | Importable Grafana dashboards |
 | `grafana-dashboard/build_mission_control.py` | Mission Control dashboard builder |
 | `scripts/generate_truenas_dashboard.py` | Dashboard generator source |
-| `scripts/validate.sh` | Full local validation suite |
-| `docs/api-exporter-parity.md` / `.json` | Human- & machine-readable API/exporter audit |
+| `scripts/validate.sh` | Local validation suite |
+| `docs/api-exporter-parity.md`, `.json` | Human- and machine-readable API/exporter audit |
 | `docs/metrics-contract.json` | Machine-readable Prometheus metric contract |
-| `docs/modernization/README.md` | Reliability & architecture roadmap |
+| `docs/modernization/README.md` | Reliability and architecture roadmap |
 | `tests/` | Unit tests for collector and event behavior |
 
 </details>
-
----
-
-<div align="center">
-
-**Made for the TrueNAS community.** ⭐ If this helped you, consider starring the repo!
-
-</div>
