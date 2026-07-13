@@ -1,0 +1,86 @@
+# TrueNAS 25.10.2 and 26.0.0 Compatibility
+
+Status: planning complete; implementation not started.
+
+This package is the implementation handoff for supporting the exporter against
+the pinned TrueNAS SCALE 25.10.2 contract and the validated TrueNAS API
+v26.0.0 contract.
+
+## Objective
+
+Deliver one read-only exporter image that automatically supports both API
+families while preserving every existing Prometheus metric name, type, help
+text, and label set.
+
+The first compatibility release maintains existing metrics only. New v26-only
+metrics are deferred until their API safety, schema, permissions, cardinality,
+metric contract, fixture, and dashboard impact are separately approved.
+
+## Authoritative constraints
+
+- 25.10.2 remains the authoritative baseline for existing behavior.
+- Only demonstrably read-only API methods and events may be used.
+- Removed, denied, malformed, or semantically ambiguous data is unavailable;
+  it is never converted into a fabricated zero.
+- No operator-managed API-version toggle is required or recommended.
+- Unknown API versions use a conservative common profile.
+- No GitHub Actions, hosted CI, or automatic publication is added.
+- Release tooling remains dry-run by default.
+
+## Research corrections
+
+The original discovery draft is retained as historical evidence, but these
+decisions supersede ambiguous or incorrect draft statements:
+
+- `app.image.query` exists in the v26.0.0 documentation and remains a possible
+  read-only source after review.
+- The v26 corpus removes the old `virt.instance.*`, `virt.volume.*`, and
+  `virt.global.*` surfaces used by the current exporter, including the
+  `virt.instance.metrics` event.
+- `nvmet.global.sessions` is absent from the pinned v26.0.0 corpus.
+- v26 documents `reporting.graph` and `reporting.netdata_graph`; the current
+  optional generic collector calls `reporting.graphs` and
+  `reporting.netdata_graphs`. They are not interchangeable without bounded
+  graph selection and semantic review.
+- `vm.get_available_memory` and `vm.get_vmemory_in_use` are bytes in v26 and
+  megabytes in the pinned 25.10.2 documentation.
+- `core.subscribe` returns a subscription identifier and `core.unsubscribe`
+  accepts it.
+
+Official references: [TrueNAS 26 API changes](https://www.truenas.com/docs/scale/26/gettingstarted/versionnotes/), [v26 API documentation](https://api.truenas.com/v26.0/), [v26 authentication method](https://api.truenas.com/v26.0/api_methods_auth.login_ex.html), [v26 VM memory method](https://api.truenas.com/v26.0/api_methods_vm.get_available_memory.html), and [v26 subscription method](https://api.truenas.com/v26.0/api_methods_core.subscribe.html).
+
+## Document map
+
+| Document | Purpose | Primary implementers |
+| --- | --- | --- |
+| [01 — API baseline and diff](01-api-baseline-and-diff.md) | Pin provenance, manifests, target-aware generators, and exact method/event diff | Documentation/tooling agent |
+| [02 — Runtime profile and safety](02-runtime-profile-and-safety.md) | Define profile interfaces, version detection, method gating, and unknown-version policy | Runtime/catalog agent |
+| [03 — Collectors and events](03-runtime-collectors-and-events.md) | Implement units, normalizers, removed-source handling, and event lifecycle | Runtime/events agent |
+| [04 — Tests and release](04-tests-fixtures-and-release.md) | Define fixtures, regression tests, validation, smoke tests, and rollout evidence | Test/release agent |
+| [05 — Agent task board](05-agent-task-board.md) | Dependency-ordered, isolated coding tasks and acceptance criteria | All agents |
+
+## Dependency order
+
+```text
+API provenance and diff
+          |
+          v
+Profile and safety interfaces
+       /       \
+      v         v
+Collectors   Event lifecycle
+       \       /
+        v     v
+   Fixtures and regression tests
+              |
+              v
+     Full validation and release evidence
+```
+
+## Definition of done
+
+Compatibility is complete only when both profiles pass sanitized fixtures, all
+existing metric contracts are unchanged, v26 removed methods are absent from
+transport traces, the target-aware generated artifacts pass, the local
+`./scripts/validate.sh` gate passes, and verification evidence is recorded in
+`docs/modernization/README.md`.

@@ -54,6 +54,17 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 TrueNAS 25.10.2/26.0.0 compatibility planning: added the
+  repository-specific implementation package under
+  `docs/truenas-25-10-2-and-26-0-0-compatibility/`, including the corrected
+  API diff, profile/safety design, collector and event plan, fixture/release
+  plan, and dependency-ordered coding-agent task board. No production code,
+  metric contracts, credentials, live responses, or hosted automation were
+  changed. Focused API/runtime/event/transport tests passed (56 tests), and
+  the existing generated metric, dashboard, API-manifest, exporter-parity,
+  and dashboard-validation checks passed. Full `./scripts/validate.sh` and
+  target-aware v26 checks remain implementation-stage gates.
+
 - 2026-07-13 realtime metrics fix: implemented sibling `cpuN` usage and
   temperature parsing, documented user/idle CPU fallbacks, and preserved the
   existing `disls`/`disks`, aggregate-disk, interface, and legacy pool-I/O
