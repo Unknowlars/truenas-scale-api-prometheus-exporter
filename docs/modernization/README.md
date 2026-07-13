@@ -54,6 +54,20 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-13 COMPAT-01A v26 API documentation manifest: added target-aware
+  manifest support while preserving the default 25.10.2 manifest behavior.
+  Generated `docs/truenas-api-v26/MANIFEST.json` for target `26.0.0` with
+  1,092 Markdown files, aggregate SHA-256
+  `32acc76d9ec44593ae17a53571a29b5cbc33526741feff3b2062b645b9c88855`,
+  per-file hashes, provenance noting that `truenas-v26.0.0-docs/` is not
+  checked in, generator metadata, and generation/check commands. The legacy
+  25.10.2 checks `python3 scripts/generate_api_docs_manifest.py --check` and
+  `python3 scripts/generate_api_exporter_parity.py --check` passed unchanged;
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`,
+  `git diff --check`, and `./scripts/validate.sh` also passed. No runtime,
+  metrics, dashboards, fixtures, release behavior, credentials, live API calls,
+  or hosted automation were changed.
+
 - 2026-07-13 TrueNAS 25.10.2/26.0.0 compatibility planning: added the
   repository-specific implementation package under
   `docs/truenas-25-10-2-and-26-0-0-compatibility/`, including the corrected

@@ -8,6 +8,52 @@ Hard gate: no runtime, transport, collector, event, metric-contract, dashboard,
 or fixture implementation may start until COMPAT-01A and COMPAT-01B are
 complete and validated.
 
+## Agent execution status
+
+Update this table before and after each task. Agents must update only their own
+task row, except to add a blocking note that directly affects their assigned
+task.
+
+Allowed statuses: `not started`, `in progress`, `blocked`, `needs review`,
+`complete`.
+
+| Task | Status | Owner/session | Started | Finished | Evidence | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| COMPAT-01A | complete | Codex GPT-5 / session 2026-07-13T13:52+02:00 | 2026-07-13T13:52:00+02:00 | 2026-07-13T13:56:31+02:00 | `python3 scripts/generate_api_docs_manifest.py --check`; `python3 scripts/generate_api_exporter_parity.py --check`; `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`; `git diff -- docs/truenas-api/MANIFEST.json` empty; `git diff --check`; `./scripts/validate.sh` | v26 manifest: `docs/truenas-api-v26/MANIFEST.json`; dependent runtime/profile tasks remain blocked until COMPAT-01B |
+| COMPAT-01B | blocked | — | — | — | — | Requires COMPAT-01A |
+| COMPAT-02 | blocked | — | — | — | — | Requires COMPAT-01A and COMPAT-01B |
+| COMPAT-03 | blocked | — | — | — | — | Requires COMPAT-02 |
+| COMPAT-04 | blocked | — | — | — | — | Requires COMPAT-02 and COMPAT-03 |
+| COMPAT-05 | blocked | — | — | — | — | Requires COMPAT-03 |
+| COMPAT-06 | blocked | — | — | — | — | Requires COMPAT-02 and COMPAT-03 |
+| COMPAT-07 | blocked | — | — | — | — | Requires COMPAT-01A through COMPAT-06 |
+| COMPAT-08 | blocked | — | — | — | — | Requires all prior tasks |
+
+### Status update rules
+
+Before starting a task:
+
+- set `Status` to `in progress`;
+- set `Owner/session` to the agent name or session id;
+- set `Started` to the current date/time;
+- leave `Finished` as `—`.
+
+When finishing a task:
+
+- set `Status` to `needs review` if implementation is complete but acceptance
+  checks or independent review are not complete;
+- set `Status` to `complete` only after all acceptance checks pass;
+- set `Finished` to the current date/time;
+- set `Evidence` to exact commands/artifacts, for example
+  `v26 manifest check passed; ./scripts/validate.sh passed`;
+- put any blocker, follow-up, or dependency note in `Notes`.
+
+When blocked:
+
+- set `Status` to `blocked`;
+- put the exact blocker and required evidence/action in `Notes`;
+- do not continue into dependent tasks.
+
 ## COMPAT-01A — Pin v26 documentation provenance
 
 **Prerequisite:** none.
