@@ -77,6 +77,17 @@ below; it is not treated as a code or test pass.
   `srw-rw---- root docker`, while user `aeva` is not in group `docker` and
   non-interactive sudo is unavailable.
 - Live smoke was not run because no read-only TrueNAS API key was provided.
+- 2026-07-13 live observation (TrueNAS SCALE 25.10.3, read-only `/metrics`
+  scrapes only): realtime-sourced gauges (`truenas_cpu_*_percent`, several
+  `truenas_memory_*_bytes`, SMB/NFS activity, ZFS ARC rate gauges)
+  intermittently report `NaN` between event updates, which fragments Grafana
+  time series; `truenas_zfs_*_hit_ratio` gauges read 0.0/NaN even while the
+  matching `*_hits_per_second` gauges show load; and
+  `truenas_snapshot_oldest_timestamp_seconds` was NaN with 150 snapshots
+  present. Dashboards work around all three (see README metric behavior
+  notes). A future reliability candidate is suppressing or last-known-value
+  holding NaN samples at the exporter, subject to the locked metric-contract
+  rules.
 
 - 2026-07-12 review fixes: 78 passed, 1 skipped; branch coverage 49.26%; Ruff,
   mypy, metric-contract, dashboard, and fixture checks passed through the local

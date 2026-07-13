@@ -248,9 +248,73 @@ Replace `192.168.0.238:9108` with your exporter host and port. The `forward_to` 
 
 The repo also includes `deploy/prometheus/docker-compose.prometheus.yml` and `deploy/prometheus/prometheus.yml` for local experiments. Update those targets before publishing or using them outside your own environment.
 
-## Grafana Dashboard
+## Grafana Dashboards
 
-The repository includes a ready-to-import dashboard in `grafana-dashboard/operations-center-dashboard.json`.
+The repository includes two importable dashboards in `grafana-dashboard/`:
+
+| Dashboard | File | Requires |
+| --- | --- | --- |
+| TrueNAS · Mission Control (tabbed flagship) | `truenas-mission-control.json` | Grafana 13+ (dynamic dashboards, schema v2) |
+| TrueNAS Operations Center (classic rows) | `operations-center-dashboard.json` | Any recent Grafana |
+
+### Mission Control (Grafana 13+)
+
+A 12-tab dynamic dashboard covering the full metric surface, with a hero
+Overview tab for the 30-second health check. It uses the Grafana dashboard
+schema v2 (`dashboard.grafana.app/v2beta1`), so it needs Grafana 13 or later.
+
+1. Open Grafana and go to `Dashboards` -> `New` -> `Import`.
+2. Upload `grafana-dashboard/truenas-mission-control.json`.
+3. Choose your Prometheus data source in the `Datasource` variable after import.
+
+Alternatively push it via the App Platform API:
+
+```bash
+curl -X POST -H "Authorization: Bearer $GRAFANA_SA_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data-binary @grafana-dashboard/truenas-mission-control.json \
+  "https://<grafana-host>/apis/dashboard.grafana.app/v2beta1/namespaces/default/dashboards"
+```
+
+The dashboard is generated code: edit and re-run
+`grafana-dashboard/build_mission_control.py` (no dependencies beyond Python 3)
+instead of hand-editing the JSON. The builder harvests panel queries from the
+classic Operations Center dashboard, so query fixes should land there first.
+
+Builder notes:
+
+- It probes the live exporter (`TRUENAS_EXPORTER_URL`, default
+  `http://192.168.0.247:9108/metrics`) and moves panels whose metrics are
+  never emitted on your system into a collapsed "Not collected on this
+  system" row per tab. Observed metric names accumulate in the gitignored
+  `grafana-dashboard/.metric-names-cache.json`.
+- To update an already-imported copy, delete the old dashboard in Grafana and
+  import the regenerated JSON again (it keeps the same
+  `metadata.name`/URL), or `PUT` it to
+  `/apis/dashboard.grafana.app/v2beta1/namespaces/default/dashboards/truenas-mission-control`.
+
+### Metric behavior notes (relevant to dashboards)
+
+Observed against TrueNAS SCALE 25.10.3 (July 2026):
+
+- `/metrics` serves a cached in-memory snapshot (~10 ms response). The
+  `truenas_scrape_duration_seconds` metric measures the background collection
+  cycle (~17 s), not HTTP latency — short Prometheus scrape timeouts are fine.
+- Realtime metrics (`truenas_cpu_*_percent`, several
+  `truenas_memory_*_bytes`, SMB/NFS activity, ZFS ARC rates) intermittently
+  report `NaN` between event updates. Grafana renders NaN samples as line
+  breaks; dashboard queries should drop them with a comparison filter, e.g.
+  `avg((truenas_cpu_user_percent >= 0))`. The Mission Control builder applies
+  this automatically to all timeseries panels.
+- The `truenas_zfs_*_hit_ratio` gauges are unreliable (0.0 or NaN even under
+  load); compute hit percentages from the corresponding
+  `*_hits_per_second` / `*_misses_per_second` gauges instead.
+- Some metrics are emitted only when their subject exists or something is
+  happening (`truenas_job_*`, `truenas_api_call_errors_total`,
+  `truenas_certificate_*`, per-core CPU metrics, Incus/VM metrics). Zero
+  samples for these is normal, not an exporter fault.
+
+### Operations Center (classic)
 
 1. Open Grafana and go to `Dashboards` -> `Import`.
 2. Upload `grafana-dashboard/operations-center-dashboard.json`.
@@ -268,7 +332,9 @@ The repository includes a ready-to-import dashboard in `grafana-dashboard/operat
 | `docker-compose.yml` | Main Docker Compose deployment |
 | `.env.example` | Example environment configuration |
 | `deploy/prometheus/prometheus.truenas-example.yml` | Minimal Prometheus scrape config |
-| `grafana-dashboard/operations-center-dashboard.json` | Importable Grafana dashboard |
+| `grafana-dashboard/operations-center-dashboard.json` | Importable Grafana dashboard (classic) |
+| `grafana-dashboard/truenas-mission-control.json` | Tabbed flagship dashboard (Grafana 13+, schema v2) |
+| `grafana-dashboard/build_mission_control.py` | Mission Control dashboard builder |
 | `scripts/generate_truenas_dashboard.py` | Dashboard generator source |
 | `scripts/convert_truenas_api_docs_to_markdown.py` | Offline API docs converter |
 | `scripts/generate_api_exporter_parity.py` | Exhaustive API/exporter parity inventory generator |

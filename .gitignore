@@ -30,3 +30,4 @@ prometheus_metrics.txt
 promthues_metrics.txt
 truenas_exporter_old.py
 truenas-v25.10.2-docs/
+grafana-dashboard/.metric-names-cache.json
