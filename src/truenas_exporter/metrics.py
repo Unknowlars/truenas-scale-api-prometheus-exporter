@@ -461,6 +461,7 @@ INTERFACE_CHECKIN_WAITING_SECONDS = declare_gauge("INTERFACE_CHECKIN_WAITING_SEC
 # ---------------------------------------------------------------------------
 APP_AVAILABLE_SPACE_BYTES = declare_gauge("APP_AVAILABLE_SPACE_BYTES", "truenas_app_available_space_bytes", "Bytes available for new app installs")
 APP_WEBDAV_SHARE_COUNT = declare_gauge("APP_WEBDAV_SHARE_COUNT", "truenas_webdav_share_count", "Number of WebDAV (WebShare) shares")
+WEBSHARE_ENABLED = declare_gauge("WEBSHARE_ENABLED", "truenas_webshare_enabled", "1 if WebShare passkey authentication is enabled (v26+)")
 
 # ---------------------------------------------------------------------------
 # UPS

@@ -17,7 +17,6 @@ ProfileName = Literal["25.10", "26.0", "unknown"]
 
 V26_REMOVED_METHODS: frozenset[str] = frozenset(
     {
-        "nvmet.global.sessions",
         "reporting.graphs",
         "reporting.netdata_graphs",
         "virt.global.config",
@@ -26,7 +25,18 @@ V26_REMOVED_METHODS: frozenset[str] = frozenset(
         "virt.volume.query",
     }
 )
+# nvmet.global.sessions is absent from the pinned v26 doc corpus but is still
+# served by live 26.0.0-BETA.2 (returns []), so it is intentionally NOT treated
+# as removed — the exporter keeps populating truenas_nvmet_session_count on v26.
 V26_REMOVED_EVENTS: frozenset[str] = frozenset({"virt.instance.metrics"})
+
+# v26 replaced the virt.* Incus/LXD API with container.*/lxc.*. These methods and
+# the container.metrics event do not exist on 25.10, so they are added to the 26.0
+# profile only (never the 25.10 profile).
+V26_ADDED_METHODS: frozenset[str] = frozenset(
+    {"container.query", "sharing.webshare.query", "smb.status", "webshare.config"}
+)
+V26_ADDED_EVENTS: frozenset[str] = frozenset({"container.metrics"})
 
 PROFILE_PROHIBITED_METHODS: frozenset[str] = frozenset(
     {
@@ -88,10 +98,12 @@ class CompatibilityProfile:
 
 _V25_METHODS = READ_ONLY_METHOD_ALLOWLIST - PROFILE_PROHIBITED_METHODS
 _V25_TELEMETRY_METHODS = TELEMETRY_CANDIDATE_METHOD_ALLOWLIST - PROFILE_PROHIBITED_METHODS
-_V26_METHODS = _V25_METHODS - V26_REMOVED_METHODS
+_V26_METHODS = (_V25_METHODS - V26_REMOVED_METHODS) | V26_ADDED_METHODS
 _V26_TELEMETRY_METHODS = _V25_TELEMETRY_METHODS - V26_REMOVED_METHODS
-_V25_EVENTS = frozenset(DEFAULT_SAFE_EVENT_SUBSCRIPTIONS)
-_V26_EVENTS = _V25_EVENTS - V26_REMOVED_EVENTS
+# DEFAULT_SAFE_EVENT_SUBSCRIPTIONS carries both virt.instance.metrics (v25) and
+# container.metrics (v26); each profile keeps only the name its version exposes.
+_V25_EVENTS = frozenset(DEFAULT_SAFE_EVENT_SUBSCRIPTIONS) - V26_ADDED_EVENTS
+_V26_EVENTS = frozenset(DEFAULT_SAFE_EVENT_SUBSCRIPTIONS) - V26_REMOVED_EVENTS
 
 # The pinned 25.10.2 documentation says these VM memory methods return
 # "megabytes", but a live TrueNAS SCALE 25.10.3 system returns raw *bytes*
@@ -118,7 +130,9 @@ PROFILE_25_10 = CompatibilityProfile(
     reviewed_methods=_V25_METHODS,
     telemetry_methods=_V25_TELEMETRY_METHODS,
     reviewed_events=_V25_EVENTS,
-    default_event_subscriptions=DEFAULT_SAFE_EVENT_SUBSCRIPTIONS,
+    default_event_subscriptions=tuple(
+        event for event in DEFAULT_SAFE_EVENT_SUBSCRIPTIONS if event in _V25_EVENTS
+    ),
     removed_methods=frozenset(),
     removed_events=frozenset(),
     query_limit_methods=QUERY_LIMIT_METHODS,

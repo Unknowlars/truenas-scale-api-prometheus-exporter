@@ -54,6 +54,37 @@ below; it is not treated as a code or test pass.
 
 ## Verification evidence
 
+- 2026-07-14 Mission Control dashboard review: added
+  `docs/mission-control-dashboard-review.md` after reviewing the 27 rendered
+  screenshots in `grafana-dashboard/screenshots/` and the generated
+  `dashboard.grafana.app/v2beta1` resource at
+  `grafana-dashboard/truenas-mission-control.json`. Structural checks found
+  312 v2 panel elements, 312 layout references, no orphan or missing
+  references, no duplicate panel IDs, and no 24-column grid overflow.
+  `python3 scripts/validate_dashboard.py grafana-dashboard/truenas-mission-control.json`
+  passed (`dashboard_ok panels=313 metric_references=282`). The required
+  `./scripts/validate.sh` gate was attempted and passed ruff/mypy, the full
+  Python test suite (`176 passed`, 90.47% coverage), and dashboard validation,
+  then failed in the API parity generator with `ValueError: runtime event
+  catalog differs from documented event leaves`. The failure is recorded as a
+  host/worktree blocker for this review rather than a dashboard-report failure;
+  pre-existing runtime/event-catalog changes were present before the report
+  edit and were not reverted.
+
+- 2026-07-14 Mission Control independent second pass: updated the report with
+  screenshot-backed findings for inverted update/app/job mappings, misleading
+  API success and lifetime-error panels, additional no-data and alias failures,
+  and disk/pool/temperature/snapshot values that require exporter data-quality
+  investigation. Reconfirmed 312 elements, 312 unique layout references, 12
+  tabs, 11 variables, no missing/orphan references, duplicate IDs, or grid
+  overflow, and all 406 Prometheus panel queries using
+  `instance=~"$instance"`. JSON parsing, dashboard validation
+  (`dashboard_ok panels=313 metric_references=282`), and `git diff --check`
+  passed. The required `./scripts/validate.sh` currently passes ruff, mypy, 185
+  tests, and 90.44% coverage, then fails with `Metric contract is out of date:
+  regenerate metrics-contract.json`. This is recorded as a failed full gate;
+  unrelated runtime, test, and screenshot changes were not reverted.
+
 - 2026-07-13 live-review VM memory unit fix: a read-only scrape of a live
   TrueNAS SCALE 25.10.3 system (the operator's running exporter) showed
   `truenas_vm_available_memory_bytes` reporting ~1.83e16 (16.2 PiB). Direct

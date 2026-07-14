@@ -686,7 +686,7 @@
           "type": "stat",
           "id": 12,
           "title": "Update",
-          "description": "Update available.",
+          "description": "TrueNAS update available.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -712,14 +712,14 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "green",
                       "index": 0,
-                      "text": "No"
+                      "text": "Current"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "yellow",
                       "index": 1,
-                      "text": "Yes"
+                      "text": "\u2b06 Available"
                     }
                   }
                 }
@@ -2227,9 +2227,9 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
-                      "text": "No"
+                      "text": "Not reported"
                     },
                     "1": {
                       "color": "green",
@@ -2278,7 +2278,7 @@
         {
           "type": "timeseries",
           "id": 35,
-          "title": "Documented Memory Capacity Over Time",
+          "title": "Memory Capacity Over Time",
           "description": "Physical memory fields explicitly documented by reporting.realtime; used is total minus available.",
           "datasource": {
             "type": "prometheus",
@@ -6536,7 +6536,7 @@
           "type": "stat",
           "id": 83,
           "title": "Pending Changes",
-          "description": "Unapplied network changes.",
+          "description": "Unapplied network interface changes.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -6562,14 +6562,14 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "green",
                       "index": 0,
-                      "text": "No"
+                      "text": "None"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "orange",
                       "index": 1,
-                      "text": "Yes"
+                      "text": "Pending"
                     }
                   }
                 }
@@ -7603,7 +7603,7 @@
           "type": "stat",
           "id": 99,
           "title": "SMB1",
-          "description": "Legacy SMB1 protocol enabled.",
+          "description": "Legacy SMB1 protocol enabled (insecure when on).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -7629,14 +7629,14 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "green",
                       "index": 0,
-                      "text": "No"
+                      "text": "Disabled"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "red",
                       "index": 1,
-                      "text": "Yes"
+                      "text": "\u26a0 Enabled"
                     }
                   }
                 }
@@ -7707,14 +7707,14 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "green",
                       "index": 0,
-                      "text": "No"
+                      "text": "Disabled"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "red",
                       "index": 1,
-                      "text": "Yes"
+                      "text": "\u26a0 Enabled"
                     }
                   }
                 }
@@ -7785,12 +7785,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -7834,8 +7834,334 @@
           "pluginVersion": "12.4.0"
         },
         {
-          "type": "state-timeline",
+          "type": "stat",
           "id": 102,
+          "title": "SMB Sessions",
+          "description": "Active SMB sessions (live, from smb.status).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "sum(truenas_smb_session_count{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 168,
+            "w": 5,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 103,
+          "title": "SMB Conns",
+          "description": "Active SMB tree connections (live, from smb.status).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "sum(truenas_smb_connection_count{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 5,
+            "y": 168,
+            "w": 5,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 104,
+          "title": "SMB Open Files",
+          "description": "Open SMB file locks (live, from smb.status).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "sum(truenas_smb_open_file_count{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 10,
+            "y": 168,
+            "w": 5,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 105,
+          "title": "WebShare",
+          "description": "Configured WebShare (WebDAV) shares (v26+).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "sum(truenas_webdav_share_count{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 15,
+            "y": 168,
+            "w": 5,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "stat",
+          "id": 106,
+          "title": "WebShare Auth",
+          "description": "WebShare passkey authentication enabled (v26+).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "max(truenas_webshare_enabled{instance=~\"$instance\"})",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "color": "#808080",
+                      "index": 0,
+                      "text": "Disabled"
+                    },
+                    "1": {
+                      "color": "green",
+                      "index": 1,
+                      "text": "Enabled"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 20,
+            "y": 168,
+            "w": 4,
+            "h": 4
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "state-timeline",
+          "id": 107,
           "title": "Service Runtime State",
           "description": "Service running/stopped history.",
           "datasource": {
@@ -7909,7 +8235,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 168,
+            "y": 172,
             "w": 12,
             "h": 8
           },
@@ -7933,7 +8259,7 @@
         },
         {
           "type": "piechart",
-          "id": 103,
+          "id": 108,
           "title": "Protocol Activity Mix",
           "description": "Relative protocol activity.",
           "datasource": {
@@ -7987,7 +8313,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 168,
+            "y": 172,
             "w": 12,
             "h": 8
           },
@@ -8021,7 +8347,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 104,
+          "id": 109,
           "title": "SMB Encryption Mode",
           "description": "Configured SMB transport-encryption mode.",
           "datasource": {
@@ -8068,7 +8394,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 176,
+            "y": 180,
             "w": 24,
             "h": 8
           },
@@ -8092,7 +8418,7 @@
         },
         {
           "type": "stat",
-          "id": 105,
+          "id": 110,
           "title": "Portals",
           "description": "iSCSI portals.",
           "datasource": {
@@ -8131,7 +8457,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8154,7 +8480,7 @@
         },
         {
           "type": "stat",
-          "id": 106,
+          "id": 111,
           "title": "Extents",
           "description": "iSCSI extents.",
           "datasource": {
@@ -8193,7 +8519,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8216,7 +8542,7 @@
         },
         {
           "type": "stat",
-          "id": 107,
+          "id": 112,
           "title": "Initiators",
           "description": "iSCSI initiator groups.",
           "datasource": {
@@ -8255,7 +8581,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8278,7 +8604,7 @@
         },
         {
           "type": "stat",
-          "id": 108,
+          "id": 113,
           "title": "iSCSI Sess",
           "description": "Active iSCSI sessions.",
           "datasource": {
@@ -8317,7 +8643,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8340,9 +8666,9 @@
         },
         {
           "type": "stat",
-          "id": 109,
+          "id": 114,
           "title": "ALUA",
-          "description": "iSCSI ALUA protocol.",
+          "description": "iSCSI ALUA protocol (optional).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -8368,12 +8694,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -8395,7 +8721,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8418,9 +8744,9 @@
         },
         {
           "type": "stat",
-          "id": 110,
+          "id": 115,
           "title": "iSER",
-          "description": "iSCSI iSER (RDMA) protocol.",
+          "description": "iSCSI iSER (RDMA) protocol (optional).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -8446,12 +8772,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -8473,7 +8799,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8496,9 +8822,9 @@
         },
         {
           "type": "stat",
-          "id": 111,
+          "id": 116,
           "title": "SMB Multi",
-          "description": "SMB multichannel.",
+          "description": "SMB multichannel (optional).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -8524,12 +8850,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -8551,7 +8877,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8574,9 +8900,9 @@
         },
         {
           "type": "stat",
-          "id": 112,
+          "id": 117,
           "title": "NFSv4 On",
-          "description": "NFSv4 enabled.",
+          "description": "NFSv4 enabled (optional).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -8602,12 +8928,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -8629,7 +8955,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 184,
+            "y": 188,
             "w": 3,
             "h": 4
           },
@@ -8652,7 +8978,7 @@
         },
         {
           "type": "stat",
-          "id": 113,
+          "id": 118,
           "title": "iSER Sess",
           "description": "Active iSCSI sessions using iSER.",
           "datasource": {
@@ -8691,7 +9017,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 188,
+            "y": 192,
             "w": 4,
             "h": 4
           },
@@ -8714,7 +9040,7 @@
         },
         {
           "type": "stat",
-          "id": 114,
+          "id": 119,
           "title": "Offload Sess",
           "description": "Active iSCSI sessions using offload.",
           "datasource": {
@@ -8753,7 +9079,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 188,
+            "y": 192,
             "w": 5,
             "h": 4
           },
@@ -8776,7 +9102,7 @@
         },
         {
           "type": "stat",
-          "id": 115,
+          "id": 120,
           "title": "ImmediateData",
           "description": "Active iSCSI sessions with immediate-data enabled.",
           "datasource": {
@@ -8815,7 +9141,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 188,
+            "y": 192,
             "w": 5,
             "h": 4
           },
@@ -8838,7 +9164,7 @@
         },
         {
           "type": "stat",
-          "id": 116,
+          "id": 121,
           "title": "NFS Threads",
           "description": "NFS server threads.",
           "datasource": {
@@ -8877,7 +9203,7 @@
           },
           "gridPos": {
             "x": 14,
-            "y": 188,
+            "y": 192,
             "w": 5,
             "h": 4
           },
@@ -8900,7 +9226,7 @@
         },
         {
           "type": "stat",
-          "id": 117,
+          "id": 122,
           "title": "Used Disks",
           "description": "Disks currently in use by pools.",
           "datasource": {
@@ -8939,7 +9265,7 @@
           },
           "gridPos": {
             "x": 19,
-            "y": 188,
+            "y": 192,
             "w": 5,
             "h": 4
           },
@@ -8962,7 +9288,7 @@
         },
         {
           "type": "table",
-          "id": 118,
+          "id": 123,
           "title": "Service Inventory",
           "description": "Service runtime state and boot enablement.",
           "datasource": {
@@ -9090,7 +9416,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 192,
+            "y": 196,
             "w": 24,
             "h": 10
           },
@@ -9164,13 +9490,13 @@
     },
     {
       "type": "row",
-      "id": 119,
+      "id": 124,
       "title": "Apps & Docker",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 120,
+          "id": 125,
           "title": "Apps",
           "description": "Installed apps.",
           "datasource": {
@@ -9209,7 +9535,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9232,7 +9558,7 @@
         },
         {
           "type": "stat",
-          "id": 121,
+          "id": 126,
           "title": "Avail Space",
           "description": "Space available for new apps.",
           "datasource": {
@@ -9271,7 +9597,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9294,7 +9620,7 @@
         },
         {
           "type": "stat",
-          "id": 122,
+          "id": 127,
           "title": "Docker Imgs",
           "description": "Docker images.",
           "datasource": {
@@ -9333,7 +9659,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9356,7 +9682,7 @@
         },
         {
           "type": "stat",
-          "id": 123,
+          "id": 128,
           "title": "Docker Nets",
           "description": "Docker networks.",
           "datasource": {
@@ -9395,7 +9721,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9418,7 +9744,7 @@
         },
         {
           "type": "stat",
-          "id": 124,
+          "id": 129,
           "title": "Docker Up",
           "description": "Docker service running.",
           "datasource": {
@@ -9473,7 +9799,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9496,7 +9822,7 @@
         },
         {
           "type": "stat",
-          "id": 125,
+          "id": 130,
           "title": "NVIDIA GPU",
           "description": "NVIDIA GPU available.",
           "datasource": {
@@ -9524,9 +9850,9 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
-                      "text": "No"
+                      "text": "Not present"
                     },
                     "1": {
                       "color": "green",
@@ -9551,7 +9877,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9574,7 +9900,7 @@
         },
         {
           "type": "stat",
-          "id": 126,
+          "id": 131,
           "title": "Catalog Trains",
           "description": "App catalog trains.",
           "datasource": {
@@ -9613,7 +9939,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9636,7 +9962,7 @@
         },
         {
           "type": "stat",
-          "id": 127,
+          "id": 132,
           "title": "Pref Trains",
           "description": "Preferred catalog trains configured.",
           "datasource": {
@@ -9675,7 +10001,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 203,
+            "y": 207,
             "w": 3,
             "h": 4
           },
@@ -9698,7 +10024,7 @@
         },
         {
           "type": "stat",
-          "id": 128,
+          "id": 133,
           "title": "DH RL Error",
           "description": "DockerHub rate-limit endpoint currently reports an error.",
           "datasource": {
@@ -9757,7 +10083,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 207,
+            "y": 211,
             "w": 4,
             "h": 4
           },
@@ -9780,7 +10106,7 @@
         },
         {
           "type": "stat",
-          "id": 129,
+          "id": 134,
           "title": "DH Rem %",
           "description": "DockerHub pull-limit budget remaining percentage.",
           "datasource": {
@@ -9827,7 +10153,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 207,
+            "y": 211,
             "w": 5,
             "h": 4
           },
@@ -9850,7 +10176,7 @@
         },
         {
           "type": "stat",
-          "id": 130,
+          "id": 135,
           "title": "DockerHub Rem",
           "description": "DockerHub pull requests remaining in current window.",
           "datasource": {
@@ -9889,7 +10215,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 207,
+            "y": 211,
             "w": 5,
             "h": 4
           },
@@ -9912,7 +10238,7 @@
         },
         {
           "type": "stat",
-          "id": 131,
+          "id": 136,
           "title": "DockerHub Limit",
           "description": "DockerHub pull limit window total requests.",
           "datasource": {
@@ -9951,7 +10277,7 @@
           },
           "gridPos": {
             "x": 14,
-            "y": 207,
+            "y": 211,
             "w": 5,
             "h": 4
           },
@@ -9974,7 +10300,7 @@
         },
         {
           "type": "stat",
-          "id": 132,
+          "id": 137,
           "title": "DH Window Left",
           "description": "Seconds remaining in the current DockerHub pull-limit window.",
           "datasource": {
@@ -10013,7 +10339,7 @@
           },
           "gridPos": {
             "x": 19,
-            "y": 207,
+            "y": 211,
             "w": 5,
             "h": 4
           },
@@ -10036,7 +10362,7 @@
         },
         {
           "type": "stat",
-          "id": 133,
+          "id": 138,
           "title": "App Upgrades",
           "description": "Apps with a newer chart or package version available.",
           "datasource": {
@@ -10075,7 +10401,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 211,
+            "y": 215,
             "w": 6,
             "h": 4
           },
@@ -10098,7 +10424,7 @@
         },
         {
           "type": "stat",
-          "id": 134,
+          "id": 139,
           "title": "Custom Apps",
           "description": "Apps deployed as custom apps.",
           "datasource": {
@@ -10137,7 +10463,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 211,
+            "y": 215,
             "w": 6,
             "h": 4
           },
@@ -10160,7 +10486,7 @@
         },
         {
           "type": "stat",
-          "id": 135,
+          "id": 140,
           "title": "Migrated Apps",
           "description": "Apps migrated from the older Kubernetes stack.",
           "datasource": {
@@ -10199,7 +10525,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 211,
+            "y": 215,
             "w": 6,
             "h": 4
           },
@@ -10222,7 +10548,7 @@
         },
         {
           "type": "stat",
-          "id": 136,
+          "id": 141,
           "title": "Img Updates",
           "description": "Apps with container image updates available.",
           "datasource": {
@@ -10261,7 +10587,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 211,
+            "y": 215,
             "w": 6,
             "h": 4
           },
@@ -10284,7 +10610,7 @@
         },
         {
           "type": "bargauge",
-          "id": 137,
+          "id": 142,
           "title": "Top Apps by CPU",
           "description": "Top CPU consumers.",
           "datasource": {
@@ -10333,7 +10659,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 215,
+            "y": 219,
             "w": 12,
             "h": 8
           },
@@ -10366,7 +10692,7 @@
         },
         {
           "type": "bargauge",
-          "id": 138,
+          "id": 143,
           "title": "Top Apps by Memory",
           "description": "Top memory consumers.",
           "datasource": {
@@ -10414,7 +10740,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 215,
+            "y": 219,
             "w": 12,
             "h": 8
           },
@@ -10447,7 +10773,7 @@
         },
         {
           "type": "timeseries",
-          "id": 139,
+          "id": 144,
           "title": "App CPU Over Time",
           "description": "App CPU usage trends.",
           "datasource": {
@@ -10512,7 +10838,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 223,
+            "y": 227,
             "w": 12,
             "h": 8
           },
@@ -10537,7 +10863,7 @@
         },
         {
           "type": "timeseries",
-          "id": 140,
+          "id": 145,
           "title": "App Memory Over Time",
           "description": "App memory usage trends.",
           "datasource": {
@@ -10602,7 +10928,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 223,
+            "y": 227,
             "w": 12,
             "h": 8
           },
@@ -10627,7 +10953,7 @@
         },
         {
           "type": "timeseries",
-          "id": 141,
+          "id": 146,
           "title": "App Block I/O",
           "description": "Read/write volume by app.",
           "datasource": {
@@ -10701,7 +11027,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 231,
+            "y": 235,
             "w": 12,
             "h": 8
           },
@@ -10726,7 +11052,7 @@
         },
         {
           "type": "timeseries",
-          "id": 142,
+          "id": 147,
           "title": "App Network",
           "description": "App network ingress/egress.",
           "datasource": {
@@ -10800,7 +11126,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 231,
+            "y": 235,
             "w": 12,
             "h": 8
           },
@@ -10825,7 +11151,7 @@
         },
         {
           "type": "bargauge",
-          "id": 143,
+          "id": 148,
           "title": "Apps by Container Count",
           "description": "Apps with the largest active workload footprint.",
           "datasource": {
@@ -10873,7 +11199,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 239,
+            "y": 243,
             "w": 8,
             "h": 8
           },
@@ -10906,7 +11232,7 @@
         },
         {
           "type": "piechart",
-          "id": 144,
+          "id": 149,
           "title": "App State Distribution",
           "description": "Current state mix across installed apps.",
           "datasource": {
@@ -10942,7 +11268,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 239,
+            "y": 243,
             "w": 8,
             "h": 8
           },
@@ -10976,7 +11302,7 @@
         },
         {
           "type": "piechart",
-          "id": 145,
+          "id": 150,
           "title": "App Container State Distribution",
           "description": "Current runtime state mix across app containers.",
           "datasource": {
@@ -11012,7 +11338,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 239,
+            "y": 243,
             "w": 8,
             "h": 8
           },
@@ -11046,7 +11372,7 @@
         },
         {
           "type": "table",
-          "id": 146,
+          "id": 151,
           "title": "App Inventory",
           "description": "App resource footprint, update posture, and exposure summary.",
           "datasource": {
@@ -11226,14 +11552,14 @@
                         "type": "value",
                         "options": {
                           "0": {
-                            "color": "red",
+                            "color": "#808080",
                             "index": 0,
-                            "text": "No"
+                            "text": "\u2014"
                           },
                           "1": {
-                            "color": "green",
+                            "color": "yellow",
                             "index": 1,
-                            "text": "Yes"
+                            "text": "Available"
                           }
                         }
                       }
@@ -11260,14 +11586,14 @@
                         "type": "value",
                         "options": {
                           "0": {
-                            "color": "red",
+                            "color": "#808080",
                             "index": 0,
-                            "text": "No"
+                            "text": "\u2014"
                           },
                           "1": {
-                            "color": "green",
+                            "color": "yellow",
                             "index": 1,
-                            "text": "Yes"
+                            "text": "Available"
                           }
                         }
                       }
@@ -11279,7 +11605,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 247,
+            "y": 251,
             "w": 24,
             "h": 10
           },
@@ -11356,20 +11682,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 202,
+        "y": 206,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 147,
+      "id": 152,
       "title": "Virtualization (VMs & Incus)",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 148,
+          "id": 153,
           "title": "VM Count",
           "description": "Virtual machines.",
           "datasource": {
@@ -11408,7 +11734,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11431,7 +11757,7 @@
         },
         {
           "type": "stat",
-          "id": 149,
+          "id": 154,
           "title": "Virt Support",
           "description": "KVM/HW virt available.",
           "datasource": {
@@ -11459,12 +11785,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -11486,7 +11812,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11509,7 +11835,7 @@
         },
         {
           "type": "stat",
-          "id": 150,
+          "id": 155,
           "title": "Virt Details",
           "description": "Virtualization support from vm.virtualization_details.",
           "datasource": {
@@ -11537,12 +11863,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -11564,7 +11890,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11587,7 +11913,7 @@
         },
         {
           "type": "stat",
-          "id": 151,
+          "id": 156,
           "title": "Virt Error",
           "description": "vm.virtualization_details currently reports an error.",
           "datasource": {
@@ -11615,14 +11941,14 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "green",
                       "index": 0,
-                      "text": "No"
+                      "text": "OK"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "red",
                       "index": 1,
-                      "text": "Yes"
+                      "text": "Error"
                     }
                   }
                 }
@@ -11642,7 +11968,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11665,7 +11991,7 @@
         },
         {
           "type": "stat",
-          "id": 152,
+          "id": 157,
           "title": "Max vCPUs",
           "description": "Maximum supported vCPUs.",
           "datasource": {
@@ -11704,7 +12030,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11727,7 +12053,7 @@
         },
         {
           "type": "stat",
-          "id": 153,
+          "id": 158,
           "title": "VM Avail RAM",
           "description": "Available memory for VMs.",
           "datasource": {
@@ -11766,7 +12092,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11789,7 +12115,7 @@
         },
         {
           "type": "stat",
-          "id": 154,
+          "id": 159,
           "title": "Incus Inst",
           "description": "Incus/LXD instances.",
           "datasource": {
@@ -11828,7 +12154,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11851,7 +12177,7 @@
         },
         {
           "type": "stat",
-          "id": 155,
+          "id": 160,
           "title": "IOMMU",
           "description": "IOMMU/PCI passthrough.",
           "datasource": {
@@ -11879,12 +12205,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -11906,7 +12232,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 258,
+            "y": 262,
             "w": 3,
             "h": 4
           },
@@ -11929,7 +12255,7 @@
         },
         {
           "type": "stat",
-          "id": 156,
+          "id": 161,
           "title": "Intel VMX",
           "description": "Intel VT-x capability flag.",
           "datasource": {
@@ -11957,12 +12283,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -11984,7 +12310,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 262,
+            "y": 266,
             "w": 4,
             "h": 4
           },
@@ -12007,7 +12333,7 @@
         },
         {
           "type": "stat",
-          "id": 157,
+          "id": 162,
           "title": "AMD RVI",
           "description": "AMD RVI/NPT capability flag.",
           "datasource": {
@@ -12035,12 +12361,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -12062,7 +12388,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 262,
+            "y": 266,
             "w": 4,
             "h": 4
           },
@@ -12085,7 +12411,7 @@
         },
         {
           "type": "stat",
-          "id": 158,
+          "id": 163,
           "title": "Unrestricted",
           "description": "Unrestricted guest capability flag.",
           "datasource": {
@@ -12113,12 +12439,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -12140,7 +12466,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 262,
+            "y": 266,
             "w": 4,
             "h": 4
           },
@@ -12163,7 +12489,7 @@
         },
         {
           "type": "stat",
-          "id": 159,
+          "id": 164,
           "title": "AMD ASIDs",
           "description": "AMD Address Space Identifiers are supported.",
           "datasource": {
@@ -12191,12 +12517,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -12218,7 +12544,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 262,
+            "y": 266,
             "w": 4,
             "h": 4
           },
@@ -12241,7 +12567,7 @@
         },
         {
           "type": "stat",
-          "id": 160,
+          "id": 165,
           "title": "Incus Vols",
           "description": "Incus storage volumes.",
           "datasource": {
@@ -12280,7 +12606,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 262,
+            "y": 266,
             "w": 4,
             "h": 4
           },
@@ -12303,7 +12629,7 @@
         },
         {
           "type": "stat",
-          "id": 161,
+          "id": 166,
           "title": "VM Mem Used",
           "description": "VM memory in use.",
           "datasource": {
@@ -12342,7 +12668,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 262,
+            "y": 266,
             "w": 4,
             "h": 4
           },
@@ -12365,7 +12691,7 @@
         },
         {
           "type": "timeseries",
-          "id": 162,
+          "id": 167,
           "title": "VM Memory Allocation",
           "description": "VM memory available vs in use.",
           "datasource": {
@@ -12439,7 +12765,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 266,
+            "y": 270,
             "w": 12,
             "h": 8
           },
@@ -12464,7 +12790,7 @@
         },
         {
           "type": "timeseries",
-          "id": 163,
+          "id": 168,
           "title": "Incus Instance CPU",
           "description": "Per-instance CPU usage.",
           "datasource": {
@@ -12529,7 +12855,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 266,
+            "y": 270,
             "w": 12,
             "h": 8
           },
@@ -12554,7 +12880,7 @@
         },
         {
           "type": "timeseries",
-          "id": 164,
+          "id": 169,
           "title": "Incus Instance Memory",
           "description": "Per-instance memory usage.",
           "datasource": {
@@ -12619,7 +12945,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 274,
+            "y": 278,
             "w": 24,
             "h": 8
           },
@@ -12645,20 +12971,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 257,
+        "y": 261,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 165,
+      "id": 170,
       "title": "Alerts, Tasks & Updates",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 166,
+          "id": 171,
           "title": "Total Alerts",
           "description": "Active alerts.",
           "datasource": {
@@ -12705,7 +13031,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -12728,7 +13054,7 @@
         },
         {
           "type": "stat",
-          "id": 167,
+          "id": 172,
           "title": "Critical",
           "description": "Critical alerts.",
           "datasource": {
@@ -12771,7 +13097,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -12794,7 +13120,7 @@
         },
         {
           "type": "stat",
-          "id": 168,
+          "id": 173,
           "title": "Warning",
           "description": "Warning alerts.",
           "datasource": {
@@ -12841,7 +13167,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -12864,7 +13190,7 @@
         },
         {
           "type": "stat",
-          "id": 169,
+          "id": 174,
           "title": "Tasks",
           "description": "Scheduled tasks.",
           "datasource": {
@@ -12903,7 +13229,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -12926,7 +13252,7 @@
         },
         {
           "type": "stat",
-          "id": 170,
+          "id": 175,
           "title": "Tasks On",
           "description": "Enabled tasks.",
           "datasource": {
@@ -12965,7 +13291,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -12988,7 +13314,7 @@
         },
         {
           "type": "stat",
-          "id": 171,
+          "id": 176,
           "title": "Cloud Bkp",
           "description": "Cloud backup tasks.",
           "datasource": {
@@ -13027,7 +13353,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -13050,7 +13376,7 @@
         },
         {
           "type": "stat",
-          "id": 172,
+          "id": 177,
           "title": "Cron Jobs",
           "description": "Configured cron jobs.",
           "datasource": {
@@ -13089,7 +13415,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -13112,9 +13438,9 @@
         },
         {
           "type": "stat",
-          "id": 173,
+          "id": 178,
           "title": "Reboot Req",
-          "description": "Reboot pending.",
+          "description": "Reboot required to finish pending changes.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -13140,14 +13466,14 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "green",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "red",
                       "index": 1,
-                      "text": "Yes"
+                      "text": "Reboot"
                     }
                   }
                 }
@@ -13167,7 +13493,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 283,
+            "y": 287,
             "w": 3,
             "h": 4
           },
@@ -13190,7 +13516,7 @@
         },
         {
           "type": "stat",
-          "id": 174,
+          "id": 179,
           "title": "Dismissed",
           "description": "Alerts dismissed but still present.",
           "datasource": {
@@ -13229,7 +13555,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 287,
+            "y": 291,
             "w": 4,
             "h": 4
           },
@@ -13252,7 +13578,7 @@
         },
         {
           "type": "stat",
-          "id": 175,
+          "id": 180,
           "title": "One-Shot",
           "description": "One-shot alerts requiring explicit handling.",
           "datasource": {
@@ -13291,7 +13617,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 287,
+            "y": 291,
             "w": 4,
             "h": 4
           },
@@ -13314,7 +13640,7 @@
         },
         {
           "type": "stat",
-          "id": 176,
+          "id": 181,
           "title": "Active Jobs",
           "description": "Jobs currently waiting or running.",
           "datasource": {
@@ -13353,7 +13679,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 287,
+            "y": 291,
             "w": 4,
             "h": 4
           },
@@ -13376,7 +13702,7 @@
         },
         {
           "type": "stat",
-          "id": 177,
+          "id": 182,
           "title": "Abortable",
           "description": "Active jobs that can be cancelled.",
           "datasource": {
@@ -13415,7 +13741,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 287,
+            "y": 291,
             "w": 4,
             "h": 4
           },
@@ -13438,7 +13764,7 @@
         },
         {
           "type": "stat",
-          "id": 178,
+          "id": 183,
           "title": "Transient",
           "description": "Active transient jobs.",
           "datasource": {
@@ -13477,7 +13803,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 287,
+            "y": 291,
             "w": 4,
             "h": 4
           },
@@ -13500,7 +13826,7 @@
         },
         {
           "type": "stat",
-          "id": 179,
+          "id": 184,
           "title": "Last Alert Activity",
           "description": "Age since the most recent alert occurrence.",
           "datasource": {
@@ -13539,7 +13865,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 287,
+            "y": 291,
             "w": 4,
             "h": 4
           },
@@ -13562,7 +13888,7 @@
         },
         {
           "type": "piechart",
-          "id": 180,
+          "id": 185,
           "title": "Alert Level Distribution",
           "description": "Current alert severity mix.",
           "datasource": {
@@ -13598,7 +13924,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 291,
+            "y": 295,
             "w": 8,
             "h": 8
           },
@@ -13632,7 +13958,7 @@
         },
         {
           "type": "barchart",
-          "id": 181,
+          "id": 186,
           "title": "Tasks by Type",
           "description": "Scheduled work breakdown.",
           "datasource": {
@@ -13690,7 +14016,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 291,
+            "y": 295,
             "w": 8,
             "h": 8
           },
@@ -13743,7 +14069,7 @@
         },
         {
           "type": "timeseries",
-          "id": 182,
+          "id": 187,
           "title": "Alert Count Over Time",
           "description": "Alert count trend.",
           "datasource": {
@@ -13808,7 +14134,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 291,
+            "y": 295,
             "w": 8,
             "h": 8
           },
@@ -13833,7 +14159,7 @@
         },
         {
           "type": "barchart",
-          "id": 183,
+          "id": 188,
           "title": "Alert Classes",
           "description": "Most common current alert classes.",
           "datasource": {
@@ -13891,7 +14217,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 299,
+            "y": 303,
             "w": 8,
             "h": 8
           },
@@ -13944,7 +14270,7 @@
         },
         {
           "type": "piechart",
-          "id": 184,
+          "id": 189,
           "title": "Alert Sources",
           "description": "Which subsystems are generating alerts.",
           "datasource": {
@@ -13980,7 +14306,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 299,
+            "y": 303,
             "w": 8,
             "h": 8
           },
@@ -14014,7 +14340,7 @@
         },
         {
           "type": "bargauge",
-          "id": 185,
+          "id": 190,
           "title": "Running Job Progress",
           "description": "Progress of currently running jobs by method.",
           "datasource": {
@@ -14063,7 +14389,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 299,
+            "y": 303,
             "w": 8,
             "h": 8
           },
@@ -14096,7 +14422,7 @@
         },
         {
           "type": "timeseries",
-          "id": 186,
+          "id": 191,
           "title": "Active Jobs by State",
           "description": "Current active job counts split by WAITING and RUNNING state.",
           "datasource": {
@@ -14161,7 +14487,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 307,
+            "y": 311,
             "w": 12,
             "h": 8
           },
@@ -14186,7 +14512,7 @@
         },
         {
           "type": "timeseries",
-          "id": 187,
+          "id": 192,
           "title": "Oldest Active Job Age",
           "description": "Age of the oldest active job in each state.",
           "datasource": {
@@ -14251,7 +14577,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 307,
+            "y": 311,
             "w": 12,
             "h": 8
           },
@@ -14276,7 +14602,7 @@
         },
         {
           "type": "table",
-          "id": 188,
+          "id": 193,
           "title": "Job Method Detail",
           "description": "Active job counts and progress by middleware method.",
           "datasource": {
@@ -14396,7 +14722,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 315,
+            "y": 319,
             "w": 12,
             "h": 10
           },
@@ -14466,7 +14792,7 @@
         },
         {
           "type": "table",
-          "id": 189,
+          "id": 194,
           "title": "Alert Source and Node Detail",
           "description": "Current alert counts grouped by source and by node.",
           "datasource": {
@@ -14554,7 +14880,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 315,
+            "y": 319,
             "w": 12,
             "h": 10
           },
@@ -14599,7 +14925,7 @@
         },
         {
           "type": "table",
-          "id": 190,
+          "id": 195,
           "title": "Task Enablement Detail",
           "description": "Task enablement from documented task query fields.",
           "datasource": {
@@ -14682,7 +15008,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 325,
+            "y": 329,
             "w": 24,
             "h": 10
           },
@@ -14749,22 +15075,22 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 282,
+        "y": 286,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 191,
+      "id": 196,
       "title": "Security & Platform",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 192,
+          "id": 197,
           "title": "2FA",
-          "description": "Two-factor auth.",
+          "description": "Two-factor auth (disabled is a security finding).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -14792,12 +15118,12 @@
                     "0": {
                       "color": "red",
                       "index": 0,
-                      "text": "No"
+                      "text": "\u26a0 Disabled"
                     },
                     "1": {
                       "color": "green",
                       "index": 1,
-                      "text": "Yes"
+                      "text": "Enabled"
                     }
                   }
                 }
@@ -14817,7 +15143,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 336,
+            "y": 340,
             "w": 4,
             "h": 4
           },
@@ -14840,7 +15166,7 @@
         },
         {
           "type": "stat",
-          "id": 193,
+          "id": 198,
           "title": "SSH",
           "description": "SSH service enabled at boot.",
           "datasource": {
@@ -14868,12 +15194,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -14895,7 +15221,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 336,
+            "y": 340,
             "w": 4,
             "h": 4
           },
@@ -14918,7 +15244,7 @@
         },
         {
           "type": "stat",
-          "id": 194,
+          "id": 199,
           "title": "FTP",
           "description": "FTP service enabled at boot.",
           "datasource": {
@@ -14946,12 +15272,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -14973,7 +15299,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 336,
+            "y": 340,
             "w": 4,
             "h": 4
           },
@@ -14996,7 +15322,7 @@
         },
         {
           "type": "stat",
-          "id": 195,
+          "id": 200,
           "title": "SNMP",
           "description": "SNMP service enabled at boot.",
           "datasource": {
@@ -15024,12 +15350,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15051,7 +15377,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 336,
+            "y": 340,
             "w": 4,
             "h": 4
           },
@@ -15074,9 +15400,9 @@
         },
         {
           "type": "stat",
-          "id": 196,
+          "id": 201,
           "title": "FIPS",
-          "description": "FIPS mode.",
+          "description": "FIPS mode (policy-dependent).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -15102,12 +15428,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15129,7 +15455,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 336,
+            "y": 340,
             "w": 4,
             "h": 4
           },
@@ -15152,7 +15478,7 @@
         },
         {
           "type": "stat",
-          "id": 197,
+          "id": 202,
           "title": "Sessions",
           "description": "Active API sessions.",
           "datasource": {
@@ -15191,7 +15517,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 336,
+            "y": 340,
             "w": 4,
             "h": 4
           },
@@ -15214,7 +15540,7 @@
         },
         {
           "type": "stat",
-          "id": 198,
+          "id": 203,
           "title": "Production",
           "description": "Marked as production.",
           "datasource": {
@@ -15242,12 +15568,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15269,7 +15595,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 340,
+            "y": 344,
             "w": 4,
             "h": 4
           },
@@ -15292,7 +15618,7 @@
         },
         {
           "type": "stat",
-          "id": 199,
+          "id": 204,
           "title": "iX Hardware",
           "description": "iXsystems hardware.",
           "datasource": {
@@ -15320,12 +15646,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15347,7 +15673,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 340,
+            "y": 344,
             "w": 4,
             "h": 4
           },
@@ -15370,7 +15696,7 @@
         },
         {
           "type": "stat",
-          "id": 200,
+          "id": 205,
           "title": "Support A+E",
           "description": "Support available and enabled.",
           "datasource": {
@@ -15398,12 +15724,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15425,7 +15751,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 340,
+            "y": 344,
             "w": 4,
             "h": 4
           },
@@ -15448,9 +15774,9 @@
         },
         {
           "type": "stat",
-          "id": 201,
+          "id": 206,
           "title": "Dir Svc OK",
-          "description": "Directory services healthy.",
+          "description": "Directory services healthy (when configured).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -15503,7 +15829,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 340,
+            "y": 344,
             "w": 4,
             "h": 4
           },
@@ -15526,7 +15852,7 @@
         },
         {
           "type": "stat",
-          "id": 202,
+          "id": 207,
           "title": "Dir Svc Cfg",
           "description": "Directory service detected by status.",
           "datasource": {
@@ -15554,12 +15880,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15581,7 +15907,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 340,
+            "y": 344,
             "w": 4,
             "h": 4
           },
@@ -15604,7 +15930,7 @@
         },
         {
           "type": "stat",
-          "id": 203,
+          "id": 208,
           "title": "Dir Faults",
           "description": "Enabled directory services reporting a fault.",
           "datasource": {
@@ -15647,7 +15973,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 340,
+            "y": 344,
             "w": 4,
             "h": 4
           },
@@ -15670,9 +15996,9 @@
         },
         {
           "type": "stat",
-          "id": 204,
+          "id": 209,
           "title": "Security FIPS",
-          "description": "System security FIPS configured.",
+          "description": "System security FIPS configured (policy-dependent).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -15698,12 +16024,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15725,7 +16051,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 344,
+            "y": 348,
             "w": 4,
             "h": 4
           },
@@ -15748,9 +16074,9 @@
         },
         {
           "type": "stat",
-          "id": 205,
+          "id": 210,
           "title": "GPOS STIG",
-          "description": "GPOS STIG policy enabled.",
+          "description": "GPOS STIG policy enabled (policy-dependent).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -15776,12 +16102,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -15803,7 +16129,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 344,
+            "y": 348,
             "w": 4,
             "h": 4
           },
@@ -15826,7 +16152,7 @@
         },
         {
           "type": "stat",
-          "id": 206,
+          "id": 211,
           "title": "Pwd Min Len",
           "description": "Minimum password length policy.",
           "datasource": {
@@ -15873,7 +16199,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 344,
+            "y": 348,
             "w": 4,
             "h": 4
           },
@@ -15896,7 +16222,7 @@
         },
         {
           "type": "stat",
-          "id": 207,
+          "id": 212,
           "title": "Pwd Max Age",
           "description": "Maximum password age in days.",
           "datasource": {
@@ -15943,7 +16269,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 344,
+            "y": 348,
             "w": 4,
             "h": 4
           },
@@ -15966,7 +16292,7 @@
         },
         {
           "type": "stat",
-          "id": 208,
+          "id": 213,
           "title": "Pwd History",
           "description": "Password history retention count.",
           "datasource": {
@@ -16013,7 +16339,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 344,
+            "y": 348,
             "w": 4,
             "h": 4
           },
@@ -16036,7 +16362,7 @@
         },
         {
           "type": "stat",
-          "id": 209,
+          "id": 214,
           "title": "FIPS Avail",
           "description": "FIPS capability is available on this system.",
           "datasource": {
@@ -16064,12 +16390,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -16091,7 +16417,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 344,
+            "y": 348,
             "w": 4,
             "h": 4
           },
@@ -16114,7 +16440,7 @@
         },
         {
           "type": "table",
-          "id": 210,
+          "id": 215,
           "title": "Security and Identity Counts",
           "description": "Identity and trust object counts.",
           "datasource": {
@@ -16189,7 +16515,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 348,
+            "y": 352,
             "w": 12,
             "h": 10
           },
@@ -16246,7 +16572,7 @@
         },
         {
           "type": "table",
-          "id": 211,
+          "id": 216,
           "title": "Certificate Expiry",
           "description": "Certificate expiry in operator-friendly relative and absolute forms.",
           "datasource": {
@@ -16356,7 +16682,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 348,
+            "y": 352,
             "w": 12,
             "h": 10
           },
@@ -16423,20 +16749,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 335,
+        "y": 339,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 222,
+      "id": 227,
       "title": "Boot Environment",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 212,
+          "id": 217,
           "title": "Boot Healthy",
           "description": "Boot pool health.",
           "datasource": {
@@ -16491,7 +16817,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16514,7 +16840,7 @@
         },
         {
           "type": "stat",
-          "id": 213,
+          "id": 218,
           "title": "Boot Size",
           "description": "",
           "datasource": {
@@ -16553,7 +16879,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16576,7 +16902,7 @@
         },
         {
           "type": "stat",
-          "id": 214,
+          "id": 219,
           "title": "Boot Free",
           "description": "",
           "datasource": {
@@ -16615,7 +16941,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16638,7 +16964,7 @@
         },
         {
           "type": "stat",
-          "id": 215,
+          "id": 220,
           "title": "Boot Disks",
           "description": "",
           "datasource": {
@@ -16677,7 +17003,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16700,7 +17026,7 @@
         },
         {
           "type": "stat",
-          "id": 216,
+          "id": 221,
           "title": "Boot Envs",
           "description": "",
           "datasource": {
@@ -16739,7 +17065,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16762,7 +17088,7 @@
         },
         {
           "type": "stat",
-          "id": 217,
+          "id": 222,
           "title": "Active BEs",
           "description": "",
           "datasource": {
@@ -16801,7 +17127,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16824,7 +17150,7 @@
         },
         {
           "type": "stat",
-          "id": 218,
+          "id": 223,
           "title": "Activated BEs",
           "description": "Boot environments selected for the next boot.",
           "datasource": {
@@ -16863,7 +17189,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16886,7 +17212,7 @@
         },
         {
           "type": "stat",
-          "id": 219,
+          "id": 224,
           "title": "Keep BEs",
           "description": "",
           "datasource": {
@@ -16925,7 +17251,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 359,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -16948,7 +17274,7 @@
         },
         {
           "type": "gauge",
-          "id": 220,
+          "id": 225,
           "title": "Boot Pool Usage",
           "description": "Boot pool fill ratio.",
           "datasource": {
@@ -16997,7 +17323,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 363,
+            "y": 367,
             "w": 6,
             "h": 8
           },
@@ -17020,7 +17346,7 @@
         },
         {
           "type": "bargauge",
-          "id": 221,
+          "id": 226,
           "title": "Boot Environment Used Space",
           "description": "Bytes used by each boot environment.",
           "datasource": {
@@ -17068,7 +17394,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 363,
+            "y": 367,
             "w": 18,
             "h": 8
           },
@@ -17102,20 +17428,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 358,
+        "y": 362,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 237,
+      "id": 242,
       "title": "Hardware & IPMI",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 223,
+          "id": 228,
           "title": "IPMI Loaded",
           "description": "",
           "datasource": {
@@ -17143,9 +17469,9 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
-                      "text": "No"
+                      "text": "Not present"
                     },
                     "1": {
                       "color": "green",
@@ -17170,7 +17496,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17193,7 +17519,7 @@
         },
         {
           "type": "stat",
-          "id": 224,
+          "id": 229,
           "title": "Power On",
           "description": "",
           "datasource": {
@@ -17248,7 +17574,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17271,7 +17597,7 @@
         },
         {
           "type": "stat",
-          "id": 225,
+          "id": 230,
           "title": "GPUs",
           "description": "",
           "datasource": {
@@ -17310,7 +17636,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17333,7 +17659,7 @@
         },
         {
           "type": "stat",
-          "id": 226,
+          "id": 231,
           "title": "Power Overld",
           "description": "",
           "datasource": {
@@ -17376,7 +17702,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17399,7 +17725,7 @@
         },
         {
           "type": "stat",
-          "id": 227,
+          "id": 232,
           "title": "Intrusion",
           "description": "",
           "datasource": {
@@ -17442,7 +17768,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17465,7 +17791,7 @@
         },
         {
           "type": "stat",
-          "id": 228,
+          "id": 233,
           "title": "Drive Fault",
           "description": "",
           "datasource": {
@@ -17508,7 +17834,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17531,7 +17857,7 @@
         },
         {
           "type": "stat",
-          "id": 229,
+          "id": 234,
           "title": "Fan Fault",
           "description": "",
           "datasource": {
@@ -17574,7 +17900,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17597,7 +17923,7 @@
         },
         {
           "type": "stat",
-          "id": 230,
+          "id": 235,
           "title": "JBOF",
           "description": "",
           "datasource": {
@@ -17636,7 +17962,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 360,
+            "y": 364,
             "w": 3,
             "h": 4
           },
@@ -17659,7 +17985,7 @@
         },
         {
           "type": "stat",
-          "id": 231,
+          "id": 236,
           "title": "SEL Entries",
           "description": "",
           "datasource": {
@@ -17698,7 +18024,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 364,
+            "y": 368,
             "w": 4,
             "h": 4
           },
@@ -17721,7 +18047,7 @@
         },
         {
           "type": "stat",
-          "id": 232,
+          "id": 237,
           "title": "SEL Free",
           "description": "",
           "datasource": {
@@ -17760,7 +18086,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 364,
+            "y": 368,
             "w": 4,
             "h": 4
           },
@@ -17783,7 +18109,7 @@
         },
         {
           "type": "stat",
-          "id": 233,
+          "id": 238,
           "title": "GPU Host Avail",
           "description": "GPUs available to the TrueNAS host.",
           "datasource": {
@@ -17822,7 +18148,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 364,
+            "y": 368,
             "w": 4,
             "h": 4
           },
@@ -17845,7 +18171,7 @@
         },
         {
           "type": "stat",
-          "id": 234,
+          "id": 239,
           "title": "GPU Critical",
           "description": "GPUs using system-critical PCI devices.",
           "datasource": {
@@ -17888,7 +18214,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 364,
+            "y": 368,
             "w": 4,
             "h": 4
           },
@@ -17911,7 +18237,7 @@
         },
         {
           "type": "stat",
-          "id": 235,
+          "id": 240,
           "title": "ECC Memory",
           "description": "",
           "datasource": {
@@ -17939,9 +18265,9 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
-                      "text": "No"
+                      "text": "Not reported"
                     },
                     "1": {
                       "color": "green",
@@ -17966,7 +18292,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 364,
+            "y": 368,
             "w": 4,
             "h": 4
           },
@@ -17989,7 +18315,7 @@
         },
         {
           "type": "stat",
-          "id": 236,
+          "id": 241,
           "title": "Resilver On",
           "description": "",
           "datasource": {
@@ -18017,12 +18343,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -18044,7 +18370,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 364,
+            "y": 368,
             "w": 4,
             "h": 4
           },
@@ -18068,20 +18394,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 359,
+        "y": 363,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 246,
+      "id": 251,
       "title": "Advanced Protocols (NVMe-oF / FC / HA)",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 238,
+          "id": 243,
           "title": "NVMe-oF Sess",
           "description": "",
           "datasource": {
@@ -18120,7 +18446,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18143,7 +18469,7 @@
         },
         {
           "type": "stat",
-          "id": 239,
+          "id": 244,
           "title": "NVMe-oF Subs",
           "description": "",
           "datasource": {
@@ -18182,7 +18508,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18205,7 +18531,7 @@
         },
         {
           "type": "stat",
-          "id": 240,
+          "id": 245,
           "title": "NVMe-oF Ports",
           "description": "",
           "datasource": {
@@ -18244,7 +18570,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18267,7 +18593,7 @@
         },
         {
           "type": "stat",
-          "id": 241,
+          "id": 246,
           "title": "NVMe-oF Hosts",
           "description": "",
           "datasource": {
@@ -18306,7 +18632,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18329,7 +18655,7 @@
         },
         {
           "type": "stat",
-          "id": 242,
+          "id": 247,
           "title": "NVMe-oF NS",
           "description": "",
           "datasource": {
@@ -18368,7 +18694,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18391,7 +18717,7 @@
         },
         {
           "type": "stat",
-          "id": 243,
+          "id": 248,
           "title": "FC Hosts",
           "description": "",
           "datasource": {
@@ -18430,7 +18756,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18453,7 +18779,7 @@
         },
         {
           "type": "stat",
-          "id": 244,
+          "id": 249,
           "title": "FC Ports",
           "description": "",
           "datasource": {
@@ -18492,7 +18818,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18515,7 +18841,7 @@
         },
         {
           "type": "stat",
-          "id": 245,
+          "id": 250,
           "title": "HA Disabled",
           "description": "",
           "datasource": {
@@ -18558,7 +18884,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 361,
+            "y": 365,
             "w": 3,
             "h": 4
           },
@@ -18582,20 +18908,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 360,
+        "y": 364,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 257,
+      "id": 262,
       "title": "Audit & Directory Services",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 247,
+          "id": 252,
           "title": "Audit Used",
           "description": "",
           "datasource": {
@@ -18634,7 +18960,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 362,
+            "y": 366,
             "w": 4,
             "h": 4
           },
@@ -18657,7 +18983,7 @@
         },
         {
           "type": "stat",
-          "id": 248,
+          "id": 253,
           "title": "Audit Avail",
           "description": "",
           "datasource": {
@@ -18696,7 +19022,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 362,
+            "y": 366,
             "w": 4,
             "h": 4
           },
@@ -18719,7 +19045,7 @@
         },
         {
           "type": "stat",
-          "id": 249,
+          "id": 254,
           "title": "Audit Quota",
           "description": "",
           "datasource": {
@@ -18758,7 +19084,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 362,
+            "y": 366,
             "w": 4,
             "h": 4
           },
@@ -18781,7 +19107,7 @@
         },
         {
           "type": "stat",
-          "id": 250,
+          "id": 255,
           "title": "Audit Reserve",
           "description": "",
           "datasource": {
@@ -18820,7 +19146,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 362,
+            "y": 366,
             "w": 4,
             "h": 4
           },
@@ -18843,7 +19169,7 @@
         },
         {
           "type": "stat",
-          "id": 251,
+          "id": 256,
           "title": "Warn Fill %",
           "description": "",
           "datasource": {
@@ -18882,7 +19208,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 362,
+            "y": 366,
             "w": 4,
             "h": 4
           },
@@ -18905,7 +19231,7 @@
         },
         {
           "type": "stat",
-          "id": 252,
+          "id": 257,
           "title": "Crit Fill %",
           "description": "",
           "datasource": {
@@ -18944,7 +19270,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 362,
+            "y": 366,
             "w": 4,
             "h": 4
           },
@@ -18967,7 +19293,7 @@
         },
         {
           "type": "stat",
-          "id": 253,
+          "id": 258,
           "title": "Retention",
           "description": "Configured local audit retention.",
           "datasource": {
@@ -19006,7 +19332,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 366,
+            "y": 370,
             "w": 6,
             "h": 4
           },
@@ -19029,9 +19355,9 @@
         },
         {
           "type": "stat",
-          "id": 254,
+          "id": 259,
           "title": "Remote Log",
-          "description": "Remote audit logging enabled.",
+          "description": "Remote audit logging enabled (optional).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -19057,12 +19383,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -19084,7 +19410,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 366,
+            "y": 370,
             "w": 6,
             "h": 4
           },
@@ -19107,7 +19433,7 @@
         },
         {
           "type": "stat",
-          "id": 255,
+          "id": 260,
           "title": "Dir Svc OK",
           "description": "",
           "datasource": {
@@ -19162,7 +19488,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 366,
+            "y": 370,
             "w": 6,
             "h": 4
           },
@@ -19185,7 +19511,7 @@
         },
         {
           "type": "stat",
-          "id": 256,
+          "id": 261,
           "title": "Dir Faults",
           "description": "",
           "datasource": {
@@ -19228,7 +19554,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 366,
+            "y": 370,
             "w": 6,
             "h": 4
           },
@@ -19252,20 +19578,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 361,
+        "y": 365,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 276,
+      "id": 281,
       "title": "System Configuration",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 258,
+          "id": 263,
           "title": "HTTPS Port",
           "description": "",
           "datasource": {
@@ -19304,7 +19630,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 363,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -19327,7 +19653,7 @@
         },
         {
           "type": "stat",
-          "id": 259,
+          "id": 264,
           "title": "Reporting On",
           "description": "",
           "datasource": {
@@ -19355,12 +19681,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -19382,7 +19708,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 363,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -19405,7 +19731,7 @@
         },
         {
           "type": "stat",
-          "id": 260,
+          "id": 265,
           "title": "Exporters",
           "description": "",
           "datasource": {
@@ -19444,7 +19770,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 363,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -19467,7 +19793,7 @@
         },
         {
           "type": "stat",
-          "id": 261,
+          "id": 266,
           "title": "Static Routes",
           "description": "",
           "datasource": {
@@ -19506,7 +19832,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 363,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -19529,7 +19855,7 @@
         },
         {
           "type": "stat",
-          "id": 262,
+          "id": 267,
           "title": "Tunables",
           "description": "",
           "datasource": {
@@ -19568,7 +19894,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 363,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -19591,7 +19917,7 @@
         },
         {
           "type": "stat",
-          "id": 263,
+          "id": 268,
           "title": "Init Scripts",
           "description": "",
           "datasource": {
@@ -19630,7 +19956,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 363,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -19653,7 +19979,7 @@
         },
         {
           "type": "stat",
-          "id": 264,
+          "id": 269,
           "title": "Upd AutoChk",
           "description": "Automatic update checks enabled.",
           "datasource": {
@@ -19681,12 +20007,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -19708,7 +20034,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 367,
+            "y": 371,
             "w": 4,
             "h": 4
           },
@@ -19731,7 +20057,7 @@
         },
         {
           "type": "stat",
-          "id": 265,
+          "id": 270,
           "title": "Upd Profile",
           "description": "Update profile information present.",
           "datasource": {
@@ -19759,12 +20085,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -19786,7 +20112,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 367,
+            "y": 371,
             "w": 4,
             "h": 4
           },
@@ -19809,7 +20135,7 @@
         },
         {
           "type": "stat",
-          "id": 266,
+          "id": 271,
           "title": "NTP Servers",
           "description": "Configured NTP servers.",
           "datasource": {
@@ -19848,7 +20174,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 367,
+            "y": 371,
             "w": 4,
             "h": 4
           },
@@ -19871,7 +20197,7 @@
         },
         {
           "type": "stat",
-          "id": 267,
+          "id": 272,
           "title": "Tier0 Days",
           "description": "Reporting tier0 retention period.",
           "datasource": {
@@ -19910,7 +20236,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 367,
+            "y": 371,
             "w": 4,
             "h": 4
           },
@@ -19933,7 +20259,7 @@
         },
         {
           "type": "stat",
-          "id": 268,
+          "id": 273,
           "title": "Tier1 Days",
           "description": "Reporting tier1 retention period.",
           "datasource": {
@@ -19972,7 +20298,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 367,
+            "y": 371,
             "w": 4,
             "h": 4
           },
@@ -19995,7 +20321,7 @@
         },
         {
           "type": "stat",
-          "id": 269,
+          "id": 274,
           "title": "Tier1 Int",
           "description": "Reporting tier1 update interval.",
           "datasource": {
@@ -20034,7 +20360,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 367,
+            "y": 371,
             "w": 4,
             "h": 4
           },
@@ -20057,7 +20383,7 @@
         },
         {
           "type": "stat",
-          "id": 270,
+          "id": 275,
           "title": "Catalog Cfg",
           "description": "Catalog config payload present.",
           "datasource": {
@@ -20085,12 +20411,12 @@
                   "type": "value",
                   "options": {
                     "0": {
-                      "color": "red",
+                      "color": "#808080",
                       "index": 0,
                       "text": "No"
                     },
                     "1": {
-                      "color": "green",
+                      "color": "blue",
                       "index": 1,
                       "text": "Yes"
                     }
@@ -20112,7 +20438,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 371,
+            "y": 375,
             "w": 4,
             "h": 4
           },
@@ -20135,7 +20461,7 @@
         },
         {
           "type": "stat",
-          "id": 271,
+          "id": 276,
           "title": "Pref Trains",
           "description": "Preferred catalog trains configured.",
           "datasource": {
@@ -20174,7 +20500,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 371,
+            "y": 375,
             "w": 4,
             "h": 4
           },
@@ -20197,7 +20523,7 @@
         },
         {
           "type": "stat",
-          "id": 272,
+          "id": 277,
           "title": "NTP Burst",
           "description": "NTP servers with burst enabled.",
           "datasource": {
@@ -20236,7 +20562,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 371,
+            "y": 375,
             "w": 4,
             "h": 4
           },
@@ -20259,7 +20585,7 @@
         },
         {
           "type": "stat",
-          "id": 273,
+          "id": 278,
           "title": "NTP Iburst",
           "description": "NTP servers with iburst enabled.",
           "datasource": {
@@ -20298,7 +20624,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 371,
+            "y": 375,
             "w": 4,
             "h": 4
           },
@@ -20321,9 +20647,9 @@
         },
         {
           "type": "stat",
-          "id": 274,
+          "id": 279,
           "title": "NTP Min Poll",
-          "description": "Minimum configured NTP poll interval (minutes).",
+          "description": "Minimum configured NTP poll interval.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -20354,13 +20680,13 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "m"
             },
             "overrides": []
           },
           "gridPos": {
             "x": 16,
-            "y": 371,
+            "y": 375,
             "w": 4,
             "h": 4
           },
@@ -20383,9 +20709,9 @@
         },
         {
           "type": "stat",
-          "id": 275,
+          "id": 280,
           "title": "NTP Max Poll",
-          "description": "Maximum configured NTP poll interval (minutes).",
+          "description": "Maximum configured NTP poll interval.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -20416,13 +20742,13 @@
                   }
                 ]
               },
-              "unit": "short"
+              "unit": "m"
             },
             "overrides": []
           },
           "gridPos": {
             "x": 20,
-            "y": 371,
+            "y": 375,
             "w": 4,
             "h": 4
           },
@@ -20446,20 +20772,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 362,
+        "y": 366,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 285,
+      "id": 290,
       "title": "Dataset Deep-Dive",
       "collapsed": true,
       "panels": [
         {
           "type": "bargauge",
-          "id": 277,
+          "id": 282,
           "title": "Top Datasets by Used Bytes",
           "description": "Datasets by documented used-space value.",
           "datasource": {
@@ -20507,7 +20833,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 364,
+            "y": 368,
             "w": 12,
             "h": 8
           },
@@ -20540,7 +20866,7 @@
         },
         {
           "type": "bargauge",
-          "id": 278,
+          "id": 283,
           "title": "Datasets by Available Space (Bottom 15)",
           "description": "Datasets with least available space.",
           "datasource": {
@@ -20588,7 +20914,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 364,
+            "y": 368,
             "w": 12,
             "h": 8
           },
@@ -20621,7 +20947,7 @@
         },
         {
           "type": "bargauge",
-          "id": 279,
+          "id": 284,
           "title": "Dataset Snapshot Counts",
           "description": "Datasets with most snapshots.",
           "datasource": {
@@ -20669,7 +20995,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 372,
+            "y": 376,
             "w": 12,
             "h": 8
           },
@@ -20702,7 +21028,7 @@
         },
         {
           "type": "bargauge",
-          "id": 280,
+          "id": 285,
           "title": "Dataset Compression Ratio",
           "description": "Compression effectiveness per dataset.",
           "datasource": {
@@ -20750,7 +21076,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 372,
+            "y": 376,
             "w": 12,
             "h": 8
           },
@@ -20783,7 +21109,7 @@
         },
         {
           "type": "bargauge",
-          "id": 281,
+          "id": 286,
           "title": "Datasets Using Snapshot Space",
           "description": "Datasets consuming the most space in snapshots.",
           "datasource": {
@@ -20831,7 +21157,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 380,
+            "y": 384,
             "w": 12,
             "h": 8
           },
@@ -20864,7 +21190,7 @@
         },
         {
           "type": "bargauge",
-          "id": 282,
+          "id": 287,
           "title": "Datasets with Reservations",
           "description": "Datasets with explicit ZFS reservations.",
           "datasource": {
@@ -20912,7 +21238,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 380,
+            "y": 384,
             "w": 12,
             "h": 8
           },
@@ -20945,7 +21271,7 @@
         },
         {
           "type": "table",
-          "id": 283,
+          "id": 288,
           "title": "Dataset Capacity Detail",
           "description": "Detailed dataset capacity, encryption, quota, and snapshot info.",
           "datasource": {
@@ -21237,7 +21563,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 388,
+            "y": 392,
             "w": 24,
             "h": 10
           },
@@ -21319,7 +21645,7 @@
         },
         {
           "type": "table",
-          "id": 284,
+          "id": 289,
           "title": "Dataset Policy Detail",
           "description": "Dataset encryption, policy flags, quota thresholds, and age.",
           "datasource": {
@@ -21870,7 +22196,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 398,
+            "y": 402,
             "w": 24,
             "h": 10
           },
@@ -21959,20 +22285,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 363,
+        "y": 367,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 313,
+      "id": 318,
       "title": "Exporter + Advanced ZFS",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 286,
+          "id": 291,
           "title": "Exporter Up",
           "description": "",
           "datasource": {
@@ -22027,7 +22353,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22050,7 +22376,7 @@
         },
         {
           "type": "stat",
-          "id": 287,
+          "id": 292,
           "title": "Scrape Time",
           "description": "",
           "datasource": {
@@ -22097,7 +22423,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22120,7 +22446,7 @@
         },
         {
           "type": "stat",
-          "id": 288,
+          "id": 293,
           "title": "Event Stream",
           "description": "",
           "datasource": {
@@ -22175,7 +22501,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22198,9 +22524,9 @@
         },
         {
           "type": "stat",
-          "id": 289,
-          "title": "API Success %",
-          "description": "",
+          "id": 294,
+          "title": "Methods OK %",
+          "description": "Share of API methods whose latest scrape call succeeded (not a call-level success rate).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -22245,7 +22571,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22268,9 +22594,9 @@
         },
         {
           "type": "stat",
-          "id": 290,
-          "title": "API Errors",
-          "description": "",
+          "id": 295,
+          "title": "API Errors (1h)",
+          "description": "API call errors in the last hour; returns to 0 after recovery.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -22281,7 +22607,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "sum(truenas_api_call_errors_total{instance=~\"$instance\"})",
+              "expr": "sum(increase(truenas_api_call_errors_total{instance=~\"$instance\"}[1h]))",
               "legendFormat": "",
               "refId": "A"
             }
@@ -22315,7 +22641,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22338,9 +22664,9 @@
         },
         {
           "type": "stat",
-          "id": 291,
-          "title": "Coll Errors",
-          "description": "",
+          "id": 296,
+          "title": "Coll Errors (1h)",
+          "description": "Collector errors in the last hour; returns to 0 after recovery.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -22351,7 +22677,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "sum(truenas_collector_errors_total{instance=~\"$instance\"})",
+              "expr": "sum(increase(truenas_collector_errors_total{instance=~\"$instance\"}[1h]))",
               "legendFormat": "",
               "refId": "A"
             }
@@ -22370,8 +22696,12 @@
                     "value": 0
                   },
                   {
-                    "color": "red",
+                    "color": "yellow",
                     "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
                   }
                 ]
               },
@@ -22381,7 +22711,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22404,7 +22734,7 @@
         },
         {
           "type": "stat",
-          "id": 292,
+          "id": 297,
           "title": "Scrape Age",
           "description": "Seconds since last successful scrape.",
           "datasource": {
@@ -22443,7 +22773,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22466,7 +22796,7 @@
         },
         {
           "type": "stat",
-          "id": 293,
+          "id": 298,
           "title": "Features On",
           "description": "Enabled platform feature flags.",
           "datasource": {
@@ -22505,7 +22835,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 365,
+            "y": 369,
             "w": 3,
             "h": 4
           },
@@ -22528,7 +22858,7 @@
         },
         {
           "type": "stat",
-          "id": 294,
+          "id": 299,
           "title": "Oldest Alert Age",
           "description": "Age of the oldest active alert.",
           "datasource": {
@@ -22567,7 +22897,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -22590,7 +22920,7 @@
         },
         {
           "type": "stat",
-          "id": 295,
+          "id": 300,
           "title": "Repl Parallel",
           "description": "Configured maximum replication parallelism.",
           "datasource": {
@@ -22629,7 +22959,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -22652,7 +22982,7 @@
         },
         {
           "type": "stat",
-          "id": 296,
+          "id": 301,
           "title": "Boot Env Active",
           "description": "Boot environments active now.",
           "datasource": {
@@ -22691,7 +23021,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -22714,7 +23044,7 @@
         },
         {
           "type": "stat",
-          "id": 297,
+          "id": 302,
           "title": "Boot Env Next",
           "description": "Boot environments selected for the next boot.",
           "datasource": {
@@ -22753,7 +23083,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -22776,7 +23106,7 @@
         },
         {
           "type": "stat",
-          "id": 298,
+          "id": 303,
           "title": "Demand Access/s",
           "description": "Total ARC demand accesses per second.",
           "datasource": {
@@ -22815,7 +23145,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -22838,7 +23168,7 @@
         },
         {
           "type": "stat",
-          "id": 299,
+          "id": 304,
           "title": "Data IO Hit %",
           "description": "Demand data I/O hit ratio.",
           "datasource": {
@@ -22877,7 +23207,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -22900,7 +23230,7 @@
         },
         {
           "type": "stat",
-          "id": 300,
+          "id": 305,
           "title": "Meta IO Hit %",
           "description": "Demand metadata I/O hit ratio.",
           "datasource": {
@@ -22939,7 +23269,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -22962,7 +23292,7 @@
         },
         {
           "type": "stat",
-          "id": 301,
+          "id": 306,
           "title": "L2ARC Miss %",
           "description": "L2ARC miss ratio.",
           "datasource": {
@@ -23001,7 +23331,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 369,
+            "y": 373,
             "w": 3,
             "h": 4
           },
@@ -23024,9 +23354,9 @@
         },
         {
           "type": "timeseries",
-          "id": 302,
+          "id": 307,
           "title": "Exporter & Event Stream Health",
-          "description": "Telemetry collection health.",
+          "description": "Telemetry collection health (collector errors shown as a rate, not a lifetime total).",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -23055,8 +23385,8 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "sum(truenas_collector_errors_total{instance=~\"$instance\"})",
-              "legendFormat": "Collector errors",
+              "expr": "sum(rate(truenas_collector_errors_total{instance=~\"$instance\"}[$__rate_interval]))",
+              "legendFormat": "Collector error rate",
               "refId": "C"
             }
           ],
@@ -23107,7 +23437,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 373,
+            "y": 377,
             "w": 12,
             "h": 8
           },
@@ -23132,7 +23462,7 @@
         },
         {
           "type": "timeseries",
-          "id": 303,
+          "id": 308,
           "title": "Scrape Duration Over Time",
           "description": "Exporter scrape duration trend.",
           "datasource": {
@@ -23197,7 +23527,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 373,
+            "y": 377,
             "w": 12,
             "h": 8
           },
@@ -23222,7 +23552,7 @@
         },
         {
           "type": "timeseries",
-          "id": 304,
+          "id": 309,
           "title": "API Method Duration (Top 12)",
           "description": "Slowest API methods.",
           "datasource": {
@@ -23287,7 +23617,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 381,
+            "y": 385,
             "w": 12,
             "h": 8
           },
@@ -23312,7 +23642,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 305,
+          "id": 310,
           "title": "API Method Success",
           "description": "Per-method success state.",
           "datasource": {
@@ -23386,7 +23716,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 381,
+            "y": 385,
             "w": 12,
             "h": 8
           },
@@ -23410,7 +23740,7 @@
         },
         {
           "type": "histogram",
-          "id": 306,
+          "id": 311,
           "title": "API Duration Distribution",
           "description": "API method duration spread.",
           "datasource": {
@@ -23449,7 +23779,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 389,
+            "y": 393,
             "w": 12,
             "h": 8
           },
@@ -23473,7 +23803,7 @@
         },
         {
           "type": "timeseries",
-          "id": 307,
+          "id": 312,
           "title": "Event Messages Rate",
           "description": "Event stream message rate.",
           "datasource": {
@@ -23538,7 +23868,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 389,
+            "y": 393,
             "w": 12,
             "h": 8
           },
@@ -23563,7 +23893,7 @@
         },
         {
           "type": "timeseries",
-          "id": 308,
+          "id": 313,
           "title": "Advanced ZFS Ratios",
           "description": "Advanced ARC/L2ARC percentage metrics from realtime telemetry.",
           "datasource": {
@@ -23673,7 +24003,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 397,
+            "y": 401,
             "w": 12,
             "h": 8
           },
@@ -23698,7 +24028,7 @@
         },
         {
           "type": "timeseries",
-          "id": 309,
+          "id": 314,
           "title": "Advanced ZFS Access & Miss Rates",
           "description": "Advanced demand and L2ARC activity rates.",
           "datasource": {
@@ -23808,7 +24138,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 397,
+            "y": 401,
             "w": 12,
             "h": 8
           },
@@ -23833,7 +24163,7 @@
         },
         {
           "type": "table",
-          "id": 310,
+          "id": 315,
           "title": "Exporter Version",
           "description": "Exporter build version label currently active per instance.",
           "datasource": {
@@ -23916,7 +24246,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 405,
+            "y": 409,
             "w": 12,
             "h": 8
           },
@@ -23973,7 +24303,7 @@
         },
         {
           "type": "table",
-          "id": 311,
+          "id": 316,
           "title": "Boot Environment Flags",
           "description": "Current, next-boot, and retention flags for rollback planning.",
           "datasource": {
@@ -24059,14 +24389,14 @@
                         "type": "value",
                         "options": {
                           "0": {
-                            "color": "red",
+                            "color": "#808080",
                             "index": 0,
-                            "text": "Down"
+                            "text": "\u2014"
                           },
                           "1": {
                             "color": "green",
                             "index": 1,
-                            "text": "Up"
+                            "text": "Active"
                           }
                         }
                       }
@@ -24093,14 +24423,14 @@
                         "type": "value",
                         "options": {
                           "0": {
-                            "color": "red",
+                            "color": "#808080",
                             "index": 0,
-                            "text": "No"
+                            "text": "\u2014"
                           },
                           "1": {
-                            "color": "green",
+                            "color": "blue",
                             "index": 1,
-                            "text": "Yes"
+                            "text": "Next"
                           }
                         }
                       }
@@ -24127,14 +24457,14 @@
                         "type": "value",
                         "options": {
                           "0": {
-                            "color": "red",
+                            "color": "#808080",
                             "index": 0,
-                            "text": "No"
+                            "text": "\u2014"
                           },
                           "1": {
-                            "color": "green",
+                            "color": "blue",
                             "index": 1,
-                            "text": "Yes"
+                            "text": "Kept"
                           }
                         }
                       }
@@ -24146,7 +24476,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 405,
+            "y": 409,
             "w": 12,
             "h": 8
           },
@@ -24214,7 +24544,7 @@
         },
         {
           "type": "table",
-          "id": 312,
+          "id": 317,
           "title": "API Method Detail",
           "description": "Per-method duration, success flag, and errors.",
           "datasource": {
@@ -24357,7 +24687,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 413,
+            "y": 417,
             "w": 24,
             "h": 10
           },
@@ -24427,7 +24757,7 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 364,
+        "y": 368,
         "w": 24,
         "h": 1
       }

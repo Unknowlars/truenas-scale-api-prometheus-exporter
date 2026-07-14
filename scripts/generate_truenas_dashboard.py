@@ -462,6 +462,30 @@ UP_MAP = [
     }
 ]
 
+GRAY = "#808080"
+
+
+def bmap(one_text, one_color, zero_text, zero_color):
+    """Explicit 0/1 value map.
+
+    Replaces overloading a single BOOL_MAP (0=red "No" / 1=green "Yes") for
+    three semantically different boolean kinds: security risks (bad when on),
+    neutral capability/mode flags (off is not a fault), and required-action
+    states (attention when set). Returns a fresh list per call.
+    """
+    return [{
+        "type": "value",
+        "options": {
+            "0": {"color": zero_color, "index": 0, "text": zero_text},
+            "1": {"color": one_color, "index": 1, "text": one_text},
+        },
+    }]
+
+
+# Optional capability or mode: present = informational blue, absent = neutral
+# gray. Off is expected/benign, never rendered as a red fault.
+NEUTRAL_MAP = bmap("Yes", "blue", "No", GRAY)
+
 STATE_OVERRIDES = [
     {
         "matcher": {"id": "byType", "options": "number"},
@@ -514,7 +538,7 @@ def build_dashboard():
         stat("Datasets", f'truenas_dataset_count{{instance=~"{I}"}}', 14, y, w=2, desc="Number of datasets."),
         stat("Alerts", f'sum(truenas_alert_count_by_level{{instance=~"{I}", level=~"$level"}})', 16, y, w=2,
              desc="Active alerts.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}], graph=True),
-        stat("Update", f'max(truenas_update_available{{instance=~"{I}"}})', 18, y, w=2, desc="Update available.", mappings=BOOL_MAP),
+        stat("Update", f'max(truenas_update_available{{instance=~"{I}"}})', 18, y, w=2, desc="TrueNAS update available.", mappings=bmap("⬆ Available", "yellow", "Current", "green")),
         stat("Services", f'truenas_service_count{{instance=~"{I}"}}', 20, y, w=2, desc="Number of services."),
         stat("Apps", f'truenas_app_count{{instance=~"{I}"}}', 22, y, w=2, desc="Number of apps."),
     ])
@@ -593,11 +617,11 @@ def build_dashboard():
         stat("RAM Used %", f'100 * truenas_memory_physical_used_bytes{{instance=~"{I}"}} / truenas_memory_physical_total_bytes{{instance=~"{I}"}}', 16, y, w=4, unit="percent",
              desc="Derived from documented physical-memory total and available values.",
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 80}, {"color": "red", "value": 95}]),
-        stat("ECC", f'max(truenas_host_ecc_memory{{instance=~"{I}"}})', 20, y, w=4, desc="ECC memory present.", mappings=BOOL_MAP),
+        stat("ECC", f'max(truenas_host_ecc_memory{{instance=~"{I}"}})', 20, y, w=4, desc="ECC memory present.", mappings=bmap("Yes", "green", "Not reported", GRAY)),
     ])
     y += 4
     panels.append(timeseries(
-        "Documented Memory Capacity Over Time",
+        "Memory Capacity Over Time",
         [
             tgt(f'truenas_memory_physical_total_bytes{{instance=~"{I}"}}', 'Total', 'A'),
             tgt(f'truenas_memory_physical_used_bytes{{instance=~"{I}"}}', 'Used', 'B'),
@@ -907,7 +931,7 @@ def build_dashboard():
         stat("Nameservers", f'truenas_network_nameservers{{instance=~"{I}"}}', 6, y, w=3, desc="Configured nameservers."),
         stat("Default Routes", f'truenas_network_default_routes{{instance=~"{I}"}}', 9, y, w=3, desc="Number of default routes."),
         stat("DNS Resolvers", f'truenas_dns_resolver_count{{instance=~"{I}"}}', 12, y, w=3, desc="Configured DNS resolvers."),
-        stat("Pending Changes", f'max(truenas_interface_has_pending_changes{{instance=~"{I}"}})', 15, y, w=3, desc="Unapplied network changes.", mappings=BOOL_MAP),
+        stat("Pending Changes", f'max(truenas_interface_has_pending_changes{{instance=~"{I}"}})', 15, y, w=3, desc="Unapplied network interface changes.", mappings=bmap("Pending", "orange", "None", "green")),
         stat("Checkin Wait", f'max(truenas_interface_checkin_waiting_seconds{{instance=~"{I}"}})', 18, y, w=3, unit="s", desc="Seconds until pending changes auto-rollback."),
     ])
     y += 4
@@ -948,9 +972,26 @@ def build_dashboard():
         stat("NFS v4", f'sum(truenas_nfs_v4_client_count{{instance=~"{I}"}})', 12, y, w=2, desc="NFSv4 clients.", graph=True),
         stat("iSCSI Cli", f'sum(truenas_iscsi_client_count{{instance=~"{I}"}})', 14, y, w=2, desc="iSCSI clients.", graph=True),
         stat("NVMe-oF", f'sum(truenas_nvmet_session_count{{instance=~"{I}"}})', 16, y, w=2, desc="NVMe-oF sessions.", graph=True),
-        stat("SMB1", f'max(truenas_smb1_enabled{{instance=~"{I}"}})', 18, y, w=2, desc="Legacy SMB1 protocol enabled.", mappings=BOOL_MAP),
-        stat("NTLMv1", f'max(truenas_smb_ntlmv1_auth_enabled{{instance=~"{I}"}})', 20, y, w=2, desc="Insecure NTLMv1 authentication enabled.", mappings=BOOL_MAP),
-        stat("NFS RDMA", f'max(truenas_nfs_rdma_enabled{{instance=~"{I}"}})', 22, y, w=2, desc="NFS over RDMA enabled.", mappings=BOOL_MAP),
+        stat("SMB1", f'max(truenas_smb1_enabled{{instance=~"{I}"}})', 18, y, w=2, desc="Legacy SMB1 protocol enabled (insecure when on).", mappings=bmap("⚠ Enabled", "red", "Disabled", "green")),
+        stat("NTLMv1", f'max(truenas_smb_ntlmv1_auth_enabled{{instance=~"{I}"}})', 20, y, w=2, desc="Insecure NTLMv1 authentication enabled.", mappings=bmap("⚠ Enabled", "red", "Disabled", "green")),
+        stat("NFS RDMA", f'max(truenas_nfs_rdma_enabled{{instance=~"{I}"}})', 22, y, w=2, desc="NFS over RDMA enabled.", mappings=NEUTRAL_MAP),
+    ])
+    y += 4
+    # Live SMB activity (v26 smb.status, counts only) + WebShare (v26 WebDAV
+    # successor). All emit 0 when idle/unconfigured, so they read as healthy
+    # zeros rather than no-data.
+    panels.extend([
+        stat("SMB Sessions", f'sum(truenas_smb_session_count{{instance=~"{I}"}})', 0, y, w=5,
+             desc="Active SMB sessions (live, from smb.status).", graph=True),
+        stat("SMB Conns", f'sum(truenas_smb_connection_count{{instance=~"{I}"}})', 5, y, w=5,
+             desc="Active SMB tree connections (live, from smb.status).", graph=True),
+        stat("SMB Open Files", f'sum(truenas_smb_open_file_count{{instance=~"{I}"}})', 10, y, w=5,
+             desc="Open SMB file locks (live, from smb.status).", graph=True),
+        stat("WebShare", f'sum(truenas_webdav_share_count{{instance=~"{I}"}})', 15, y, w=5,
+             desc="Configured WebShare (WebDAV) shares (v26+).", graph=True),
+        stat("WebShare Auth", f'max(truenas_webshare_enabled{{instance=~"{I}"}})', 20, y, w=4,
+             desc="WebShare passkey authentication enabled (v26+).",
+             mappings=bmap("Enabled", "green", "Disabled", GRAY)),
     ])
     y += 4
     panels.append(state_timeline(
@@ -980,10 +1021,10 @@ def build_dashboard():
         stat("Extents", f'sum(truenas_iscsi_extent_count{{instance=~"{I}"}})', 3, y, w=3, desc="iSCSI extents."),
         stat("Initiators", f'sum(truenas_iscsi_initiator_count{{instance=~"{I}"}})', 6, y, w=3, desc="iSCSI initiator groups."),
         stat("iSCSI Sess", f'sum(truenas_iscsi_session_count{{instance=~"{I}"}})', 9, y, w=3, desc="Active iSCSI sessions."),
-        stat("ALUA", f'max(truenas_iscsi_alua_enabled{{instance=~"{I}"}})', 12, y, w=3, desc="iSCSI ALUA protocol.", mappings=BOOL_MAP),
-        stat("iSER", f'max(truenas_iscsi_iser_enabled{{instance=~"{I}"}})', 15, y, w=3, desc="iSCSI iSER (RDMA) protocol.", mappings=BOOL_MAP),
-        stat("SMB Multi", f'max(truenas_smb_multichannel_enabled{{instance=~"{I}"}})', 18, y, w=3, desc="SMB multichannel.", mappings=BOOL_MAP),
-        stat("NFSv4 On", f'max(truenas_nfs_v4_enabled{{instance=~"{I}"}})', 21, y, w=3, desc="NFSv4 enabled.", mappings=BOOL_MAP),
+        stat("ALUA", f'max(truenas_iscsi_alua_enabled{{instance=~"{I}"}})', 12, y, w=3, desc="iSCSI ALUA protocol (optional).", mappings=NEUTRAL_MAP),
+        stat("iSER", f'max(truenas_iscsi_iser_enabled{{instance=~"{I}"}})', 15, y, w=3, desc="iSCSI iSER (RDMA) protocol (optional).", mappings=NEUTRAL_MAP),
+        stat("SMB Multi", f'max(truenas_smb_multichannel_enabled{{instance=~"{I}"}})', 18, y, w=3, desc="SMB multichannel (optional).", mappings=NEUTRAL_MAP),
+        stat("NFSv4 On", f'max(truenas_nfs_v4_enabled{{instance=~"{I}"}})', 21, y, w=3, desc="NFSv4 enabled (optional).", mappings=NEUTRAL_MAP),
     ])
     y += 4
     panels.extend([
@@ -1028,7 +1069,7 @@ def build_dashboard():
         stat("Docker Imgs", f'sum(truenas_docker_image_count{{instance=~"{I}"}})', 6, y, w=3, desc="Docker images."),
         stat("Docker Nets", f'sum(truenas_docker_network_count{{instance=~"{I}"}})', 9, y, w=3, desc="Docker networks."),
         stat("Docker Up", f'max(truenas_docker_status{{instance=~"{I}", status="RUNNING"}})', 12, y, w=3, desc="Docker service running.", mappings=UP_MAP),
-        stat("NVIDIA GPU", f'max(truenas_docker_nvidia_present{{instance=~"{I}"}})', 15, y, w=3, desc="NVIDIA GPU available.", mappings=BOOL_MAP),
+        stat("NVIDIA GPU", f'max(truenas_docker_nvidia_present{{instance=~"{I}"}})', 15, y, w=3, desc="NVIDIA GPU available.", mappings=bmap("Yes", "green", "Not present", GRAY)),
         stat("Catalog Trains", f'truenas_catalog_train_count{{instance=~"{I}"}}', 18, y, w=3, desc="App catalog trains."),
         stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}})', 21, y, w=3, desc="Preferred catalog trains configured."),
     ])
@@ -1148,8 +1189,8 @@ def build_dashboard():
     app_overrides = [
         {"matcher": {"id": "byName", "options": "CPU %"}, "properties": [{"id": "unit", "value": "percent"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 50}, {"color": "red", "value": 80}]}}]},
         {"matcher": {"id": "byName", "options": "Memory"}, "properties": [{"id": "unit", "value": "bytes"}]},
-        {"matcher": {"id": "byName", "options": "Upgrade"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
-        {"matcher": {"id": "byName", "options": "Img Updates"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+        {"matcher": {"id": "byName", "options": "Upgrade"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": bmap("Available", "yellow", "—", GRAY)}]},
+        {"matcher": {"id": "byName", "options": "Img Updates"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": bmap("Available", "yellow", "—", GRAY)}]},
     ]
     panels.append(table(
         "App Inventory", app_table_targets, 0, y,
@@ -1162,23 +1203,23 @@ def build_dashboard():
     y += 1
     panels.extend([
         stat("VM Count", f'sum(truenas_vm_count{{instance=~"{I}"}})', 0, y, w=3, desc="Virtual machines."),
-        stat("Virt Support", f'max(truenas_vm_supports_virtualization{{instance=~"{I}"}})', 3, y, w=3, desc="KVM/HW virt available.", mappings=BOOL_MAP),
+        stat("Virt Support", f'max(truenas_vm_supports_virtualization{{instance=~"{I}"}})', 3, y, w=3, desc="KVM/HW virt available.", mappings=NEUTRAL_MAP),
         stat("Virt Details", f'max(truenas_vm_virtualization_details_supported{{instance=~"{I}"}})', 6, y, w=3,
-             desc="Virtualization support from vm.virtualization_details.", mappings=BOOL_MAP),
+             desc="Virtualization support from vm.virtualization_details.", mappings=NEUTRAL_MAP),
         stat("Virt Error", f'max(truenas_vm_virtualization_details_error_present{{instance=~"{I}"}})', 9, y, w=3,
-             desc="vm.virtualization_details currently reports an error.", mappings=BOOL_MAP),
+             desc="vm.virtualization_details currently reports an error.", mappings=bmap("Error", "red", "OK", "green")),
         stat("Max vCPUs", f'max(truenas_vm_maximum_supported_vcpus{{instance=~"{I}"}})', 12, y, w=3, desc="Maximum supported vCPUs."),
         stat("VM Avail RAM", f'sum(truenas_vm_available_memory_bytes{{instance=~"{I}"}})', 15, y, w=3, unit="bytes", desc="Available memory for VMs."),
         stat("Incus Inst", f'sum(truenas_virt_instance_count{{instance=~"{I}"}})', 18, y, w=3, desc="Incus/LXD instances."),
-        stat("IOMMU", f'max(truenas_iommu_enabled{{instance=~"{I}"}})', 21, y, w=3, desc="IOMMU/PCI passthrough.", mappings=BOOL_MAP),
+        stat("IOMMU", f'max(truenas_iommu_enabled{{instance=~"{I}"}})', 21, y, w=3, desc="IOMMU/PCI passthrough.", mappings=NEUTRAL_MAP),
     ])
     y += 4
     panels.extend([
-        stat("Intel VMX", f'max(truenas_vm_flag_intel_vmx{{instance=~"{I}"}})', 0, y, w=4, desc="Intel VT-x capability flag.", mappings=BOOL_MAP),
-        stat("AMD RVI", f'max(truenas_vm_flag_amd_rvi{{instance=~"{I}"}})', 4, y, w=4, desc="AMD RVI/NPT capability flag.", mappings=BOOL_MAP),
-        stat("Unrestricted", f'max(truenas_vm_flag_unrestricted_guest{{instance=~"{I}"}})', 8, y, w=4, desc="Unrestricted guest capability flag.", mappings=BOOL_MAP),
+        stat("Intel VMX", f'max(truenas_vm_flag_intel_vmx{{instance=~"{I}"}})', 0, y, w=4, desc="Intel VT-x capability flag.", mappings=NEUTRAL_MAP),
+        stat("AMD RVI", f'max(truenas_vm_flag_amd_rvi{{instance=~"{I}"}})', 4, y, w=4, desc="AMD RVI/NPT capability flag.", mappings=NEUTRAL_MAP),
+        stat("Unrestricted", f'max(truenas_vm_flag_unrestricted_guest{{instance=~"{I}"}})', 8, y, w=4, desc="Unrestricted guest capability flag.", mappings=NEUTRAL_MAP),
         stat("AMD ASIDs", f'max(truenas_vm_flag_amd_asids_supported{{instance=~"{I}"}})', 12, y, w=4,
-             desc="AMD Address Space Identifiers are supported.", mappings=BOOL_MAP),
+             desc="AMD Address Space Identifiers are supported.", mappings=NEUTRAL_MAP),
         stat("Incus Vols", f'sum(truenas_virt_volume_count{{instance=~"{I}"}})', 16, y, w=4, desc="Incus storage volumes."),
         stat("VM Mem Used", f'sum(truenas_vm_vmemory_in_use_bytes{{instance=~"{I}"}})', 20, y, w=4, unit="bytes", desc="VM memory in use."),
     ])
@@ -1218,7 +1259,7 @@ def build_dashboard():
         stat("Tasks On", f'sum(truenas_task_enabled{{instance=~"{I}"}})', 12, y, w=3, desc="Enabled tasks."),
         stat("Cloud Bkp", f'sum(truenas_cloud_backup_task_count{{instance=~"{I}"}})', 15, y, w=3, desc="Cloud backup tasks."),
         stat("Cron Jobs", f'truenas_cronjob_count{{instance=~"{I}"}}', 18, y, w=3, desc="Configured cron jobs."),
-        stat("Reboot Req", f'max(truenas_system_reboot_required{{instance=~"{I}"}})', 21, y, w=3, desc="Reboot pending.", mappings=BOOL_MAP),
+        stat("Reboot Req", f'max(truenas_system_reboot_required{{instance=~"{I}"}})', 21, y, w=3, desc="Reboot required to finish pending changes.", mappings=bmap("Reboot", "red", "No", "green")),
     ])
     y += 4
     panels.extend([
@@ -1356,28 +1397,28 @@ def build_dashboard():
     panels.append(row("Security & Platform", y))
     y += 1
     panels.extend([
-        stat("2FA", f'max(truenas_2fa_enabled{{instance=~"{I}"}})', 0, y, w=4, desc="Two-factor auth.", mappings=BOOL_MAP),
-        stat("SSH", f'max(truenas_ssh_enabled{{instance=~"{I}"}})', 4, y, w=4, desc="SSH service enabled at boot.", mappings=BOOL_MAP),
-        stat("FTP", f'max(truenas_ftp_enabled{{instance=~"{I}"}})', 8, y, w=4, desc="FTP service enabled at boot.", mappings=BOOL_MAP),
-        stat("SNMP", f'max(truenas_snmp_enabled{{instance=~"{I}"}})', 12, y, w=4, desc="SNMP service enabled at boot.", mappings=BOOL_MAP),
-        stat("FIPS", f'max(truenas_fips_enabled{{instance=~"{I}"}})', 16, y, w=4, desc="FIPS mode.", mappings=BOOL_MAP),
+        stat("2FA", f'max(truenas_2fa_enabled{{instance=~"{I}"}})', 0, y, w=4, desc="Two-factor auth (disabled is a security finding).", mappings=bmap("Enabled", "green", "⚠ Disabled", "red")),
+        stat("SSH", f'max(truenas_ssh_enabled{{instance=~"{I}"}})', 4, y, w=4, desc="SSH service enabled at boot.", mappings=NEUTRAL_MAP),
+        stat("FTP", f'max(truenas_ftp_enabled{{instance=~"{I}"}})', 8, y, w=4, desc="FTP service enabled at boot.", mappings=NEUTRAL_MAP),
+        stat("SNMP", f'max(truenas_snmp_enabled{{instance=~"{I}"}})', 12, y, w=4, desc="SNMP service enabled at boot.", mappings=NEUTRAL_MAP),
+        stat("FIPS", f'max(truenas_fips_enabled{{instance=~"{I}"}})', 16, y, w=4, desc="FIPS mode (policy-dependent).", mappings=NEUTRAL_MAP),
         stat("Sessions", f'max(truenas_auth_sessions_active{{instance=~"{I}"}})', 20, y, w=4, desc="Active API sessions."),
     ])
     y += 4
     panels.extend([
-        stat("Production", f'max(truenas_is_production{{instance=~"{I}"}})', 0, y, w=4, desc="Marked as production.", mappings=BOOL_MAP),
-        stat("iX Hardware", f'max(truenas_is_ix_hardware{{instance=~"{I}"}})', 4, y, w=4, desc="iXsystems hardware.", mappings=BOOL_MAP),
+        stat("Production", f'max(truenas_is_production{{instance=~"{I}"}})', 0, y, w=4, desc="Marked as production.", mappings=NEUTRAL_MAP),
+        stat("iX Hardware", f'max(truenas_is_ix_hardware{{instance=~"{I}"}})', 4, y, w=4, desc="iXsystems hardware.", mappings=NEUTRAL_MAP),
         stat("Support A+E", f'max(truenas_support_available_and_enabled{{instance=~"{I}"}})', 8, y, w=4,
-             desc="Support available and enabled.", mappings=BOOL_MAP),
-        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 12, y, w=4, desc="Directory services healthy.", mappings=UP_MAP),
-        stat("Dir Svc Cfg", f'max(truenas_directoryservices_config_enabled{{instance=~"{I}"}})', 16, y, w=4, desc="Directory service detected by status.", mappings=BOOL_MAP),
+             desc="Support available and enabled.", mappings=NEUTRAL_MAP),
+        stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 12, y, w=4, desc="Directory services healthy (when configured).", mappings=UP_MAP),
+        stat("Dir Svc Cfg", f'max(truenas_directoryservices_config_enabled{{instance=~"{I}"}})', 16, y, w=4, desc="Directory service detected by status.", mappings=NEUTRAL_MAP),
         stat("Dir Faults", f'sum(truenas_directoryservices_fault_present{{instance=~"{I}"}})', 20, y, w=4,
              desc="Enabled directory services reporting a fault.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
     ])
     y += 4
     panels.extend([
-        stat("Security FIPS", f'max(truenas_system_security_fips_configured{{instance=~"{I}"}})', 0, y, w=4, desc="System security FIPS configured.", mappings=BOOL_MAP),
-        stat("GPOS STIG", f'max(truenas_system_security_gpos_stig{{instance=~"{I}"}})', 4, y, w=4, desc="GPOS STIG policy enabled.", mappings=BOOL_MAP),
+        stat("Security FIPS", f'max(truenas_system_security_fips_configured{{instance=~"{I}"}})', 0, y, w=4, desc="System security FIPS configured (policy-dependent).", mappings=NEUTRAL_MAP),
+        stat("GPOS STIG", f'max(truenas_system_security_gpos_stig{{instance=~"{I}"}})', 4, y, w=4, desc="GPOS STIG policy enabled (policy-dependent).", mappings=NEUTRAL_MAP),
         stat(
             "Pwd Min Len",
             f'max(truenas_system_security_password_min_length{{instance=~"{I}"}})',
@@ -1407,7 +1448,7 @@ def build_dashboard():
             desc="Password history retention count.",
         ),
         stat("FIPS Avail", f'max(truenas_fips_available{{instance=~"{I}"}})', 20, y, w=4,
-             desc="FIPS capability is available on this system.", mappings=BOOL_MAP),
+             desc="FIPS capability is available on this system.", mappings=NEUTRAL_MAP),
     ])
     y += 4
     panels.append(table(
@@ -1493,7 +1534,7 @@ def build_dashboard():
     hw_panels = []
     hy = y + 1
     hw_panels.extend([
-        stat("IPMI Loaded", f'max(truenas_ipmi_loaded{{instance=~"{I}"}})', 0, hy, w=3, mappings=BOOL_MAP),
+        stat("IPMI Loaded", f'max(truenas_ipmi_loaded{{instance=~"{I}"}})', 0, hy, w=3, mappings=bmap("Yes", "green", "Not present", GRAY)),
         stat("Power On", f'max(truenas_ipmi_chassis_power_on{{instance=~"{I}"}})', 3, hy, w=3, mappings=UP_MAP),
         stat("GPUs", f'truenas_gpu_count{{instance=~"{I}"}}', 6, hy, w=3),
         stat("Power Overld", f'max(truenas_ipmi_chassis_power_overload{{instance=~"{I}"}})', 9, hy, w=3,
@@ -1514,8 +1555,8 @@ def build_dashboard():
              desc="GPUs available to the TrueNAS host."),
         stat("GPU Critical", f'sum(truenas_gpu_uses_system_critical_devices{{instance=~"{I}"}})', 12, hy, w=4,
              desc="GPUs using system-critical PCI devices.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
-        stat("ECC Memory", f'max(truenas_host_ecc_memory{{instance=~"{I}"}})', 16, hy, w=4, mappings=BOOL_MAP),
-        stat("Resilver On", f'max(truenas_pool_resilver_enabled{{instance=~"{I}"}})', 20, hy, w=4, mappings=BOOL_MAP),
+        stat("ECC Memory", f'max(truenas_host_ecc_memory{{instance=~"{I}"}})', 16, hy, w=4, mappings=bmap("Yes", "green", "Not reported", GRAY)),
+        stat("Resilver On", f'max(truenas_pool_resilver_enabled{{instance=~"{I}"}})', 20, hy, w=4, mappings=NEUTRAL_MAP),
     ])
     hy += 4
     panels.append(row("Hardware & IPMI", y, collapsed=True, panels=hw_panels))
@@ -1555,7 +1596,7 @@ def build_dashboard():
         stat("Retention", f'truenas_audit_retention_days{{instance=~"{I}"}}', 0, ay, w=6, unit="d",
              desc="Configured local audit retention."),
         stat("Remote Log", f'max(truenas_audit_remote_logging_enabled{{instance=~"{I}"}})', 6, ay, w=6,
-             desc="Remote audit logging enabled.", mappings=BOOL_MAP),
+             desc="Remote audit logging enabled (optional).", mappings=NEUTRAL_MAP),
         stat("Dir Svc OK", f'max(truenas_directoryservices_healthy{{instance=~"{I}"}})', 12, ay, w=6, mappings=UP_MAP),
         stat("Dir Faults", f'sum(truenas_directoryservices_fault_present{{instance=~"{I}"}})', 18, ay, w=6,
              thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
@@ -1569,7 +1610,7 @@ def build_dashboard():
     cy = y + 1
     cfg_panels.extend([
         stat("HTTPS Port", f'truenas_ui_https_port{{instance=~"{I}"}}', 0, cy, w=4),
-        stat("Reporting On", f'max(truenas_reporting_enabled{{instance=~"{I}"}})', 4, cy, w=4, mappings=BOOL_MAP),
+        stat("Reporting On", f'max(truenas_reporting_enabled{{instance=~"{I}"}})', 4, cy, w=4, mappings=NEUTRAL_MAP),
         stat("Exporters", f'truenas_reporting_exporter_count{{instance=~"{I}"}}', 8, cy, w=4),
         stat("Static Routes", f'truenas_static_route_count{{instance=~"{I}"}}', 12, cy, w=4),
         stat("Tunables", f'truenas_tunable_count{{instance=~"{I}"}}', 16, cy, w=4),
@@ -1577,9 +1618,9 @@ def build_dashboard():
     ])
     cy += 4
     cfg_panels.extend([
-        stat("Upd AutoChk", f'max(truenas_update_autocheck_enabled{{instance=~"{I}"}})', 0, cy, w=4, mappings=BOOL_MAP,
+        stat("Upd AutoChk", f'max(truenas_update_autocheck_enabled{{instance=~"{I}"}})', 0, cy, w=4, mappings=NEUTRAL_MAP,
              desc="Automatic update checks enabled."),
-        stat("Upd Profile", f'clamp_max(count(truenas_update_profile_info{{instance=~"{I}"}}), 1)', 4, cy, w=4, mappings=BOOL_MAP,
+        stat("Upd Profile", f'clamp_max(count(truenas_update_profile_info{{instance=~"{I}"}}), 1)', 4, cy, w=4, mappings=NEUTRAL_MAP,
              desc="Update profile information present."),
         stat("NTP Servers", f'max(truenas_ntp_server_count{{instance=~"{I}"}})', 8, cy, w=4,
              desc="Configured NTP servers."),
@@ -1592,7 +1633,7 @@ def build_dashboard():
     ])
     cy += 4
     cfg_panels.extend([
-        stat("Catalog Cfg", f'max(truenas_catalog_config_present{{instance=~"{I}"}})', 0, cy, w=4, mappings=BOOL_MAP,
+        stat("Catalog Cfg", f'max(truenas_catalog_config_present{{instance=~"{I}"}})', 0, cy, w=4, mappings=NEUTRAL_MAP,
              desc="Catalog config payload present."),
         stat("Pref Trains", f'max(truenas_catalog_preferred_train_count{{instance=~"{I}"}})', 4, cy, w=4,
              desc="Preferred catalog trains configured."),
@@ -1600,10 +1641,10 @@ def build_dashboard():
              desc="NTP servers with burst enabled."),
         stat("NTP Iburst", f'max(truenas_ntp_server_iburst_count{{instance=~"{I}"}})', 12, cy, w=4,
              desc="NTP servers with iburst enabled."),
-        stat("NTP Min Poll", f'max(truenas_ntp_server_min_poll_minutes{{instance=~"{I}"}})', 16, cy, w=4,
-             desc="Minimum configured NTP poll interval (minutes)."),
-        stat("NTP Max Poll", f'max(truenas_ntp_server_max_poll_minutes{{instance=~"{I}"}})', 20, cy, w=4,
-             desc="Maximum configured NTP poll interval (minutes)."),
+        stat("NTP Min Poll", f'max(truenas_ntp_server_min_poll_minutes{{instance=~"{I}"}})', 16, cy, w=4, unit="m",
+             desc="Minimum configured NTP poll interval."),
+        stat("NTP Max Poll", f'max(truenas_ntp_server_max_poll_minutes{{instance=~"{I}"}})', 20, cy, w=4, unit="m",
+             desc="Maximum configured NTP poll interval."),
     ])
     cy += 4
     panels.append(row("System Configuration", y, collapsed=True, panels=cfg_panels))
@@ -1740,12 +1781,15 @@ def build_dashboard():
         stat("Scrape Time", f'max(truenas_scrape_duration_seconds{{instance=~"{I}"}})', 3, apy, w=3, unit="s",
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 10}, {"color": "red", "value": 30}], graph=True),
         stat("Event Stream", f'max(truenas_event_stream_up{{instance=~"{I}"}})', 6, apy, w=3, mappings=UP_MAP),
-        stat("API Success %", f'100 * avg(truenas_api_call_success{{instance=~"{I}", method=~"$method"}})', 9, apy, w=3, unit="percent",
+        stat("Methods OK %", f'100 * avg(truenas_api_call_success{{instance=~"{I}", method=~"$method"}})', 9, apy, w=3, unit="percent",
+             desc="Share of API methods whose latest scrape call succeeded (not a call-level success rate).",
              thresholds=[{"color": "red", "value": 0}, {"color": "yellow", "value": 95}, {"color": "green", "value": 99}], graph=True),
-        stat("API Errors", f'sum(truenas_api_call_errors_total{{instance=~"{I}"}})', 12, apy, w=3,
+        stat("API Errors (1h)", f'sum(increase(truenas_api_call_errors_total{{instance=~"{I}"}}[1h]))', 12, apy, w=3,
+             desc="API call errors in the last hour; returns to 0 after recovery.",
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 10}], graph=True),
-        stat("Coll Errors", f'sum(truenas_collector_errors_total{{instance=~"{I}"}})', 15, apy, w=3,
-             thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
+        stat("Coll Errors (1h)", f'sum(increase(truenas_collector_errors_total{{instance=~"{I}"}}[1h]))', 15, apy, w=3,
+             desc="Collector errors in the last hour; returns to 0 after recovery.",
+             thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]),
         stat("Scrape Age", f'time() - max(truenas_last_scrape_timestamp_seconds{{instance=~"{I}"}})', 18, apy, w=3, unit="s", desc="Seconds since last successful scrape."),
         stat("Features On", f'sum(truenas_feature_enabled{{instance=~"{I}"}})', 21, apy, w=3, desc="Enabled platform feature flags."),
     ])
@@ -1766,9 +1810,9 @@ def build_dashboard():
         [
             tgt(f'truenas_up{{instance=~"{I}"}}', 'Exporter up', 'A'),
             tgt(f'truenas_event_stream_up{{instance=~"{I}"}}', 'Event stream up', 'B'),
-            tgt(f'sum(truenas_collector_errors_total{{instance=~"{I}"}})', 'Collector errors', 'C'),
+            tgt(f'sum(rate(truenas_collector_errors_total{{instance=~"{I}"}}[$__rate_interval]))', 'Collector error rate', 'C'),
         ],
-        0, apy, desc="Telemetry collection health.",
+        0, apy, desc="Telemetry collection health (collector errors shown as a rate, not a lifetime total).",
     ))
     api_panels.append(timeseries(
         "Scrape Duration Over Time",
@@ -1860,9 +1904,9 @@ def build_dashboard():
             tf('sortBy', {'fields': [{'displayName': 'Active Now', 'desc': True}]}),
         ],
         overrides=[
-            {"matcher": {"id": "byName", "options": "Active Now"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": UP_MAP}]},
-            {"matcher": {"id": "byName", "options": "Next Boot"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
-            {"matcher": {"id": "byName", "options": "Keep"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+            {"matcher": {"id": "byName", "options": "Active Now"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": bmap("Active", "green", "—", GRAY)}]},
+            {"matcher": {"id": "byName", "options": "Next Boot"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": bmap("Next", "blue", "—", GRAY)}]},
+            {"matcher": {"id": "byName", "options": "Keep"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": bmap("Kept", "blue", "—", GRAY)}]},
         ],
         sort_col='Active Now',
     ))

@@ -3012,6 +3012,13 @@
       "variable": "APP_WEBDAV_SHARE_COUNT"
     },
     {
+      "help": "1 if WebShare passkey authentication is enabled (v26+)",
+      "labels": [],
+      "name": "truenas_webshare_enabled",
+      "type": "gauge",
+      "variable": "WEBSHARE_ENABLED"
+    },
+    {
       "help": "ZFS ARC available memory in bytes (v25+)",
       "labels": [],
       "name": "truenas_zfs_arc_available_bytes",
