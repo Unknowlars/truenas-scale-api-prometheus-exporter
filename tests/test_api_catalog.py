@@ -14,6 +14,7 @@ from truenas_exporter.compat_profiles import (
     PROFILE_25_10,
     PROFILE_26_0,
     PROFILE_UNKNOWN,
+    V26_ADDED_METHODS,
     V26_REMOVED_EVENTS,
     V26_REMOVED_METHODS,
 )
@@ -123,6 +124,7 @@ def test_default_event_subscriptions_are_documented() -> None:
         "reporting.realtime",
         "app.stats",
         "virt.instance.metrics",
+        "container.metrics",
     )
     assert set(DEFAULT_EVENT_SUBSCRIPTIONS) <= SAFE_EVENT_SUBSCRIPTIONS
     assert SAFE_EVENT_SUBSCRIPTIONS | UNSAFE_EVENT_SUBSCRIPTIONS == DOCUMENTED_EVENT_NAMES
@@ -156,14 +158,16 @@ def test_compatibility_profiles_encode_reviewed_intersections() -> None:
     assert PROFILE_26_0.target_version == "26.0.0"
     assert PROFILE_UNKNOWN.target_version == "common-intersection"
 
-    assert PROFILE_26_0.reviewed_methods < PROFILE_25_10.reviewed_methods
+    # v26 = (v25 minus removed methods) plus v26-only additions (container.*, webshare).
+    assert PROFILE_26_0.reviewed_methods >= V26_ADDED_METHODS
+    assert V26_ADDED_METHODS.isdisjoint(PROFILE_25_10.reviewed_methods)
+    assert PROFILE_26_0.reviewed_methods - V26_ADDED_METHODS < PROFILE_25_10.reviewed_methods
     assert PROFILE_UNKNOWN.reviewed_methods == PROFILE_26_0.reviewed_methods
     assert PROFILE_UNKNOWN.reviewed_events == PROFILE_26_0.reviewed_events
 
     removed_methods = {
         "virt.instance.query",
         "virt.volume.query",
-        "nvmet.global.sessions",
         "reporting.graphs",
         "reporting.netdata_graphs",
     }
@@ -176,6 +180,11 @@ def test_compatibility_profiles_encode_reviewed_intersections() -> None:
     assert "virt.instance.metrics" in PROFILE_25_10.reviewed_events
     assert "virt.instance.metrics" not in PROFILE_26_0.reviewed_events
     assert "virt.instance.metrics" not in PROFILE_UNKNOWN.reviewed_events
+
+    # container.metrics is the v26 rename of virt.instance.metrics.
+    assert "container.metrics" not in PROFILE_25_10.reviewed_events
+    assert "container.metrics" in PROFILE_26_0.reviewed_events
+    assert "container.metrics" in PROFILE_UNKNOWN.reviewed_events
 
     assert "app.image.query" in PROFILE_25_10.reviewed_methods
     assert "app.image.query" in PROFILE_26_0.reviewed_methods

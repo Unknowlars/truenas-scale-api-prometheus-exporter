@@ -180,7 +180,9 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
         options = params[1]
         if options.get("count"):
             return 4
-        return [{"creation_parsed": 1700000000}]
+        # v26 returns the full object with properties.creation populated (via
+        # extra.properties); the nested select alias is no longer used.
+        return [{"properties": {"creation": {"parsed": 1700000000}}}]
 
     monkeypatch.setattr(exporter, "_call", fake_call)
 
@@ -190,7 +192,8 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
     oldest_options = calls[1][1][1]
     assert oldest_options["limit"] == 1
     assert oldest_options["order_by"] == ["properties.creation.parsed"]
-    assert oldest_options["select"] == [["properties.creation.parsed", "creation_parsed"]]
+    assert oldest_options["extra"] == {"properties": ["creation"]}
+    assert "select" not in oldest_options
 
 
 def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeypatch):

@@ -59,8 +59,10 @@ def test_load_config_defaults_include_documented_event_streams(monkeypatch):
 
     assert "reporting.realtime" in config.event_subscriptions
     assert "app.stats" in config.event_subscriptions
+    # Both instance-metrics wire names are safe defaults; the active profile keeps
+    # only the one its TrueNAS version exposes (v25 virt.*, v26 container.metrics).
     assert "virt.instance.metrics" in config.event_subscriptions
-    assert "container.metrics" not in config.event_subscriptions
+    assert "container.metrics" in config.event_subscriptions
 
 
 def test_event_subscription_formatting_handles_documented_interval_events():
@@ -91,13 +93,15 @@ def test_dispatch_routes_virt_instance_metrics_to_single_cache_sink(monkeypatch)
 
     payload = {"fields": [{"name": "vm1", "cpu_usage": 12.5}]}
     before = time.time()
+    # The v25 wire name virt.instance.metrics is normalized to the canonical
+    # container.metrics key so caching/freshness use one identity across versions.
     exporter._dispatch_event("virt.instance.metrics", payload)
 
     assert calls == [
         ("virt", payload),
-        ("generic", "virt.instance.metrics", payload),
+        ("generic", "container.metrics", payload),
     ]
-    assert labeled_value(exporter_module.EVENT_LAST_MESSAGE_TS, "virt.instance.metrics") >= before
+    assert labeled_value(exporter_module.EVENT_LAST_MESSAGE_TS, "container.metrics") >= before
 
 
 def test_app_stats_event_removes_stale_app_and_interface_series():

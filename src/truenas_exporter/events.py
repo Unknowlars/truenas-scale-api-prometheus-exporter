@@ -120,6 +120,15 @@ _REALTIME_EVENT_SCALAR_METRICS: tuple[Gauge, ...] = (
     ZFS_L2ARC_ACCESSES_RATE,
 )
 
+# v25 emitted per-instance CPU/mem as the virt.instance.metrics event; v26 renamed
+# the source to container.metrics. Both share the same payload shape and feed the
+# same gauges, so wire names are normalized to this single canonical key before any
+# metric caching/freshness bookkeeping (see runtime._dispatch_event).
+INSTANCE_METRICS_EVENT = "container.metrics"
+INSTANCE_METRICS_WIRE_ALIASES: frozenset[str] = frozenset(
+    {"virt.instance.metrics", "container.metrics"}
+)
+
 _EVENT_METRICS: dict[str, tuple[Gauge, ...]] = {
     "reporting.realtime": _REALTIME_EVENT_SCALAR_METRICS + (
         CPU_CORE_USAGE_PERCENT,
@@ -142,7 +151,7 @@ _EVENT_METRICS: dict[str, tuple[Gauge, ...]] = {
         APP_BLKIO_READ_BYTES,
         APP_BLKIO_WRITE_BYTES,
     ),
-    "virt.instance.metrics": (VIRT_INSTANCE_CPU, VIRT_INSTANCE_MEM),
+    INSTANCE_METRICS_EVENT: (VIRT_INSTANCE_CPU, VIRT_INSTANCE_MEM),
 }
 _EVENT_SOURCE_BY_METRIC_NAME = {
     metric_name(metric): event for event, metrics in _EVENT_METRICS.items() for metric in metrics

@@ -687,6 +687,7 @@ DOCUMENTED_EVENT_NAMES: frozenset[str] = frozenset(
         "cloud_backup.query",
         "cloudsync.credentials.query",
         "cloudsync.query",
+        "container.metrics",
         "core.get_jobs",
         "cronjob.query",
         "docker.network.query",
@@ -742,10 +743,14 @@ DOCUMENTED_EVENT_NAMES: frozenset[str] = frozenset(
 
 # Defaults are restricted to documented subscription names that provide bounded
 # operational telemetry and do not expose raw log streams or sensitive records.
+# virt.instance.metrics (v25) was renamed to container.metrics (v26). Both carry
+# the same bounded per-instance CPU/mem fields; the active compatibility profile
+# filters the default to the one its TrueNAS version actually exposes.
 DEFAULT_SAFE_EVENT_SUBSCRIPTIONS: tuple[str, ...] = (
     "reporting.realtime",
     "app.stats",
     "virt.instance.metrics",
+    "container.metrics",
 )
 
 # Event schemas are full-object notifications and cannot be server-side

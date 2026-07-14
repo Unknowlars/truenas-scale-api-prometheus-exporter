@@ -269,6 +269,8 @@ from .events import (
     _EVENT_SOURCE_BY_METRIC_NAME,
     _INTERVAL_EVENT_SUBSCRIPTIONS,
     _REALTIME_EVENT_SCALAR_METRICS,
+    INSTANCE_METRICS_EVENT,
+    INSTANCE_METRICS_WIRE_ALIASES,
 )
 from .http import _LANDING_PAGE  # noqa: F401 - compatibility re-export
 from .http import start_http_server as _start_http_server
@@ -320,6 +322,7 @@ from .metrics import (
     APP_UPGRADE_AVAILABLE,
     APP_USED_HOST_IP_COUNT,
     APP_USED_PORT_COUNT,
+    APP_WEBDAV_SHARE_COUNT,
     AUDIT_DATASET_AVAILABLE_BYTES,
     AUDIT_DATASET_USED_BYTES,
     AUDIT_QUOTA_BYTES,
@@ -561,9 +564,12 @@ from .metrics import (
     SERVICE_ENABLED,
     SERVICE_RUNNING,
     SMB1_ENABLED,
+    SMB_CONNECTION_COUNT,
     SMB_ENCRYPTION_MODE,
     SMB_MULTICHANNEL_ENABLED,
     SMB_NTLMV1_AUTH_ENABLED,
+    SMB_OPEN_FILE_COUNT,
+    SMB_SESSION_COUNT,
     SMB_SHARE_COUNT,
     SNAPSHOT_OLDEST_TS,
     SNAPSHOT_TASK_MAX_COUNT,
@@ -627,6 +633,7 @@ from .metrics import (
     VM_VIRTUALIZATION_DETAILS_ERROR_PRESENT,
     VM_VIRTUALIZATION_DETAILS_SUPPORTED,
     VM_VMEMORY_IN_USE_BYTES,
+    WEBSHARE_ENABLED,
     ZFS_ARC_AVAILABLE_BYTES,
     ZFS_ARC_FREE_MEMORY_BYTES,
     ZFS_ARC_SIZE_BYTES,
@@ -1923,6 +1930,11 @@ class TrueNASExporter:
         self._collector_event_series[metric_name(POOL_REALTIME_WRITE_BYTES)] = pool_write
 
     def _dispatch_event(self, collection: str, payload: Any) -> None:
+        # v25 virt.instance.metrics and v26 container.metrics are the same source
+        # under different names; normalize to the canonical key so caching and
+        # freshness use one identity regardless of TrueNAS version.
+        if collection in INSTANCE_METRICS_WIRE_ALIASES:
+            collection = INSTANCE_METRICS_EVENT
         now = time.time()
         self._collector_event_messages[collection] = now
 
@@ -1936,7 +1948,7 @@ class TrueNASExporter:
             valid_payload = isinstance(payload, dict) and isinstance(
                 payload.get("fields"), list
             )
-        elif collection == "virt.instance.metrics":
+        elif collection == INSTANCE_METRICS_EVENT:
             if not isinstance(payload, dict):
                 valid_payload = False
             elif "fields" in payload:
@@ -1960,7 +1972,7 @@ class TrueNASExporter:
             self._cache_realtime_event(payload)
         elif collection == "app.stats":
             self._cache_app_stats_event(payload)
-        elif collection == "virt.instance.metrics":
+        elif collection == INSTANCE_METRICS_EVENT:
             self._cache_virt_metrics_event(payload)
 
         self._event_last_monotonic[collection] = time.monotonic()
@@ -2836,7 +2848,26 @@ class TrueNASExporter:
     # ------------------------------------------------------------------
 
     def _collect_smb_nfs_sessions(self, client: JsonRpcWsClient) -> None:
-        """Retain legacy SMB metric declarations without undocumented calls."""
+        """Populate SMB session/connection/open-file counts from smb.status (v26+).
+
+        smb.status returns per-session records that include usernames and client
+        IP addresses. Only the *count* of each list is recorded — no session
+        field is ever turned into a metric label, so no PII reaches the metrics.
+        On 25.10 smb.status was undocumented, so these gauges stay NaN there.
+        """
+        if not self.compatibility_profile.allows_method("smb.status"):
+            return
+        for info_level, gauge in (
+            ("SESSIONS", SMB_SESSION_COUNT),
+            ("SHARES", SMB_CONNECTION_COUNT),
+            ("LOCKS", SMB_OPEN_FILE_COUNT),
+        ):
+            try:
+                result = self._call(client, "smb.status", [info_level])
+                if isinstance(result, list):
+                    gauge.set(len(result))
+            except Exception:
+                LOG.debug("smb.status %s failed", info_level, exc_info=True)
 
     # ------------------------------------------------------------------
     # GPU metrics via device.get_info (v3)
@@ -3984,21 +4015,35 @@ class TrueNASExporter:
     # ------------------------------------------------------------------
 
     def _collect_virt_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """Collect Incus/LXD container instance and volume metrics."""
+        """Collect Incus/LXD container instance and volume metrics.
+
+        v26 renamed the virt.* API to container.*; v25 still uses
+        virt.instance.query. The active compatibility profile decides which
+        method exists. container.query exposes sensitive fields (initenv holds
+        per-container environment variables, idmap, etc.), so we request only the
+        ``name`` and ``status`` fields via ``select`` and never fetch the full
+        object.
+        """
+        use_container = self.compatibility_profile.allows_method("container.query")
+        instance_method = "container.query" if use_container else "virt.instance.query"
+        # v26 container.query nests state under ``status.state``; v25
+        # virt.instance.query returns a flat ``status`` string plus a ``type``.
+        select_fields = ["name", "status"] if use_container else ["name", "type", "status"]
+
         # Instances
         try:
-            instances = cache.get("virt.instance.query") or self._call(client, "virt.instance.query", [
-                [], {"limit": self.config.query_limit, "select": ["name", "type", "status"]}
+            instances = cache.get(instance_method) or self._call(client, instance_method, [
+                [], {"limit": self.config.query_limit, "select": select_fields}
             ])
         except Exception:
-            LOG.debug("virt.instance.query failed", exc_info=True)
+            LOG.debug("%s failed", instance_method, exc_info=True)
             instances = None
 
         if isinstance(instances, list):
             try:
-                VIRT_INSTANCE_COUNT.set(self._query_count(client, "virt.instance.query"))
+                VIRT_INSTANCE_COUNT.set(self._query_count(client, instance_method))
             except Exception:
-                LOG.debug("virt.instance.query count failed", exc_info=True)
+                LOG.debug("%s count failed", instance_method, exc_info=True)
             VIRT_INSTANCE_RUNNING.clear()
             for inst in instances[: self.config.max_entity_calls]:
                 if not isinstance(inst, dict):
@@ -4006,6 +4051,9 @@ class TrueNASExporter:
                 name = _str_label(inst.get("name"), "unknown")
                 inst_type = _str_label(inst.get("type"), "CONTAINER").upper()
                 status = inst.get("status")
+                if isinstance(status, dict):
+                    # v26: status is {"state": ..., "pid": ..., "domain_state": ...}
+                    status = status.get("state")
                 if isinstance(status, str) and status:
                     running = status.upper() in {"RUNNING", "STARTED", "UP"}
                     VIRT_INSTANCE_RUNNING.labels(name=name, type=inst_type).set(
@@ -4015,17 +4063,20 @@ class TrueNASExporter:
                 # CPU and memory utilization are event-owned; the query fields
                 # named cpu/memory are configuration, not usage.
 
-        # Volumes
-        try:
-            volume_count = self._query_count(client, "virt.volume.query")
-        except Exception:
-            LOG.debug("virt.volume.query failed", exc_info=True)
-            volume_count = None
-        if volume_count is not None:
-            VIRT_VOLUME_COUNT.set(volume_count)
+        # Volumes: v25 only. v26 dropped virt.volume.query and offers no
+        # equivalent read-only volume inventory, so VIRT_VOLUME_COUNT stays NaN
+        # (unknown) rather than being fabricated as 0.
+        if not use_container:
+            try:
+                volume_count = self._query_count(client, "virt.volume.query")
+            except Exception:
+                LOG.debug("virt.volume.query failed", exc_info=True)
+                volume_count = None
+            if volume_count is not None:
+                VIRT_VOLUME_COUNT.set(volume_count)
 
-        # virt.global.config has no operational state field in 25.10.2. The
-        # legacy global-state and volume-size metrics intentionally remain NaN.
+        # virt.global.config (v25) / lxc.config (v26) expose no operational state
+        # field, so the global-state and volume-size metrics remain NaN.
 
     # ------------------------------------------------------------------
     # Fibre Channel
@@ -4180,7 +4231,27 @@ class TrueNASExporter:
         except Exception:
             LOG.debug("app.image.dockerhub_rate_limit failed", exc_info=True)
 
-        # sharing.webshare.query does not exist in v25.10.2 — method removed upstream
+        # WebShare (v26 successor to WebDAV; the method does not exist on 25.10).
+        # Counts only; the config's passkey field is an auth *mode*, not a secret.
+        if self.compatibility_profile.allows_method("sharing.webshare.query"):
+            try:
+                APP_WEBDAV_SHARE_COUNT.set(
+                    self._query_count(client, "sharing.webshare.query")
+                )
+            except Exception:
+                LOG.debug("sharing.webshare.query failed", exc_info=True)
+            try:
+                webshare = cache.get("webshare.config") or self._call(
+                    client, "webshare.config", []
+                )
+                if isinstance(webshare, dict):
+                    passkey = webshare.get("passkey")
+                    if isinstance(passkey, str) and passkey:
+                        WEBSHARE_ENABLED.set(
+                            0 if passkey.strip().upper() == "DISABLED" else 1
+                        )
+            except Exception:
+                LOG.debug("webshare.config failed", exc_info=True)
 
     # ------------------------------------------------------------------
     # UPS metrics
@@ -4383,11 +4454,17 @@ class TrueNASExporter:
             LOG.debug("pool.snapshot.query count failed", exc_info=True)
 
         try:
+            # v26 note: pool.snapshot.query returns empty properties {} unless
+            # extra.properties requests them, so order_by on
+            # properties.creation.parsed would sort None<None and raise EINVAL
+            # server-side. The nested select alias also returns {} on v26, so we
+            # fetch the full object (limit 1) and let
+            # _extract_snapshot_creation_timestamp read properties.creation.parsed.
             oldest_query = self._call(client, "pool.snapshot.query", [
                 [], {
                     "limit": 1,
                     "order_by": ["properties.creation.parsed"],
-                    "select": [["properties.creation.parsed", "creation_parsed"]],
+                    "extra": {"properties": ["creation"]},
                 }
             ])
         except Exception:

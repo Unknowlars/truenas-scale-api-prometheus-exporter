@@ -597,7 +597,6 @@ def test_bootstrap_malformed_and_failed_detection_fall_back_without_expanding_ac
     blocked_methods = {
         "virt.instance.query",
         "virt.volume.query",
-        "nvmet.global.sessions",
         "reporting.graphs",
         "reporting.netdata_graphs",
     }
@@ -645,7 +644,6 @@ def test_profile_gate_blocks_removed_and_prohibited_calls_before_client() -> Non
         for method in (
             "virt.instance.query",
             "virt.volume.query",
-            "nvmet.global.sessions",
             "reporting.graphs",
             "reporting.netdata_graphs",
             "pool.is_upgraded",
