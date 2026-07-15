@@ -52,6 +52,24 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-15 startup configuration fix: removed the Compose-level
+  `EVENT_SUBSCRIPTIONS` injection so sample deployments do not force the newest
+  event list into stale or externally supplied images. `.env.example` now leaves
+  `EVENT_SUBSCRIPTIONS` unset by default and documents version-specific override
+  examples. Regression coverage in `tests/test_tooling.py` verifies Compose no
+  longer forces the optional runtime default. Focused checks passed:
+  `python3 -m pytest -q tests/test_tooling.py tests/test_api_catalog.py tests/test_phase2_events.py tests/test_removed_source_suppression.py`
+  (`40 passed`); `docker compose --env-file .env.example config --no-env-resolution --quiet`
+  passed; explicit source config validation accepted
+  `reporting.realtime,app.stats,virt.instance.metrics,container.metrics`; and
+  `python3 scripts/public_release_audit.py` returned `public_release_audit_ok`.
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `186 passed`, 90.44% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Compose validation, Docker image build, container
+  version smoke `5.2.0`, and `validation_ok`. Optional live smoke was not run
+  because no read-only live TrueNAS target/key was provided.
+
 - 2026-07-15 public-release hardening: scrubbed realistic `auth_token=` example
   values from the generated 25.10.2 and v26 API Markdown and updated
   `scripts/convert_truenas_api_docs_to_markdown.py` so regenerated examples use
