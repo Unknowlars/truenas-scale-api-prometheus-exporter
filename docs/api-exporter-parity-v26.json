@@ -1,8 +1,8 @@
 {
   "event_decision_partition": {
     "common documented event; no current dedicated exporter ownership": 56,
-    "current exporter event; requires COMPAT-02/06 profile review before v26 subscription": 2,
-    "v26-only event; inventory only, subscription prohibited until reviewed": 22
+    "current exporter event; reviewed v26 profile default subscription": 3,
+    "v26-only event; inventory only, subscription prohibited until reviewed": 21
   },
   "events": [
     {
@@ -102,7 +102,7 @@
     },
     {
       "current_exporter_surface": true,
-      "decision": "current exporter event; requires COMPAT-02/06 profile review before v26 subscription",
+      "decision": "current exporter event; reviewed v26 profile default subscription",
       "documentation_path": "events/app/stats.md",
       "documented_shapes": [
         "Subscription parameters",
@@ -211,8 +211,8 @@
       ]
     },
     {
-      "current_exporter_surface": false,
-      "decision": "v26-only event; inventory only, subscription prohibited until reviewed",
+      "current_exporter_surface": true,
+      "decision": "current exporter event; reviewed v26 profile default subscription",
       "documentation_path": "events/container/metrics.md",
       "documented_shapes": [
         "Subscription parameters",
@@ -895,7 +895,7 @@
     },
     {
       "current_exporter_surface": true,
-      "decision": "current exporter event; requires COMPAT-02/06 profile review before v26 subscription",
+      "decision": "current exporter event; reviewed v26 profile default subscription",
       "documentation_path": "events/reporting/realtime.md",
       "documented_shapes": [
         "Subscription parameters",
@@ -1249,7 +1249,7 @@
     "docs_path": "docs/truenas-api-v26",
     "event_leaf_count": 80,
     "event_namespace_count": 72,
-    "manifest_aggregate_sha256": "32acc76d9ec44593ae17a53571a29b5cbc33526741feff3b2062b645b9c88855",
+    "manifest_aggregate_sha256": "4e34a678481cb523eef932e691e0c85ca19f6b64853c3448e18061656a8dd5db",
     "manifest_file_count": 1092,
     "manifest_path": "docs/truenas-api-v26/MANIFEST.json",
     "manifest_schema_version": 2,
@@ -1267,7 +1267,7 @@
       "manifest_hash_and_size_match": false,
       "manifest_tracked": false,
       "path": "MANIFEST.json",
-      "sha256": "56bcc3ff49a7a5d90a4561dc277b63b563b24baf2cfff9f28555100542ee358e",
+      "sha256": "5470aa996a4117bdadfc39fe26b11283e4d0f2a7663d2554a1547938be04d8ef",
       "title": ""
     },
     {
@@ -4741,13 +4741,13 @@
       "title": "core.bulk"
     },
     {
-      "bytes": 3325,
+      "bytes": 3268,
       "document_class": "method leaf",
       "kind": "method",
       "manifest_hash_and_size_match": true,
       "manifest_tracked": true,
       "path": "methods/core/download.md",
-      "sha256": "f69a0e6ad826be7847dbf858a7a2e968513cd28606aad94219b513282c5f2672",
+      "sha256": "42ac624f19e949aa6f2989d69e9ad80045d65aec7682ab36eb8bef09e729b418",
       "title": "core.download"
     },
     {

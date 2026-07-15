@@ -8,7 +8,6 @@ Bug reports should include the exporter version, TrueNAS version, relevant
 configuration flags, affected metric names, and redacted logs. Do not attach
 API keys, `.env` files, private hostnames, or full live API responses.
 
-Generic method/event extraction, automatic method discovery, filesystem
-listing, and collector mode before parity are advanced features with a larger
-cardinality or compatibility surface.
-
+Generic method/event extraction, automatic method discovery, and filesystem
+listing are advanced features with a larger cardinality or compatibility
+surface. Collector mode is the default supported runtime mode.

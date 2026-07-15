@@ -131,7 +131,7 @@ Examples:
 ```json
 [
     86,
-    "/_download/86?auth_token=9WIqYg4jAYEOGQ4g319Bkr64Oj8CZk1VACfyN68M7hgjGTdeSSgZjSf5lJEshS8M"
+    "/_download/86?auth_token={token}"
 ]
 ```
 

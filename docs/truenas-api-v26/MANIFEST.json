@@ -1,5 +1,5 @@
 {
-  "aggregate_sha256": "32acc76d9ec44593ae17a53571a29b5cbc33526741feff3b2062b645b9c88855",
+  "aggregate_sha256": "4e34a678481cb523eef932e691e0c85ca19f6b64853c3448e18061656a8dd5db",
   "commands": {
     "check": "python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check",
     "generate": "python3 scripts/generate_api_docs_manifest.py --target 26.0.0"
@@ -1742,9 +1742,9 @@
       "sha256": "7c5b4c9595357c20d8c897bc0dfe54ec9adbb1a7bf9d946069b9397ac05808f9"
     },
     {
-      "bytes": 3325,
+      "bytes": 3268,
       "path": "methods/core/download.md",
-      "sha256": "f69a0e6ad826be7847dbf858a7a2e968513cd28606aad94219b513282c5f2672"
+      "sha256": "42ac624f19e949aa6f2989d69e9ad80045d65aec7682ab36eb8bef09e729b418"
     },
     {
       "bytes": 17776,

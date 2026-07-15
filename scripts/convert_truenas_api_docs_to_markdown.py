@@ -30,6 +30,13 @@ SHARED_DOCS = {
     "jobs": "Jobs",
 }
 
+TOKEN_PARAM_RE = re.compile(
+    r"\b(auth_token|access_token|refresh_token|api_key|apikey|token)="
+    r"[A-Za-z0-9_-]{20,}\b",
+    re.IGNORECASE,
+)
+BEARER_TOKEN_RE = re.compile(r"\bBearer\s+[A-Za-z0-9._-]{20,}\b")
+
 @dataclass
 class Page:
     kind: str
@@ -421,6 +428,8 @@ def code_text(node: Tag) -> str:
     text = html.unescape(node.get_text("", strip=False))
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = text.replace("\xa0", " ")
+    text = TOKEN_PARAM_RE.sub(lambda match: f"{match.group(1)}={{token}}", text)
+    text = BEARER_TOKEN_RE.sub("Bearer {token}", text)
     lines = [line.rstrip() for line in text.split("\n")]
     while lines and not lines[0].strip():
         lines.pop(0)

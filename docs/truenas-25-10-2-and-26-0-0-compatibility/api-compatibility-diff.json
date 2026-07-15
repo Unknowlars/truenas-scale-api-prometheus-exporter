@@ -25927,7 +25927,7 @@
       "v26": "present"
     },
     {
-      "decision": "absent in v26; suppress under v26 profile",
+      "decision": "absent from pinned v26 docs; keep bounded count source under v26/unknown because live 26.0.0-BETA.2 serves it",
       "kind": "method",
       "name": "nvmet.global.sessions",
       "v25": "present",
@@ -25967,6 +25967,13 @@
       "name": "virt.instance.metrics",
       "v25": "present",
       "v26": "absent"
+    },
+    {
+      "decision": "absent in 25.10; subscribe only under v26/unknown as the reviewed instance-metrics replacement",
+      "kind": "event",
+      "name": "container.metrics",
+      "v25": "absent",
+      "v26": "present"
     }
   ],
   "schema_version": 1,
@@ -25975,7 +25982,7 @@
       "docs_path": "docs/truenas-api",
       "event_leaf_count": 63,
       "event_namespace_count": 60,
-      "manifest_aggregate_sha256": "377d24c74fa0836d43505f6c4db1f9ca12c105219abfeda34b6ac7d63c3f2cda",
+      "manifest_aggregate_sha256": "e7870f3036a98d297d204591c2831b6fd7b26013b827634a66225421edd6c614",
       "manifest_file_count": 1011,
       "manifest_path": "docs/truenas-api/MANIFEST.json",
       "manifest_schema_version": 1,
@@ -25989,7 +25996,7 @@
       "docs_path": "docs/truenas-api-v26",
       "event_leaf_count": 80,
       "event_namespace_count": 72,
-      "manifest_aggregate_sha256": "32acc76d9ec44593ae17a53571a29b5cbc33526741feff3b2062b645b9c88855",
+      "manifest_aggregate_sha256": "4e34a678481cb523eef932e691e0c85ca19f6b64853c3448e18061656a8dd5db",
       "manifest_file_count": 1092,
       "manifest_path": "docs/truenas-api-v26/MANIFEST.json",
       "manifest_schema_version": 2,

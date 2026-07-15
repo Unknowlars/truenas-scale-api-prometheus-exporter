@@ -42,8 +42,8 @@ All notable changes to this project are documented here.
 - container startup now uses the `truenas-exporter` entrypoint; Compose `command:` overrides that repeated `python /app/truenas_exporter.py` must be removed
 - configuration parsing is strict: values such as `TRUENAS_VERIFY_TLS=maybe`, HTTP URLs, invalid ports, and relative filesystem paths now abort startup instead of being tolerated
 - generic method selection now requires membership in both the 25.10.2 read catalog and the reviewed telemetry/base set; mutators, unsafe/entity-specific operations, and sensitive full responses cannot be enabled through discovery or `EXTRA_METHODS`
-- default event subscriptions are profile-aware: 25.10 keeps `reporting.realtime`, `app.stats`, and `virt.instance.metrics`; 26.0 and unknown use `reporting.realtime` and `app.stats`
-- v26 and unknown profiles suppress removed sources before transport: `virt.instance.query`, `virt.volume.query`, `nvmet.global.sessions`, `reporting.graphs`, `reporting.netdata_graphs`, and `virt.instance.metrics`
+- default event subscriptions are profile-aware: 25.10 keeps `reporting.realtime`, `app.stats`, and `virt.instance.metrics`; 26.0 and unknown use `reporting.realtime`, `app.stats`, and `container.metrics`
+- v26 and unknown profiles suppress removed sources before transport: `virt.instance.query`, `virt.volume.query`, `reporting.graphs`, `reporting.netdata_graphs`, and `virt.instance.metrics`; `nvmet.global.sessions` remains allowed as a bounded count source because live 26.0.0-BETA.2 still serves it
 - event streams now require valid string `core.subscribe` IDs and unsubscribe tracked IDs with `core.unsubscribe` during clean shutdown and reconnect cleanup
 - the generated dashboard now uses verified producers only, removes fabricated `or vector(0)` fallbacks, and migrates panels to the compatibility replacements
 

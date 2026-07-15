@@ -294,14 +294,14 @@ On every connection the exporter authenticates, calls `system.version_short` onc
 | `26.0.*` | `26.0` | Uses the pinned 26.0.0 surface and suppresses sources removed in v26. |
 | Anything else, malformed, or detection failure | `unknown` | Fails closed to the reviewed common intersection only. |
 
-Failed detection never expands API access, and there is no manual version toggle. Sources removed in v26 (`virt.instance.query`, `virt.volume.query`, `nvmet.global.sessions`, `reporting.graphs`, `reporting.netdata_graphs`, `virt.instance.metrics`) are suppressed before transport under `26.0` and `unknown`.
+Failed detection never expands API access, and there is no manual version toggle. Sources removed in v26 (`virt.instance.query`, `virt.volume.query`, `reporting.graphs`, `reporting.netdata_graphs`, `virt.instance.metrics`) are suppressed before transport under `26.0` and `unknown`. `nvmet.global.sessions` is absent from the pinned v26 corpus but remains allowed as a bounded count source because live 26.0.0-BETA.2 still serves it.
 
 Default event subscriptions are profile-aware:
 
 | Profile | Default event subscriptions |
 | --- | --- |
 | `25.10` | `reporting.realtime`, `app.stats`, `virt.instance.metrics` |
-| `26.0` / `unknown` | `reporting.realtime`, `app.stats` |
+| `26.0` / `unknown` | `reporting.realtime`, `app.stats`, `container.metrics` |
 
 </details>
 
