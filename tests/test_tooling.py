@@ -19,14 +19,20 @@ def test_live_smoke_imports_from_source_checkout():
 
 def test_compose_forwards_documented_environment_keys():
     env_text = Path(".env.example").read_text(encoding="utf-8")
+    optional_runtime_defaults = {"EVENT_SUBSCRIPTIONS"}
     env_keys = {
         line.split("=", 1)[0]
         for line in env_text.splitlines()
         if line.strip() and not line.lstrip().startswith("#")
-    }
+    } - optional_runtime_defaults
     compose = Path("docker-compose.yml").read_text(encoding="utf-8")
     missing = {key for key in env_keys if f"      {key}:" not in compose}
     assert not missing
+
+
+def test_compose_does_not_force_event_subscriptions():
+    compose = Path("docker-compose.yml").read_text(encoding="utf-8")
+    assert "      EVENT_SUBSCRIPTIONS:" not in compose
 
 
 def test_docs_converter_refuses_cleaning_current_working_directory(tmp_path, monkeypatch):
