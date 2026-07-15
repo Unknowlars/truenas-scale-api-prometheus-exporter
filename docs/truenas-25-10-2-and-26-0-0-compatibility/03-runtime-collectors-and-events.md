@@ -42,9 +42,13 @@ Do not recursively flatten new opaque v26 objects into production metrics.
 For v26, suppress and clear stale data for:
 
 - Incus/legacy `virt.instance.*` and `virt.volume.*` collectors/events;
-- `nvmet.global.sessions`;
 - optional plural reporting graph discovery;
 - generic or unreviewed calls to `pool.is_upgraded` and `pool.ddt_prefetch`.
+
+`nvmet.global.sessions` is absent from the pinned v26 corpus, but live
+26.0.0-BETA.2 still serves it with an empty list when unused. Keep only the
+bounded count source enabled under v26/unknown; do not recursively export the
+full sensitive response.
 
 `pool.is_upgraded` and `pool.ddt_prefetch` exist in the checked-in v26 corpus,
 but they remain blocked/suppressed: `pool.is_upgraded` requires a pool id, and
@@ -65,12 +69,12 @@ Effective defaults:
 | Profile | Default subscriptions |
 | --- | --- |
 | 25.10 | `reporting.realtime`, `app.stats`, `virt.instance.metrics` |
-| 26.0 | `reporting.realtime`, `app.stats` |
-| unknown | only the common reviewed subscriptions |
+| 26.0 | `reporting.realtime`, `app.stats`, `container.metrics` |
+| unknown | `reporting.realtime`, `app.stats`, `container.metrics` |
 
-Do not enable `container.metrics` by default. Its payload, required role,
-cardinality, and semantic relationship to existing metrics are not sufficient
-for first-release production use.
+`container.metrics` is the reviewed v26 wire replacement for the v25
+`virt.instance.metrics` source and feeds the existing bounded instance CPU and
+memory gauges. It is never subscribed under the 25.10 profile.
 
 Track the string returned by `core.subscribe`, and call `core.unsubscribe` for
 each successfully tracked subscription during clean shutdown and before

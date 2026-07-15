@@ -40,7 +40,7 @@ COMPAT_DIFF_JSON = (
 TARGET_VERSION = "25.10.2"
 EXPECTED_MANIFEST_FILE_COUNT = 1011
 EXPECTED_TREE_FILE_COUNT = 1012
-EXPECTED_MANIFEST_AGGREGATE = "377d24c74fa0836d43505f6c4db1f9ca12c105219abfeda34b6ac7d63c3f2cda"
+EXPECTED_MANIFEST_AGGREGATE = "e7870f3036a98d297d204591c2831b6fd7b26013b827634a66225421edd6c614"
 EXPECTED_METHOD_COUNT = 767
 EXPECTED_EVENT_COUNT = 63
 EXPECTED_METHOD_NAMESPACE_COUNT = 114
@@ -50,7 +50,7 @@ EXPECTED_TELEMETRY_CANDIDATE_COUNT = 112
 EXPECTED_SENSITIVE_READ_COUNT = 60
 EXPECTED_UNSAFE_GENERIC_READ_COUNT = 43
 EXPECTED_UNSAFE_EVENT_COUNT = 60
-EXPECTED_SAFE_EVENT_COUNT = 3
+EXPECTED_SAFE_EVENT_COUNT = 4
 EXPECTED_READ_ONLY_SHA256 = "acaf4e4e414717dad624bd4c8dd18e4e97abb4d2953d32d2ea8a7bef473a6e57"
 EXPECTED_EVENT_SHA256 = "b458465c72edaa77f4e6071751c079728b2e8f8e07d13b4021cdea26dcc42c62"
 EXPECTED_CANDIDATE_SHA256 = "9ff25130a70d9e67d13b7443c5775e9936b27135f8f0fd17b729b8ceae1960c6"
@@ -67,6 +67,7 @@ from truenas_exporter.api_catalog import (  # noqa: E402
     UNSAFE_EVENT_SUBSCRIPTIONS,
     UNSAFE_GENERIC_READ_METHODS,
 )
+from truenas_exporter.compat_profiles import PROFILE_26_0, V26_ADDED_EVENTS  # noqa: E402
 
 try:  # noqa: E402
     from .tooling import TRUENAS_API_VERSION, check_or_write, resolve_api_docs_target
@@ -235,6 +236,7 @@ TELEMETRY_EVENTS = frozenset(
         "alert.list",
         "app.query",
         "app.stats",
+        "container.metrics",
         "core.get_jobs",
         "fcport.query",
         "interface.query",
@@ -250,6 +252,9 @@ TELEMETRY_EVENTS = frozenset(
     }
 )
 SUBSCRIBED_EVENTS = frozenset(DEFAULT_SAFE_EVENT_SUBSCRIPTIONS)
+ACTIVE_DEDICATED_EVENT_METRIC_SOURCES = frozenset(
+    {"reporting.realtime", "app.stats", "virt.instance.metrics"}
+)
 
 MANUAL_GENERIC_METHODS = frozenset(
     {
@@ -727,10 +732,14 @@ def inventory_docs() -> tuple[list[dict[str, Any]], list[ApiPage], list[ApiPage]
         raise ValueError("read-only catalog count changed")
     if _stable_set_sha(READ_ONLY_METHOD_ALLOWLIST) != EXPECTED_READ_ONLY_SHA256:
         raise ValueError("read-only catalog changed without a new documentation audit")
-    if event_names != set(DOCUMENTED_EVENT_NAMES):
-        raise ValueError("runtime event catalog differs from documented event leaves")
-    if _stable_set_sha(DOCUMENTED_EVENT_NAMES) != EXPECTED_EVENT_SHA256:
-        raise ValueError("documented event catalog changed without a new audit")
+    documented_v25_events = set(DOCUMENTED_EVENT_NAMES) - set(V26_ADDED_EVENTS)
+    documented_union_events = documented_v25_events | set(V26_ADDED_EVENTS)
+    if event_names != documented_v25_events:
+        raise ValueError("runtime 25.10 event catalog differs from documented event leaves")
+    if set(DOCUMENTED_EVENT_NAMES) != documented_union_events:
+        raise ValueError("runtime event catalog contains events outside reviewed target profiles")
+    if _stable_set_sha(event_names) != EXPECTED_EVENT_SHA256:
+        raise ValueError("25.10 documented event catalog changed without a new audit")
     if len(SENSITIVE_READ_METHODS) != EXPECTED_SENSITIVE_READ_COUNT:
         raise ValueError("sensitive read catalog count changed; re-audit full-response exposure")
     if len(UNSAFE_GENERIC_READ_METHODS) != EXPECTED_UNSAFE_GENERIC_READ_COUNT:
@@ -739,14 +748,14 @@ def inventory_docs() -> tuple[list[dict[str, Any]], list[ApiPage], list[ApiPage]
         raise ValueError("unsafe event catalog count changed; re-audit subscription exposure")
     if len(SAFE_EVENT_SUBSCRIPTIONS) != EXPECTED_SAFE_EVENT_COUNT:
         raise ValueError("safe event catalog count changed; re-audit subscription exposure")
-    if event_names != SAFE_EVENT_SUBSCRIPTIONS | UNSAFE_EVENT_SUBSCRIPTIONS:
-        raise ValueError("safe/unsafe event catalogs must partition every documented event")
+    if set(DOCUMENTED_EVENT_NAMES) != SAFE_EVENT_SUBSCRIPTIONS | UNSAFE_EVENT_SUBSCRIPTIONS:
+        raise ValueError("safe/unsafe event catalogs must partition every reviewed event")
     if SAFE_EVENT_SUBSCRIPTIONS & UNSAFE_EVENT_SUBSCRIPTIONS:
         raise ValueError("safe and unsafe event catalogs must be disjoint")
     if not SECRET_EVENTS <= UNSAFE_EVENT_SUBSCRIPTIONS:
         raise ValueError("secret-bearing events must be prohibited subscriptions")
-    if frozenset({"reporting.realtime", "app.stats", "virt.instance.metrics"}) != SUBSCRIBED_EVENTS:
-        raise ValueError("default subscriptions must remain the three bounded dedicated event handlers")
+    if frozenset({"reporting.realtime", "app.stats", "virt.instance.metrics", "container.metrics"}) != SUBSCRIBED_EVENTS:
+        raise ValueError("default subscriptions must remain the bounded dedicated event handlers")
     if not SUBSCRIBED_EVENTS <= SAFE_EVENT_SUBSCRIPTIONS:
         raise ValueError("default event subscriptions must be documentation-reviewed safe events")
     if len(TELEMETRY_CANDIDATE_METHOD_ALLOWLIST) != EXPECTED_TELEMETRY_CANDIDATE_COUNT:
@@ -2170,8 +2179,8 @@ def build_metric_mappings(
         if row["source_kind"] == "event" and row["implementation_status"] == "active dedicated"
         for source in row["api_method_or_event"]
     }
-    if active_event_sources != SUBSCRIBED_EVENTS:
-        raise ValueError("only the three default dedicated event handlers may own active event metrics")
+    if active_event_sources != ACTIVE_DEDICATED_EVENT_METRIC_SOURCES:
+        raise ValueError("only the 25.10 dedicated event handlers may own active event metrics")
     return mappings
 
 
@@ -2363,8 +2372,9 @@ def build_method_rows(
             note_parts.append("Full response is sensitive; count mode or a strict non-sensitive select is mandatory.")
         if method == "core.subscribe" and refs:
             note_parts.append(
-                "Session-scoped transport call is restricted to reporting.realtime, app.stats, and "
-                "virt.instance.metrics; it performs no persistent appliance mutation."
+                "Session-scoped transport call is restricted to profile-reviewed defaults: reporting.realtime, "
+                "app.stats, virt.instance.metrics on 25.10, and container.metrics on 26.0/unknown; it performs "
+                "no persistent appliance mutation."
             )
         if method == "auth.login_with_api_key" and refs:
             note_parts.append(
@@ -2705,7 +2715,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
         "- `reporting.realtime` documents required key `disls` and leaves CPU/interface/pool objects opaque; the audit preserves that spelling rather than silently rewriting it.",
         "- Standard query count/get/select options change response shape; count returns a number and get returns one object rather than the default array.",
         "- `disk.query` keeps `extra.passwords` false and `app.query` keeps `extra.retrieve_config` false; sensitive queries require count or strict select.",
-        "- Dynamic `app.stats`, `reporting.realtime`, and `virt.instance.metrics` events are ADDED-only; exporter stale-timeout/recovery handling is required.",
+        "- Dynamic `app.stats`, `reporting.realtime`, `virt.instance.metrics`, and `container.metrics` events are ADDED-only; exporter stale-timeout/recovery handling is required.",
         "- The shared jobs guide mentions `filesystem.copy`, but no corresponding method leaf exists; examples do not become inventory rows.",
         "",
         "## Every documented API method (767 rows)",
@@ -2782,7 +2792,11 @@ def _required_surface_checks(
         ("method", "app.image.query", "present in v26; keep eligible only after schema/permission review"),
         ("method", "pool.is_upgraded", "present in v26; keep blocked because a pool id is required"),
         ("method", "pool.ddt_prefetch", "present in v26; keep prohibited because it is action-like"),
-        ("method", "nvmet.global.sessions", "absent in v26; suppress under v26 profile"),
+        (
+            "method",
+            "nvmet.global.sessions",
+            "absent from pinned v26 docs; keep bounded count source under v26/unknown because live 26.0.0-BETA.2 serves it",
+        ),
         ("method", "reporting.graphs", "absent in v26; do not auto-substitute singular reporting.graph"),
         (
             "method",
@@ -2792,6 +2806,11 @@ def _required_surface_checks(
         ("method", "virt.instance.query", "absent in v26; suppress under v26 profile"),
         ("method", "virt.volume.query", "absent in v26; suppress under v26 profile"),
         ("event", "virt.instance.metrics", "absent in v26; do not subscribe under v26 profile"),
+        (
+            "event",
+            "container.metrics",
+            "absent in 25.10; subscribe only under v26/unknown as the reviewed instance-metrics replacement",
+        ),
     ]
     rows: list[dict[str, str]] = []
     for kind, name, decision in expectations:
@@ -2815,6 +2834,7 @@ def build_v26_parity(v25_audit: dict[str, Any] | None = None) -> dict[str, Any]:
     inventory = inventory_docs_for_target("26.0.0")
     current_methods = _current_exporter_methods(v25_audit)
     current_events = _current_exporter_events(v25_audit)
+    current_v26_events = set(PROFILE_26_0.default_event_subscriptions)
     v25_method_names = {row["Method"] for row in v25_audit["methods"]}
     v25_event_names = {row["event"] for row in v25_audit["events"]}
 
@@ -2845,8 +2865,10 @@ def build_v26_parity(v25_audit: dict[str, Any] | None = None) -> dict[str, Any]:
 
     event_rows: list[dict[str, Any]] = []
     for page in inventory.events:
-        if page.title in current_events:
-            exporter_relevance = "current exporter event; requires COMPAT-02/06 profile review before v26 subscription"
+        if page.title in current_v26_events:
+            exporter_relevance = "current exporter event; reviewed v26 profile default subscription"
+        elif page.title in current_events:
+            exporter_relevance = "current exporter event in 25.10 only; suppressed under v26 profile"
         elif page.title in v25_event_names:
             exporter_relevance = "common documented event; no current dedicated exporter ownership"
         else:
@@ -2858,7 +2880,7 @@ def build_v26_parity(v25_audit: dict[str, Any] | None = None) -> dict[str, Any]:
                 "documentation_path": page.path,
                 "roles": list(page.roles),
                 "documented_shapes": list(page.event_shapes),
-                "current_exporter_surface": page.title in current_events,
+                "current_exporter_surface": page.title in current_v26_events,
                 "present_in_25_10_2": page.title in v25_event_names,
                 "decision": exporter_relevance,
             }

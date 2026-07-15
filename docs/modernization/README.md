@@ -33,7 +33,7 @@ A phase is complete only when every checkbox in its document is checked and the
 listed local verification commands pass. Partial work remains marked in
 progress; roadmap documentation must not claim completion early.
 
-Current branch coverage is 90.09%, enforced by `./scripts/validate.sh` with a
+Current branch coverage is 90.44%, enforced by `./scripts/validate.sh` with a
 `--cov-fail-under=85` gate. Configuration is at 100%, transport at 95%, metric
 declarations at 99%, collection parsing at 96%, and HTTP serving at 100%.
 
@@ -46,13 +46,47 @@ review evidence. Future changes remain subject to `./scripts/validate.sh`, the
 generated metric-contract check, the read-only API policy, and the prohibition
 on hosted CI.
 
-The 2026-07-12 API/exporter parity implementation is complete in the working
-tree, but its current Docker image and Python 3.13/3.14 matrix verification is
-not complete in this host session because user `aeva` cannot access the
-root-owned `docker` socket. This host-level verification blocker is recorded
-below; it is not treated as a code or test pass.
+The 2026-07-15 public-release hardening pass restored the local release gate,
+added a tracked-file public-release audit, and completed Docker-backed
+validation on this host.
 
 ## Verification evidence
+
+- 2026-07-15 public-release hardening: scrubbed realistic `auth_token=` example
+  values from the generated 25.10.2 and v26 API Markdown and updated
+  `scripts/convert_truenas_api_docs_to_markdown.py` so regenerated examples use
+  placeholders. Added `scripts/public_release_audit.py` and wired it into
+  `./scripts/validate.sh`; the audit fails on tracked `.env` files, hosted
+  workflow files, cache/build artifacts, old scratch files, private keys, common
+  cloud/service token formats, and realistic URL token parameters. Profile-aware
+  event defaults are now documented and validated as `reporting.realtime`,
+  `app.stats`, `virt.instance.metrics` for 25.10 and `reporting.realtime`,
+  `app.stats`, `container.metrics` for 26.0/unknown; `container.metrics` uses
+  the same interval subscription formatting as the v25 instance event. The
+  v25/v26 parity generator now treats the v25 event docs and reviewed v26 event
+  additions as separate target surfaces. `nvmet.global.sessions` remains absent
+  from the pinned v26 corpus but is documented as a bounded count source kept
+  enabled under v26/unknown because live 26.0.0-BETA.2 still serves it.
+  Focused compatibility tests passed:
+  `python3 -m pytest -q tests/test_api_catalog.py tests/test_phase2_events.py tests/test_removed_source_suppression.py tests/test_runtime_api_parity.py`
+  (`67 passed`). Generated and release checks passed:
+  `python3 scripts/generate_api_docs_manifest.py --check`;
+  `python3 scripts/generate_api_exporter_parity.py --check`;
+  `python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check`;
+  `python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check`;
+  `python3 scripts/generate_api_exporter_parity.py --compat-diff --check`;
+  `python3 scripts/generate_metric_contract.py --check`; and
+  `python3 scripts/public_release_audit.py` (`public_release_audit_ok`).
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `185 passed`, 90.44% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Compose validation, Docker image build, container
+  version smoke `5.2.0`, and `validation_ok`. Python matrix validation passed:
+  `./scripts/test_python_matrix.sh` built and tested Python 3.12, 3.13, and
+  3.14 images with `185 passed` in each. Optional live smoke was skipped because
+  no read-only live TrueNAS target/key was provided. No GitHub Actions, hosted
+  CI/CD automation, credentials, live API response captures, metric names,
+  metric types, help text, or label sets were added or changed.
 
 - 2026-07-14 Mission Control dashboard review: added
   `docs/mission-control-dashboard-review.md` after reviewing the 27 rendered

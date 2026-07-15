@@ -1,5 +1,5 @@
 {
-  "aggregate_sha256": "377d24c74fa0836d43505f6c4db1f9ca12c105219abfeda34b6ac7d63c3f2cda",
+  "aggregate_sha256": "e7870f3036a98d297d204591c2831b6fd7b26013b827634a66225421edd6c614",
   "file_count": 1011,
   "files": [
     {
@@ -1483,9 +1483,9 @@
       "sha256": "3f906d2ad6cf9db3bfe01cbc0346ff914bf652bb017a513cdcd764d6540a6a15"
     },
     {
-      "bytes": 3292,
+      "bytes": 3235,
       "path": "methods/core/download.md",
-      "sha256": "5122a2ef89292c6e4172ac6fca3491dac9d8e8efa5d45aa79c033afbdb58b16c"
+      "sha256": "eeb083f876371d86a77f9d2a155ddd704aeb5beb602314b590ea37b16d4bcbc5"
     },
     {
       "bytes": 16212,

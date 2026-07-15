@@ -40,7 +40,9 @@ decisions supersede ambiguous or incorrect draft statements:
 - The v26 corpus removes the old `virt.instance.*`, `virt.volume.*`, and
   `virt.global.*` surfaces used by the current exporter, including the
   `virt.instance.metrics` event.
-- `nvmet.global.sessions` is absent from the pinned v26.0.0 corpus.
+- `nvmet.global.sessions` is absent from the pinned v26.0.0 corpus but is
+  still served by live 26.0.0-BETA.2, so the exporter keeps only the bounded
+  count source enabled under v26/unknown.
 - v26 documents `reporting.graph` and `reporting.netdata_graph`; the current
   optional generic collector calls `reporting.graphs` and
   `reporting.netdata_graphs`. They are not interchangeable without bounded
@@ -68,7 +70,6 @@ The pinned 26.0.0 diff removes these current exporter sources; the `26.0` and
 
 - `virt.instance.query`
 - `virt.volume.query`
-- `nvmet.global.sessions`
 - `reporting.graphs`
 - `reporting.netdata_graphs`
 - `virt.instance.metrics`
@@ -80,10 +81,10 @@ not emitted as a substitute.
 
 Default event subscriptions are profile-aware. `25.10` uses
 `reporting.realtime`, `app.stats`, and `virt.instance.metrics`; `26.0` and
-`unknown` use `reporting.realtime` and `app.stats`. The event loop requires a
-valid string ID from `core.subscribe`, treats invalid IDs as failures, and
-calls `core.unsubscribe` for tracked IDs during clean shutdown and reconnect
-cleanup.
+`unknown` use `reporting.realtime`, `app.stats`, and `container.metrics`. The
+event loop requires a valid string ID from `core.subscribe`, treats invalid IDs
+as failures, and calls `core.unsubscribe` for tracked IDs during clean shutdown
+and reconnect cleanup.
 
 `app.image.query` remains eligible for reviewed count use. `pool.is_upgraded`
 remains blocked because it requires a pool id, and `pool.ddt_prefetch` remains

@@ -70,7 +70,12 @@ from .metrics import (
     metric_name,
 )
 
-_INTERVAL_EVENT_SUBSCRIPTIONS = {"reporting.realtime", "app.stats", "virt.instance.metrics"}
+_INTERVAL_EVENT_SUBSCRIPTIONS = {
+    "reporting.realtime",
+    "app.stats",
+    "virt.instance.metrics",
+    "container.metrics",
+}
 
 _REALTIME_EVENT_SCALAR_METRICS: tuple[Gauge, ...] = (
     CPU_USAGE_PERCENT,

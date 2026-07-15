@@ -71,11 +71,13 @@ def test_event_subscription_formatting_handles_documented_interval_events():
     assert exporter._format_event_subscription("reporting.realtime") == 'reporting.realtime:{"interval": 7}'
     assert exporter._format_event_subscription("app.stats") == 'app.stats:{"interval": 7}'
     assert exporter._format_event_subscription("virt.instance.metrics") == 'virt.instance.metrics:{"interval": 7}'
+    assert exporter._format_event_subscription("container.metrics") == 'container.metrics:{"interval": 7}'
     assert exporter._format_event_subscription("pool.query") == "pool.query"
 
     clamped = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", event_interval_seconds=1))
     assert clamped._event_interval_seconds() == 2
     assert clamped._format_event_subscription("virt.instance.metrics") == "virt.instance.metrics"
+    assert clamped._format_event_subscription("container.metrics") == "container.metrics"
 
 
 def test_dispatch_routes_virt_instance_metrics_to_single_cache_sink(monkeypatch):
