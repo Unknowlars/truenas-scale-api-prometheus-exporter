@@ -52,6 +52,20 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T06 remediation: removed fabricated zero publication for
+  `truenas_job_abortable_active_count`,
+  `truenas_job_transient_active_count`, and `truenas_reporting_enabled` on
+  partial failure or unknown service-name paths. Active-job counts still publish
+  after successful count queries, the no-active-jobs path still publishes
+  legitimate zeroes, and `truenas_reporting_enabled` now publishes only when a
+  `netdata` or `reporting` service row exists. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py -q` (`40 passed`). Required
+  full validation passed: `./scripts/validate.sh` completed ruff, mypy,
+  `200 passed`, 90.73% coverage, dashboard validation (`dashboard_ok
+  panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`.
+
 - 2026-07-16 T05 remediation: removed the `received_bytes` /
   `sent_bytes` fallback from `truenas_network_rx_bytes_per_second` and
   `truenas_network_tx_bytes_per_second`, so cumulative-only

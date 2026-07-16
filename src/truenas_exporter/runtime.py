@@ -1251,10 +1251,10 @@ class TrueNASExporter:
             JOB_ACTIVE_COUNT_BY_STATE.labels(state=state).set(count)
 
         JOB_ACTIVE_COUNT.set(total_active)
-        JOB_ABORTABLE_ACTIVE_COUNT.set(0)
-        JOB_TRANSIENT_ACTIVE_COUNT.set(0)
 
         if total_active == 0:
+            JOB_ABORTABLE_ACTIVE_COUNT.set(0)
+            JOB_TRANSIENT_ACTIVE_COUNT.set(0)
             return
 
         detail_limit = max(self.config.query_limit, total_active)
@@ -4823,8 +4823,6 @@ class TrueNASExporter:
                 if enabled is None:
                     enabled = reporting_services.get("reporting")
                 REPORTING_ENABLED.set(1 if enabled else 0)
-            else:
-                REPORTING_ENABLED.set(0)
         except Exception:
             COLLECTOR_ERRORS_TOTAL.labels(collector="reporting_config").inc()
             LOG.debug("service.query for reporting service failed", exc_info=True)

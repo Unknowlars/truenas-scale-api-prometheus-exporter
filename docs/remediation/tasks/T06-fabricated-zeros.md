@@ -88,4 +88,18 @@ python3 -m pytest tests/test_phase1_metrics.py -q
 
 ## Outcome
 
-_(fill in when done)_
+- Removed the premature `JOB_ABORTABLE_ACTIVE_COUNT` and `JOB_TRANSIENT_ACTIVE_COUNT`
+  zero assignments before the active-job detail query succeeds. The legitimate
+  `total_active == 0` path still publishes explicit zeroes.
+- Removed the `REPORTING_ENABLED.set(0)` fallback for an empty reporting service
+  map, so `truenas_reporting_enabled` stays NaN unless `netdata` or `reporting`
+  is present.
+- Added fixture/synthetic regressions in `tests/test_phase1_metrics.py` for job
+  detail failure, no-active-job legitimate zeroes, and reporting service unknown
+  / disabled / enabled states.
+- Regenerated API/exporter parity artifacts after the runtime evidence line
+  numbers changed.
+- Grepped `src/truenas_exporter/runtime.py` for `.set(0)` and found no
+  additional out-of-scope pre-success fabricated-zero candidates.
+- Verification: `python3 -m pytest tests/test_phase1_metrics.py -q` passed
+  (`40 passed`); `./scripts/validate.sh` passed and exited `validation_ok`.

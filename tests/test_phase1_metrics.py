@@ -411,6 +411,55 @@ def test_job_metrics_use_exact_active_counts_and_filtered_detail_query(monkeypat
     ]
 
 
+def test_job_flag_metrics_stay_nan_when_detail_query_fails(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", query_limit=1))
+    exporter._reset_poll_metrics()
+
+    def fake_call(client, method, params=None):
+        assert method == "core.get_jobs"
+        filters, options = params
+        if options == {"count": True}:
+            if filters == [["state", "=", "WAITING"]]:
+                return 3
+            if filters == [["state", "=", "RUNNING"]]:
+                return 4
+        raise RuntimeError("detail query failed")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_job_metrics(object())
+
+    assert gauge_value(exporter_module.JOB_ACTIVE_COUNT) == 7
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_STATE, "WAITING") == 3
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_STATE, "RUNNING") == 4
+    assert math.isnan(gauge_value(exporter_module.JOB_ABORTABLE_ACTIVE_COUNT))
+    assert math.isnan(gauge_value(exporter_module.JOB_TRANSIENT_ACTIVE_COUNT))
+
+
+def test_job_flag_metrics_publish_zero_when_no_active_jobs(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", query_limit=1))
+    exporter._reset_poll_metrics()
+
+    def fake_call(client, method, params=None):
+        assert method == "core.get_jobs"
+        filters, options = params
+        assert options == {"count": True}
+        if filters in (
+            [["state", "=", "WAITING"]],
+            [["state", "=", "RUNNING"]],
+        ):
+            return 0
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_job_metrics(object())
+
+    assert gauge_value(exporter_module.JOB_ACTIVE_COUNT) == 0
+    assert gauge_value(exporter_module.JOB_ABORTABLE_ACTIVE_COUNT) == 0
+    assert gauge_value(exporter_module.JOB_TRANSIENT_ACTIVE_COUNT) == 0
+
+
 def test_app_query_enrichment_metrics(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
@@ -613,6 +662,50 @@ def test_enabled_gauges_follow_service_enable_state(monkeypatch):
     assert gauge_value(exporter_module.FTP_ENABLED) == 1
     assert gauge_value(exporter_module.SNMP_ENABLED) == 0
     assert gauge_value(exporter_module.REPORTING_ENABLED) == 1
+
+
+@pytest.mark.parametrize(
+    ("reporting_rows", "expected"),
+    [
+        ([], math.nan),
+        ([{"service": "netdata", "enable": False}], 0),
+        ([{"service": "netdata", "enable": True}], 1),
+    ],
+)
+def test_reporting_enabled_requires_matching_service_row(monkeypatch, reporting_rows, expected):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
+    exporter._reset_poll_metrics()
+
+    def fake_call(client, method, params=None):
+        if method == "network.configuration.config":
+            return {"httpproxy": ""}
+        if method == "app.image.query":
+            return 0
+        if method == "replication.config.config":
+            return {"max_parallel_replication_tasks": 2}
+        if method == "reporting.exporters.query":
+            return 0
+        if method == "service.query":
+            requested = tuple(params[0][0][2])
+            assert requested == ("netdata", "reporting")
+            return reporting_rows
+        if method == "dns.query":
+            return 1
+        if method == "reporting.config":
+            return {"tier0_days": 7, "tier1_days": 30, "tier1_update_interval_seconds": 300}
+        if method == "system.ntpserver.query":
+            return []
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_misc_configs(object(), {})
+
+    value = gauge_value(exporter_module.REPORTING_ENABLED)
+    if math.isnan(expected):
+        assert math.isnan(value)
+    else:
+        assert value == expected
 
 
 def test_load_config_parses_defaults_and_lists(monkeypatch):
