@@ -1,236 +1,15 @@
 #!/usr/bin/env python3
-"""TrueNAS JSON-RPC to Prometheus exporter — v5.1 historical change notes.
+"""Runtime for the TrueNAS SCALE JSON-RPC Prometheus exporter.
 
-The notes below describe earlier implementation passes. The current verified
-25.10.2 source/field contract is generated in ``docs/api-exporter-parity.md``.
+``TrueNASExporter`` polls documented read-only middleware methods on a
+background scrape thread and maintains a separate event-stream thread for
+subscribed push updates. Collector mode serves the last complete immutable
+snapshot; legacy mode exposes the default registry directly for one
+compatibility release.
 
-v5.1 fixes vs v5 (gap-analysis follow-up):
-
-  BUG FIXES
-  - "disls" key fix: reporting.realtime disk I/O section uses key "disls" in
-    v25.10.2 (confirmed in API schema), not "disks". All five disk I/O rate
-    metrics (read/write bytes, read/write ops, busy%) were zero on every v25
-    system. Handler now tries "disls" first, falls back to "disks" for v24.
-  - truenas_snapshot_oldest_timestamp_seconds: advertised in v5 changelog but
-    never implemented. Gauge now declared and populated; snapshot query updated
-    to select properties.creation so the timestamp can be extracted.
-  - event_interval_seconds config was read but never passed to core.subscribe.
-    Subscription loop now uses "event:{"interval": N}" colon-notation for
-    reporting.realtime, app.stats, and virt.instance.metrics when the
-    configured interval exceeds the API default of 2 seconds.
-
-  NEW METRICS
-  - truenas_zfs_demand_accesses_per_second (total demand_accesses_per_second)
-  - truenas_zfs_demand_data_io_hits_per_second (raw I/O hit rate)
-  - truenas_zfs_demand_metadata_accesses_per_second
-  - truenas_zfs_demand_metadata_io_hits_per_second
-  - truenas_zfs_demand_metadata_io_hit_ratio
-  - truenas_zfs_demand_metadata_miss_ratio
-  - truenas_zfs_l2arc_accesses_per_second (total_l2arc_accesses_per_second)
-  - truenas_zfs_l2arc_miss_ratio
-  - ZFS hit/miss ratios now prefer API-provided percentages over computed
-    values — the pre-computed percentages account for prefetch hits that are
-    not in the demand hits+misses sum, making them more accurate.
-  - truenas_pool_realtime_read_bytes_per_second{pool} (from realtime pools section)
-  - truenas_pool_realtime_write_bytes_per_second{pool} (from realtime pools section)
-  - truenas_nfs_v3_client_count (from nfs.get_nfs3_clients, was generic only)
-  - truenas_nfs_v4_client_count (from nfs.get_nfs4_clients, was generic only)
-
-  OTHER
-  - default event subscriptions now align with the v25.10.2 API docs:
-    virt.instance.metrics added and legacy container.metrics removed.
-
-v5 fixes vs v4 (code-review pass):
-
-  BUG FIXES
-  - _last_boot_id initialised in __init__ (was in dead scrape_loop() method — AttributeError)
-  - scrape_loop() dead method removed
-  - SCRAPE_DURATION `started` assigned inside lock (dead pre-lock assignment removed)
-  - Pool scan bytes_to_process / total_secs_left conflation fixed:
-      separate truenas_pool_scan_seconds_remaining gauge added
-  - Swap-free overwrite bug: inversion block now guarded by `not has_free_key`
-  - Version string in main() updated to v5
-  - DOCKER_STATUS added to bulk .clear() list
-  - _total suffix removed from vdev error Gauge names (reserved for Counters)
-  - All label-carrying info Gauges added to bulk .clear() block
-
-  PROMETHEUS BEST-PRACTICE FIXES
-  - truenas_exporter_info metric added (exporter version label)
-  - truenas_collector_errors_total Counter added — silent try/except failures now counted
-  - _rate suffix metrics renamed to _per_second to avoid PromQL `rate()` confusion
-
-  NEW API ENDPOINTS (35+ read-only methods)
-  - pool.scrub.query → truenas_pool_scrub_task_enabled/state/last_run
-  - pool.snapshot.query → truenas_snapshot_count, truenas_snapshot_oldest_timestamp
-  - pool.resilver.config → truenas_pool_resilver_enabled
-  - pool.dataset.details → fed through generic extractor
-  - cloud_backup.query → truenas_cloud_backup_task_count/enabled/state
-  - cronjob.query → truenas_cronjob_count/enabled/state
-  - disk.get_used → truenas_disk_in_use
-  - dns.query → truenas_dns_resolver_count
-  - smb.config → truenas_smb_config_info (multichannel, aapl_extensions)
-  - nfs.config → truenas_nfs_v4_enabled, truenas_nfs_servers
-  - ssh.config → truenas_ssh_enabled, truenas_ssh_password_auth
-  - ftp.config → truenas_ftp_enabled
-  - snmp.config → truenas_snmp_enabled
-  - system.advanced.config → truenas_consolemenu_enabled, truenas_serialconsole_enabled
-  - system.general.config → truenas_ui_https_port
-  - kmip.config → truenas_kmip_enabled
-  - support.is_available → truenas_support_available
-  - systemdataset.config → truenas_systemdataset_pool
-  - user.query → truenas_local_user_count
-  - group.query → truenas_local_group_count
-  - staticroute.query → truenas_static_route_count
-  - tunable.query → truenas_tunable_count
-  - iscsi.target.query → truenas_iscsi_target_count
-  - iscsi.portal.query → truenas_iscsi_portal_count
-  - iscsi.extent.query → truenas_iscsi_extent_count
-  - iscsi.initiator.query → truenas_iscsi_initiator_count
-  - nvmet.host.query → truenas_nvmet_host_count
-  - nvmet.namespace.query → truenas_nvmet_namespace_count
-  - network.configuration.config → truenas_network_httpproxy_configured
-  - app.image.query → truenas_docker_image_count
-  - replication.config.config → truenas_replication_max_parallel
-  - reporting.exporters.query → truenas_reporting_exporter_count
-  - reporting.config → truenas_reporting_enabled
-  - vm.device.iommu_enabled → truenas_iommu_enabled
-  - auth.twofactor.config → truenas_2fa_enabled
-  - mail.config → truenas_mail_configured
-  - alertservice.query → truenas_alertservice_count, truenas_alertservice_enabled
-  - alertclasses.config → fed through generic extractor
-  - initshutdownscript.query → truenas_initshutdownscript_count
-  - privilege.query → truenas_privilege_count
-  - keychaincredential.query → truenas_keychain_credential_count
-  - system.global.id → truenas_system_global_id
-  - kerberos.config → fed through generic extractor
-
-  NEW EVENT SUBSCRIPTIONS
-  - container.query (container state changes)
-  - vm.query (VM state changes)
-
-v3 additions vs v2:
-
-  NEW HOST METRICS (CPU / RAM / Disk I/O / Network / ZFS ARC)
-  - reporting.realtime dedicated handler (_handle_realtime_event) replaces generic
-    event extraction for that stream, emitting clean named metrics:
-      truenas_cpu_usage_percent, truenas_cpu_user/system/iowait/idle/interrupt_percent
-      truenas_cpu_core_usage_percent{core=N}    (per-core)
-      truenas_cpu_temperature_celsius{core=N}   (per-core temps from IPMI/hwmon)
-      truenas_memory_physical_total/available/free/cached/buffers/used_bytes
-      truenas_memory_swap_total/free/used_bytes
-      truenas_disk_read/write_bytes_per_second{disk}  (live I/O rates per disk)
-      truenas_disk_read/write_ops_per_second{disk}
-      truenas_disk_busy_percent{disk}
-      truenas_network_rx/tx_bytes_per_second{interface}
-      truenas_zfs_arc_size/max_size/min_size_bytes
-      truenas_zfs_arc_hit_ratio, truenas_zfs_arc_hits/misses_per_second
-
-  NEW POOL METRICS
-  - pool.query now requests topology field; _extract_vdev_errors walks the vdev
-    tree and emits per-vdev error gauges:
-      truenas_pool_vdev_read/write/checksum_errors_total{pool, vdev}
-  - Detailed scan sub-metrics extracted:
-      truenas_pool_scan_errors{pool}, truenas_pool_scan_bytes_processed/total{pool}
-      truenas_pool_last_scan_timestamp_seconds{pool}
-
-  NEW COLLECTORS
-  - SMB sessions: _collect_smb_nfs_sessions → truenas_smb_session/connection/open_file_count
-  - GPU: _collect_gpu_metrics (device.get_info GPU) → truenas_gpu_count, truenas_gpu_info{...}
-  - JBOF: _collect_jbof_metrics → truenas_jbof_count
-  - Active API sessions: _collect_auth_session_metrics → truenas_auth_sessions_active
-  - Disk extended: _collect_disk_extended_metrics → truenas_disk_rotational, truenas_disk_smart_enabled
-
-  ENHANCED SYSTEM.INFO EXTRACTION
-  - truenas_host_ecc_memory (1 if ECC RAM present)
-  - truenas_host_cpu_info{model=...} (CPU model string from DMI)
-  - truenas_host_system_info{manufacturer, product} (hardware DMI labels)
-
-v2 fixes vs v1 (see code-review for full details):
-  BUG FIXES
-  - call() recv-loop: bounded to MAX_STRAY_MESSAGES iterations to prevent infinite
-    spin when unsolicited push messages arrive on the scrape WebSocket connection.
-  - Duplicate API calls eliminated: generic extraction loop now populates a per-scrape
-    result cache; dedicated collectors consume cached results instead of re-calling the
-    API (halves WebSocket round-trips for ~15 high-cost methods).
-  - system.security.info removed from BASE_METHODS (was also in REQUIRES_ENTITY_PARAM
-    — the blocklist always wins, making the BASE_METHODS entry dead / misleading code).
-  - core.get_jobs now receives a limit param in _auto_params (previously called with no
-    params on a busy system could return thousands of job records).
-
-  PROMETHEUS BEST-PRACTICE FIXES
-  - API_CALL_ERRORS changed from Gauge to Counter (truenas_api_call_errors_total).
-    The old Gauge created confusing zero-value "none" error_type series on success
-    alongside stale "TimeoutError" series on recovery.
-  - _status_like() isupper() fallback removed: previously matched any all-caps word
-    (CPU, ARC, NFS, OK …) creating unbounded METHOD_STATUS_VALUE / EVENT_STATUS_VALUE
-    cardinality; now only matches the explicit known-good set.
-  - _normalize_path() regex pre-compiled at module level (was recompiled on every
-    recursive call inside the generic extractor — potentially thousands of times per
-    scrape).
-  - truenas_system_boot_id UUID-as-label replaced with truenas_system_boot_changes_total
-    Counter: the old metric created a new zombie series in Prometheus on every reboot
-    that was never cleaned up; the Counter increments when a boot ID change is detected.
-  - SCRAPE_DURATION now measured strictly inside the lock (previously included any
-    lock-wait time from concurrent callers, masking true API latency).
-  - Redundant .clear() calls removed from _collect_dataset_metrics(): gauges were
-    already cleared unconditionally at the top of scrape_once().
-  - /healthz endpoint added on the same port alongside /metrics so container
-    orchestrators and load balancers can distinguish exporter crashes from scrape
-    failures.
-
-  Inherited fixes from v1:
-  - auth.login_with_api_key return value now accepts dict/str/bool (v25 returns session dict)
-  - sslopt explicitly sets check_hostname=False when verify_tls=False
-  - Event subscription name no longer appends JSON payload (core.subscribe takes name only)
-  - vm.status removed from BASE_METHODS (requires vm_id, already handled per-entity)
-  - Gauge clears moved inside scrape lock to prevent partial-clear races
-  - Exponential backoff (2s → 120s cap) in event stream reconnect loop
-  - nfs.get_nfs3_clients / nfs.get_nfs4_clients called with correct query params
-
-New metrics:
-  - Boot pool health (boot.get_state, boot.get_disks)
-  - Certificate expiry in days (certificate.query)
-  - Per-dataset space / quota (pool.dataset.query)
-  - Task health — replication, cloudsync, rsynctask, snapshottask
-  - Directory services health (directoryservices.status)
-  - IPMI chassis + SEL (gated on ipmi.is_loaded)
-  - NFS/SMB share counts (sharing.nfs.query, sharing.smb.query)
-  - ZFS resource query (zfs.resource.query via generic extraction)
-  - System reboot pending (system.reboot.info)
-  - Gateway reachability (route.ipv4gw_reachable)
-  - TrueNAS identity flags (truenas.is_production, truenas.is_ix_hardware)
-  - HA failover disabled reasons (failover.disabled.reasons)
-  - Disk details (disk.details)
-
-New default event subscriptions:
-  - pool.scan (real-time scrub/resilver progress)
-  - pool.query (pool state-change push events)
-  - disk.query (hotplug/removal events)
-  - docker.state (Docker daemon transitions)
-  - container.metrics (per-container CPU/mem)
-  - alert.list (push-based new alert delivery)
-  - interface.query (link up/down events)
-  - directoryservices.status (AD/LDAP health push)
-  - failover.status (HA state transitions)
-  - update.status (update progress events)
-  - system.shutdown (shutdown initiated event)
-  - core.get_jobs (background job progress)
-
-v3 additions (Tier 1 + Tier 2):
-  - system.product_type, system.version_short, system.host_id, system.boot_id
-  - update.available_versions (version names available to upgrade to)
-  - boot.environment.query (BE count, active, keep flags)
-  - vm.supports_virtualization, vm.maximum_supported_vcpus
-  - virt.instance.query, virt.volume.query (Incus/LXD — 25.x new resource type)
-  - fc.fc_host.query, fcport.status (Fibre Channel HBAs and ports)
-  - nvmet.global.sessions, nvmet.subsys.query, nvmet.port.query (NVMe-oF)
-  - iscsi.global.alua_enabled, iscsi.global.iser_enabled (protocol flags)
-  - interface.has_pending_changes, interface.checkin_waiting (network extras)
-  - app.available_space, sharing.webshare.query (app/WebDAV)
-  - ups.config (UPS status and mode)
-  - catalog.trains (catalog health)
-  - ipmi.lan.channels → ipmi.lan.query with correct channel param
-  - truenas.managed_by_truecommand (fleet management)
+Metric declarations live in ``metrics.py`` and the generated field/source
+contract lives in ``docs/api-exporter-parity.md``. Use git history for release
+changelogs; this module documents only current behavior.
 """
 
 from __future__ import annotations
@@ -744,14 +523,6 @@ def _set_optional_bool_gauge(gauge: Any, value: Any) -> None:
     if parsed is not None:
         gauge.set(1 if parsed else 0)
 
-# Maximum number of out-of-order / unsolicited messages the recv loop will skip
-# before giving up, to prevent an infinite spin if the server sends unexpected pushes.
-
-
-
-# ---------------------------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Main exporter class
@@ -981,27 +752,6 @@ class TrueNASExporter:
         # last-known values with truenas_up=0 during short outages.
         max_age = max(3 * self.config.interval_seconds, 300)
         return time.monotonic() - last_success > max_age
-
-    def _merge_event_snapshot(self, snapshot: dict[str, dict[str, Any]]) -> None:
-        with self._lock:
-            for name, value in self._collector_event_scalars.items():
-                source = _EVENT_SOURCE_BY_METRIC_NAME.get(name)
-                if source is not None and not self._event_is_fresh(source):
-                    continue
-                snapshot["scalar"][name] = value
-            for name, series in self._collector_event_series.items():
-                source = _EVENT_SOURCE_BY_METRIC_NAME.get(name)
-                if source is not None and not self._event_is_fresh(source):
-                    continue
-                snapshot["series"][name] = dict(series)
-            if self._collector_event_messages:
-                snapshot["series"][metric_name(EVENT_LAST_MESSAGE_TS)] = {
-                    (event,): value for event, value in self._collector_event_messages.items()
-                }
-            if self._collector_event_stream_up:
-                snapshot["series"][metric_name(EVENT_STREAM_UP)] = {
-                    (event,): value for event, value in self._collector_event_stream_up.items()
-                }
 
     def _event_is_fresh(self, event: str, now: float | None = None) -> bool:
         updated = self._event_last_monotonic.get(event)
@@ -2137,6 +1887,8 @@ class TrueNASExporter:
                 if value is not None:
                     self._collector_event_scalars[metric_name(gauge)] = value / 100.0
 
+        # TrueNAS 25.10.2 names this realtime disk I/O map "disls"; accept the
+        # older "disks" spelling as a compatibility fallback.
         disks = _first_not_none(payload.get("disls"), payload.get("disks"))
         disk_read_bytes: dict[tuple[str, ...], float] = {}
         disk_write_bytes: dict[tuple[str, ...], float] = {}
@@ -3402,13 +3154,6 @@ class TrueNASExporter:
             LOG.debug("disk.query extended failed", exc_info=True)
 
     # ------------------------------------------------------------------
-    # SMART test results (v5)
-    # ------------------------------------------------------------------
-
-    def _collect_smart_test_results(self, client: JsonRpcWsClient) -> None:
-        """Retain legacy SMART metrics without the undocumented v25 RPC."""
-
-    # ------------------------------------------------------------------
     # Share count metrics (NEW)
     # ------------------------------------------------------------------
 
@@ -3612,7 +3357,8 @@ class TrueNASExporter:
                     self._collect_jbof_metrics(client)
                     self._collect_auth_session_metrics(client)
                     self._collect_disk_extended_metrics(client, result_cache)
-                    self._collect_smart_test_results(client)
+                    # Legacy SMART test-result gauges intentionally remain unavailable:
+                    # 25.10.2 exposes no documented safe RPC for that source.
 
                     # --- System state (use cache if already fetched) ---
                     state_raw = result_cache.get("system.state")
@@ -4071,8 +3817,8 @@ class TrueNASExporter:
                     # --- App extras (available space, WebDAV shares) ---
                     self._collect_app_extras(client, result_cache)
 
-                    # --- UPS ---
-                    self._collect_ups_metrics(client, result_cache)
+                    # UPS configuration is secret-bearing and 25.10.2 has no documented
+                    # live-status read method; service.query covers enable/running state.
 
                     # --- Catalog ---
                     self._collect_catalog_metrics(client, result_cache)
@@ -4086,11 +3832,8 @@ class TrueNASExporter:
                     # --- v4 additions: Hardware / Chassis ---
                     self._collect_chassis_hardware(client, result_cache)
 
-                    # --- v4 additions: TrueNAS Connect ---
-                    self._collect_tn_connect(client, result_cache)
-
-                    # --- v4 additions: TrueCommand status ---
-                    self._collect_truecommand_status(client, result_cache)
+                    # TrueNAS Connect and TrueCommand config calls include credentials;
+                    # their legacy status gauges intentionally remain unavailable.
 
                     # --- v4 additions: Audit ---
                     self._collect_audit_metrics(client, result_cache)
@@ -4098,13 +3841,13 @@ class TrueNASExporter:
                     # --- IPMI LAN (with correct channel params) ---
                     self._collect_ipmi_lan_metrics(client, result_cache)
 
-                    # ── v5 collectors ──
+                    # --- v5 collectors ---
                     self._collect_scrub_task_metrics(client, result_cache)
                     self._collect_snapshot_metrics(client, result_cache)
                     self._collect_resilver_config(client, result_cache)
                     self._collect_cloud_backup_metrics(client, result_cache)
                     self._collect_cronjob_metrics(client, result_cache)
-                    self._collect_disk_used_metrics(client, result_cache)
+                    # DISK_IN_USE is emitted above from documented disk.query pool data.
                     self._collect_protocol_configs(client, result_cache)
                     self._collect_system_configs(client, result_cache)
                     self._collect_infrastructure_configs(client, result_cache)
@@ -4685,18 +4428,6 @@ class TrueNASExporter:
                 LOG.debug("webshare.config failed", exc_info=True)
 
     # ------------------------------------------------------------------
-    # UPS metrics
-    # ------------------------------------------------------------------
-
-    def _collect_ups_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """Do not fetch secret-bearing UPS configuration.
-
-        Operational enable/running state remains available through service.query.
-        Legacy UPS-specific gauges stay NaN because 25.10.2 has no safe live-status
-        read method.
-        """
-
-    # ------------------------------------------------------------------
     # Catalog metrics
     # ------------------------------------------------------------------
 
@@ -4776,20 +4507,6 @@ class TrueNASExporter:
                 CHASSIS_HARDWARE.labels(model=model_str).set(1)
         except Exception:
             LOG.debug("truenas.get_chassis_hardware failed", exc_info=True)
-
-    # ------------------------------------------------------------------
-    # TrueNAS Connect (v4)
-    # ------------------------------------------------------------------
-
-    def _collect_tn_connect(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """Do not fetch the credential-bearing TrueNAS Connect config."""
-
-    # ------------------------------------------------------------------
-    # TrueCommand full status (v4)
-    # ------------------------------------------------------------------
-
-    def _collect_truecommand_status(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """Do not fetch truecommand.config because it contains an API key."""
 
     # ------------------------------------------------------------------
     # Audit dataset metrics (v4)
@@ -5037,13 +4754,6 @@ class TrueNASExporter:
                 continue
             name = _str_label(job.get("id"), "unknown")
             _set_optional_bool_gauge(CRONJOB_ENABLED.labels(name=name), job.get("enabled"))
-
-    # ------------------------------------------------------------------
-    # v5 collectors: Disk in-use
-    # ------------------------------------------------------------------
-
-    def _collect_disk_used_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """disk.query.pool is the documented source used in the main disk pass."""
 
     # ------------------------------------------------------------------
     # v5 collectors: Protocol configs (SMB, NFS, SSH, FTP, SNMP)
@@ -5501,14 +5211,6 @@ class TrueNASCollector:
     def collect(self):
         yield from self.exporter.metric_snapshot()
 
-
-# ---------------------------------------------------------------------------
-# HTTP server: /metrics + /healthz on one port
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Configuration loading
-# ---------------------------------------------------------------------------
 
 _load_config = load_config
 

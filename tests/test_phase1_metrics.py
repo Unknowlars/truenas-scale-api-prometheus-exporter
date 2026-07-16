@@ -1371,24 +1371,18 @@ def test_reporting_graph_discovery_runs_when_generic_enabled(monkeypatch):
     assert "reporting.netdata_graphs" in extracted
 
 
-def test_undocumented_smart_results_method_is_never_called(monkeypatch):
+def test_undocumented_smart_results_collector_is_not_present():
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
-    monkeypatch.setattr(
-        exporter,
-        "_safe_call_auto",
-        lambda *_args, **_kwargs: pytest.fail("undocumented SMART RPC must not be called"),
-    )
 
-    exporter._collect_smart_test_results(object())
+    assert not hasattr(exporter, "_collect_smart_test_results")
     assert not list(exporter_module.SMART_TEST_LAST_RESULT.collect())[0].samples
     assert not list(exporter_module.SMART_TEST_LAST_TIMESTAMP.collect())[0].samples
 
 
-def test_smart_results_unavailable_is_non_fatal(monkeypatch):
+def test_smart_results_unavailable_is_non_fatal():
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
-    monkeypatch.setattr(exporter, "_safe_call_auto", lambda client, method: None)
 
-    exporter._collect_smart_test_results(object())
+    assert not hasattr(exporter, "_collect_smart_test_results")
 
 
 def test_safe_call_auto_runtime_skips_missing_argument_methods(monkeypatch):

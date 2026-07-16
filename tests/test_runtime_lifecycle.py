@@ -1,3 +1,4 @@
+import math
 import signal
 import sys
 from types import SimpleNamespace
@@ -9,6 +10,25 @@ from websocket import WebSocketTimeoutException
 import truenas_exporter as exporter_module
 
 runtime = sys.modules[exporter_module.TrueNASExporter.__module__]
+
+
+def _event_snapshot_families(exporter):
+    exporter._publish_cached_events_to_default_registry()
+    exporter._publish_metric_snapshot()
+    return list(exporter_module.TrueNASCollector(exporter).collect())
+
+
+def _family_samples(families, name):
+    for family in families:
+        if family.name == name:
+            return list(family.samples)
+    return []
+
+
+def _first_sample_value(families, name):
+    samples = _family_samples(families, name)
+    assert samples
+    return samples[0].value
 
 
 class _CallClient:
@@ -225,16 +245,18 @@ def test_event_cache_expiry_dispatch_and_snapshot(monkeypatch):
         "virt.instance.metrics",
         {"fields": [None, {"name": "vm", "cpu_usage": 7, "memory_usage": 8}]},
     )
-    snapshot = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(snapshot)
-    assert snapshot["scalar"]
-    assert snapshot["series"]
+    families = _event_snapshot_families(exporter)
+    assert _first_sample_value(families, exporter_module.CPU_USAGE_PERCENT._name) == 25
+    assert _family_samples(families, exporter_module.APP_CPU_PERCENT._name)
+    assert _family_samples(families, exporter_module.VIRT_INSTANCE_CPU._name)
 
     monkeypatch.setattr(runtime.time, "monotonic", lambda: 1_000_000_000_000.0)
     exporter._expire_stale_events(force=True)
-    stale = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(stale)
-    assert not stale["scalar"]
+    families = _event_snapshot_families(exporter)
+    assert math.isnan(
+        _first_sample_value(families, exporter_module.CPU_USAGE_PERCENT._name)
+    )
+    assert not _family_samples(families, exporter_module.APP_CPU_PERCENT._name)
 
     legacy = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
     legacy._dispatch_event("app.stats", {"fields": []})

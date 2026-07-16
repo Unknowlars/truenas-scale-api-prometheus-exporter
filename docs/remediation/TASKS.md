@@ -45,7 +45,7 @@ Rules for updating:
 | [T17](tasks/T17-legacy-metrics-blocking.md) | Legacy mode: `/metrics` must not block for the whole poll cycle | performance | M | — | done | 2026-07-16 | performance/no metric contract change |
 | [T18](tasks/T18-bind-address-and-log-leak.md) | Configurable bind address + stop hostname leaking via tracebacks | security | S | — | done | 2026-07-16 | minor-version-worthy new env var |
 | [T19](tasks/T19-help-and-conventions.md) | HELP/type/naming corrections (gateway_reachable, blkio counters, smb LOCKS, snapshot-oldest HELP, per-disk HELP) | conventions | M | T03 | done | 2026-07-16 | patch-worthy HELP/contract correction |
-| [T20](tasks/T20-dead-code-and-docs.md) | Remove dead code and the misleading 230-line version-history docstring | cleanup | S | — | todo | | Do last-ish; low conflict risk |
+| [T20](tasks/T20-dead-code-and-docs.md) | Remove dead code and the misleading 230-line version-history docstring | cleanup | S | — | done | 2026-07-16 | patch-worthy cleanup/no metric contract change |
 | [T21](tasks/T21-new-low-cost-metrics.md) | Optional batch: api_key expiry, failover.reboot.info, kmip_sync_pending, v26 interface speed | metric gap | M | T11 | todo | | Stretch; minor-version worthy |
 
 ## Discovered during work
@@ -126,3 +126,6 @@ Move a one-line summary here when a task reaches `done`:
 - T19 — 2026-07-16 — gateway alias, app blkio, SMB LOCKS, oldest-snapshot, and
   realtime disk I/O HELP/parity text now describe the existing metrics
   truthfully with no renames or retypes — local commit; patch-worthy
+- T20 — 2026-07-16 — dead runtime changelog, private event snapshot helper,
+  no-op collector stubs, and stray comments were removed with no metric
+  contract diff — local commit; patch-worthy cleanup

@@ -464,7 +464,7 @@ def test_generic_secret_paths_method_safety_and_poll_reset(monkeypatch: pytest.M
         lambda *_args, **_kwargs: pytest.fail("undocumented method must not be called"),
     )
     exporter._collect_smb_nfs_sessions(object())
-    exporter._collect_smart_test_results(object())
+    assert not hasattr(exporter, "_collect_smart_test_results")
 
 
 def test_malformed_and_sparse_events_replace_prior_snapshots() -> None:

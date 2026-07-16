@@ -71,4 +71,28 @@ is expected and fine; field/status changes are not.
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16:
+
+- Replaced the misleading historical runtime changelog with a short current
+  module summary covering the scrape/event threads, collector/legacy modes,
+  generated parity contract, and git-history changelogs.
+- Removed `_merge_event_snapshot`; the two freshness tests now exercise
+  `_publish_cached_events_to_default_registry()` plus `TrueNASCollector`
+  snapshots.
+- Removed no-op collector stubs for SMART test results, UPS, TrueNAS Connect,
+  TrueCommand, and disk-used metrics. Their safety/source notes now live at the
+  scrape call sites, and existing guard tests assert the absent collector/metric
+  behavior.
+- Deleted stray comment/divider artifacts and moved the current `disls`
+  realtime disk-map note next to the parser.
+- Regenerated API/exporter parity artifacts for runtime line-number evidence
+  churn only. `python3 scripts/generate_metric_contract.py --check` passed with
+  no metric contract diff.
+- Verification passed: `python3 -m pytest tests/ -q` (`233 passed, 4 skipped`),
+  `python3 scripts/generate_metric_contract.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `./scripts/validate.sh` (`237 passed`, 91.40% coverage, dashboard validation,
+  generated checks, `public_release_audit_ok`, Docker build, version smoke
+  `5.2.0`, `validation_ok`).
+- Versioning: patch-worthy cleanup only; no metric names, types, HELP text,
+  label sets, or API calls changed.

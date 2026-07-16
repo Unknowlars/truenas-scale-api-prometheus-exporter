@@ -18,6 +18,12 @@ def _scalar_sample(families, name):
     return family.samples[0].value
 
 
+def _event_snapshot_families(exporter):
+    exporter._publish_cached_events_to_default_registry()
+    exporter._publish_metric_snapshot()
+    return list(exporter_module.TrueNASCollector(exporter).collect())
+
+
 def test_collector_realtime_usage_only_omits_split_metrics():
     exporter = exporter_module.TrueNASExporter(make_config())
 
@@ -72,14 +78,12 @@ def test_collector_omits_expired_event_metrics(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(event_stale_after_seconds=15))
     exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 25.0}}})
 
-    fresh = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(fresh)
-    assert fresh["scalar"][exporter_module.CPU_USAGE_PERCENT._name] == 25.0
+    families = _event_snapshot_families(exporter)
+    assert _scalar_sample(families, exporter_module.CPU_USAGE_PERCENT._name) == 25.0
 
     now["value"] = 116.0
-    stale = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(stale)
-    assert exporter_module.CPU_USAGE_PERCENT._name not in stale["scalar"]
+    families = _event_snapshot_families(exporter)
+    assert math.isnan(_scalar_sample(families, exporter_module.CPU_USAGE_PERCENT._name))
 
 
 def test_readiness_requires_recent_success(monkeypatch):

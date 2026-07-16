@@ -62,6 +62,25 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T20 remediation: removed cleanup-only runtime dead code without
+  changing metric behavior. The large historical module changelog is now a
+  short current summary, `_merge_event_snapshot` is gone, no-op SMART/UPS/
+  TrueNAS Connect/TrueCommand/disk-used collector stubs were replaced by
+  call-site safety notes, and event freshness tests now use
+  `_publish_cached_events_to_default_registry()` plus `TrueNASCollector`
+  snapshots. Regenerated parity artifacts for runtime line-number evidence
+  churn only; `python3 scripts/generate_metric_contract.py --check` produced
+  no diff. Required verification passed: `python3 -m pytest tests/ -q`
+  (`233 passed, 4 skipped`),
+  `python3 scripts/generate_metric_contract.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `./scripts/validate.sh` (ruff, mypy, `237 passed`, 91.40% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is patch-worthy cleanup with no metric names, types, HELP
+  text, label sets, or API calls changed.
+
 - 2026-07-16 T19 remediation: corrected misleading HELP/contract text for
   `truenas_network_gateway_reachable`, app blkio byte gauges,
   `truenas_smb_open_file_count`, `truenas_snapshot_oldest_timestamp_seconds`,
