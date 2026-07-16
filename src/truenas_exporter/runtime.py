@@ -756,6 +756,8 @@ class TrueNASExporter:
         self._last_scrape_success_monotonic: float | None = None
         self._last_scrape_attempt_monotonic: float | None = None
         self._snapshot_lock = threading.Lock()
+        self._last_metric_snapshot_publish_monotonic = 0.0
+        self._metric_snapshot_publish_timer: threading.Timer | None = None
         self._reset_poll_metrics()
         # Event-owned realtime scalar gauges are excluded from _reset_poll_metrics
         # (the event stream owns their lifecycle), so before the first event they
@@ -1064,6 +1066,34 @@ class TrueNASExporter:
         families = tuple(REGISTRY.collect())
         with self._snapshot_lock:
             self._metric_snapshot = families
+            self._last_metric_snapshot_publish_monotonic = time.monotonic()
+            self._metric_snapshot_publish_timer = None
+
+    def _publish_metric_snapshot_throttled(self, minimum_interval_seconds: float = 1.0) -> None:
+        now = time.monotonic()
+        publish_now = False
+        timer: threading.Timer | None = None
+        with self._snapshot_lock:
+            elapsed = now - self._last_metric_snapshot_publish_monotonic
+            if elapsed >= minimum_interval_seconds:
+                if self._metric_snapshot_publish_timer is not None:
+                    self._metric_snapshot_publish_timer.cancel()
+                    self._metric_snapshot_publish_timer = None
+                publish_now = True
+            elif (
+                self._metric_snapshot_publish_timer is None
+                or not self._metric_snapshot_publish_timer.is_alive()
+            ):
+                timer = threading.Timer(
+                    minimum_interval_seconds - elapsed,
+                    self._publish_metric_snapshot,
+                )
+                timer.daemon = True
+                self._metric_snapshot_publish_timer = timer
+        if timer is not None:
+            timer.start()
+        if publish_now:
+            self._publish_metric_snapshot()
 
     def _status_like(self, value: str) -> bool:
         """Return True only for the known-good status string set.
@@ -2200,6 +2230,7 @@ class TrueNASExporter:
             self._clear_generic_event_metrics(collection)
             if not self._is_collector_mode():
                 self._publish_cached_events_to_default_registry()
+                self._publish_metric_snapshot_throttled()
             return
 
         if collection == "reporting.realtime":
@@ -2215,6 +2246,8 @@ class TrueNASExporter:
             self._publish_cached_events_to_default_registry()
         if self.config.enable_generic_event_metrics and not self._is_collector_mode():
             self._replace_generic_event_metrics(collection, payload)
+        if not self._is_collector_mode():
+            self._publish_metric_snapshot_throttled()
 
     # ------------------------------------------------------------------
     # Event stream
@@ -5468,9 +5501,13 @@ def main() -> None:
         )
         exporter._scrape_thread.start()
     else:
+        registry = CollectorRegistry(auto_describe=True)
+        registry.register(TrueNASCollector(exporter))  # type: ignore[arg-type]
         server = _start_http_server(
             config.exporter_port,
             exporter._lock,
+            registry=registry,
+            lock_metrics=False,
             readiness_check=exporter.is_ready,
         )
 

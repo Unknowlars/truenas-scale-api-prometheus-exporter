@@ -104,11 +104,12 @@ def _capture_http_stack(monkeypatch):
     return captured
 
 
-def test_start_http_server_legacy_uses_default_registry_and_lock(monkeypatch):
+def test_start_http_server_legacy_can_use_snapshot_registry_without_lock(monkeypatch):
     captured = _capture_http_stack(monkeypatch)
     lock = _CountingLock()
+    registry = exporter_module.CollectorRegistry(auto_describe=True)
 
-    exporter_module._start_http_server(9108, lock, registry=None, lock_metrics=True)
+    exporter_module._start_http_server(9108, lock, registry=registry, lock_metrics=False)
 
     status_codes = []
 
@@ -117,10 +118,10 @@ def test_start_http_server_legacy_uses_default_registry_and_lock(monkeypatch):
 
     body = captured["http_app"]({"PATH_INFO": "/metrics"}, start_response)
 
-    assert captured["make_wsgi_kwargs"] == {}
+    assert captured["make_wsgi_kwargs"].get("registry") is registry
     assert body == [b"metrics\n"]
     assert status_codes and status_codes[0] == "200 OK"
-    assert lock.enter_count == 1
+    assert lock.enter_count == 0
 
 
 def test_start_http_server_collector_uses_custom_registry_without_lock(monkeypatch):
@@ -141,6 +142,121 @@ def test_start_http_server_collector_uses_custom_registry_without_lock(monkeypat
     assert body == [b"metrics\n"]
     assert status_codes and status_codes[0] == "200 OK"
     assert lock.enter_count == 0
+
+
+def test_main_legacy_registers_snapshot_registry_without_lock(monkeypatch):
+    captured = {}
+
+    class FakeExporter:
+        def __init__(self):
+            self._lock = _CountingLock()
+            self._event_thread = None
+            self._scrape_thread = None
+            self.ran_forever = False
+
+        def metric_snapshot(self):
+            return ()
+
+        def is_ready(self):
+            return True
+
+        def run_forever(self):
+            self.ran_forever = True
+
+        def stop(self):
+            return None
+
+    fake_exporter = FakeExporter()
+
+    def fake_start_http_server(port, lock, **kwargs):
+        captured["port"] = port
+        captured["lock"] = lock
+        captured.update(kwargs)
+
+        class FakeServer:
+            def shutdown(self):
+                return None
+
+        return FakeServer()
+
+    monkeypatch.setattr(runtime, "_load_config", lambda: make_config(exporter_mode="legacy"))
+    monkeypatch.setattr(runtime, "TrueNASExporter", lambda _config: fake_exporter)
+    monkeypatch.setattr(runtime, "_start_http_server", fake_start_http_server)
+    monkeypatch.setattr(runtime.signal, "signal", lambda *_args: None)
+
+    runtime.main()
+
+    assert captured["lock"] is fake_exporter._lock
+    assert captured["lock_metrics"] is False
+    assert captured["readiness_check"]() is True
+    assert captured["registry"] is not None
+    assert fake_exporter.ran_forever is True
+
+
+def test_legacy_event_dispatch_republishes_metrics_snapshot(monkeypatch):
+    captured = {}
+
+    def fake_make_server(host, port, app, handler_class, server_class=None):
+        captured["http_app"] = app
+
+        class FakeServer:
+            def serve_forever(self):
+                return
+
+        return FakeServer()
+
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    registry = exporter_module.CollectorRegistry(auto_describe=False)
+    registry.register(exporter_module.TrueNASCollector(exporter))
+    exporter_module.POOL_REALTIME_USED_BYTES.clear()
+    exporter._publish_metric_snapshot()
+    timer_delays = []
+
+    class FakeTimer:
+        daemon = False
+
+        def __init__(self, delay, callback):
+            self.delay = delay
+            self.callback = callback
+            timer_delays.append(delay)
+
+        def is_alive(self):
+            return False
+
+        def cancel(self):
+            return None
+
+        def start(self):
+            self.callback()
+
+    monkeypatch.setattr(http_module, "make_server", fake_make_server)
+    monkeypatch.setattr(runtime.threading, "Timer", FakeTimer)
+    exporter_module._start_http_server(
+        9108,
+        exporter._lock,
+        registry=registry,
+        lock_metrics=False,
+        readiness_check=exporter.is_ready,
+    )
+
+    exporter._dispatch_event(
+        "reporting.realtime",
+        {"pools": {"tank": {"used": 123}}},
+    )
+
+    responses = []
+    body = b"".join(
+        captured["http_app"](
+            {"PATH_INFO": "/metrics", "REQUEST_METHOD": "GET", "QUERY_STRING": ""},
+            lambda status, headers: responses.append((status, headers)),
+        )
+    )
+
+    assert responses[0][0] == "200 OK"
+    assert len(timer_delays) == 1
+    assert 0 <= timer_delays[0] <= 1
+    assert b'truenas_pool_realtime_used_bytes{pool="tank"} 123.0' in body
+    exporter_module.POOL_REALTIME_USED_BYTES.clear()
 
 
 def test_http_auxiliary_endpoints_without_socket_binding(monkeypatch):

@@ -42,7 +42,7 @@ Rules for updating:
 
 | ID | Task | Area | Size | Depends on | Status | Updated | Notes |
 |----|------|------|------|------------|--------|---------|-------|
-| [T17](tasks/T17-legacy-metrics-blocking.md) | Legacy mode: `/metrics` must not block for the whole poll cycle | performance | M | — | todo | | |
+| [T17](tasks/T17-legacy-metrics-blocking.md) | Legacy mode: `/metrics` must not block for the whole poll cycle | performance | M | — | done | 2026-07-16 | performance/no metric contract change |
 | [T18](tasks/T18-bind-address-and-log-leak.md) | Configurable bind address + stop hostname leaking via tracebacks | security | S | — | todo | | |
 | [T19](tasks/T19-help-and-conventions.md) | HELP/type/naming corrections (gateway_reachable, blkio counters, smb LOCKS, snapshot-oldest HELP, per-disk HELP) | conventions | M | T03 | todo | | |
 | [T20](tasks/T20-dead-code-and-docs.md) | Remove dead code and the misleading 230-line version-history docstring | cleanup | S | — | todo | | Do last-ish; low conflict risk |
@@ -115,3 +115,7 @@ Move a one-line summary here when a task reaches `done`:
   sorted queries now refresh every 10 cycles while cached values are re-emitted
   with bounded staleness; no metric name or label contract change — local
   commit; patch-worthy performance fix
+- T17 — 2026-07-16 — legacy `/metrics` now serves the last complete snapshot
+  without waiting on the scrape lock, with event-driven snapshot refresh
+  throttled to one second; no metric contract change — local commit;
+  patch-worthy performance fix

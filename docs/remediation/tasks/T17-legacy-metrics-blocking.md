@@ -79,4 +79,32 @@ python3 -m pytest tests/test_http_integration.py tests/test_phase3_collector_mod
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16 with Option A. The diff was small and reused the existing
+`TrueNASCollector` immutable snapshot path, so legacy mode now registers a
+snapshot-serving registry with `lock_metrics=False` instead of acquiring
+`exporter._lock` per `/metrics` request.
+
+`scrape_once` continues publishing the complete snapshot at cycle end. Legacy
+event dispatch now republishes the snapshot after updating event-owned metrics;
+publishes are throttled to at most once per second by scheduling one delayed
+publish for event bursts, so a single event still becomes visible within the
+throttle window without waiting for another poll cycle.
+
+Tests added/updated:
+
+- `tests/test_http_integration.py`: legacy `/metrics` returns while
+  `exporter._lock` is held.
+- `tests/test_phase3_collector_mode.py`: legacy `main()` wires the snapshot
+  registry without metrics locking, and legacy event dispatch updates `/metrics`
+  through the throttled snapshot path.
+
+Verification:
+
+- `python3 -m pytest tests/test_http_integration.py tests/test_phase3_collector_mode.py tests/test_runtime_lifecycle.py -q`
+  passed: 34 passed, 3 skipped.
+- `./scripts/validate.sh` passed, including Ruff, mypy, full pytest/coverage
+  (229 passed, 91.50% coverage), generated artifact checks, public release
+  audit, Docker image build, and container version smoke.
+
+No metric names, types, HELP text, or label sets changed. No live TrueNAS calls
+or mutating API calls were added.

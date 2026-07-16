@@ -62,6 +62,21 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T17 remediation: legacy mode `/metrics` now serves the last
+  complete immutable snapshot through `TrueNASCollector` instead of taking the
+  scrape lock per request. Event dispatch in legacy mode republishes snapshots
+  after updating event-owned metrics, with a one-second throttle that schedules
+  one delayed publish for bursts so single events become visible without a poll
+  cycle. No metric names, types, HELP text, or label sets changed; generated
+  parity artifacts were refreshed for runtime line-reference drift only.
+  Focused verification passed:
+  `python3 -m pytest tests/test_http_integration.py tests/test_phase3_collector_mode.py tests/test_runtime_lifecycle.py -q`
+  (`34 passed, 3 skipped`). Full verification passed: `./scripts/validate.sh`
+  (ruff, mypy, `229 passed`, 91.50% coverage, dashboard validation, generated
+  checks, `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`). Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available.
+
 - 2026-07-16 T16 remediation: reduced server-heavy read-only query cadence for
   7-day disk temperature aggregation and the oldest-snapshot sorted query.
   Both metrics now fetch on the first cycle, refresh every 10 cycles, re-emit
