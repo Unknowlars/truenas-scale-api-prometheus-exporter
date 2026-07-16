@@ -81,4 +81,35 @@ python3 -m pytest tests/test_runtime_lifecycle.py tests/test_removed_source_supp
 
 ## Outcome
 
-_(fill in when done)_
+Implemented the monotonic shared update rule rather than per-connection local
+profile plumbing. This keeps the diff small for the current runtime shape while
+still preventing a transient reconnect/version-detection failure in either
+thread from downgrading an already detected concrete profile to `unknown`.
+
+`_bootstrap_connection` now routes all profile changes through a locked helper.
+Unknown results are applied only before any concrete profile has been detected;
+after a successful `25.10` or `26.0` detection, later transient failures still
+record the `version_detection` collector error but leave the active concrete
+profile intact. Legitimate concrete profile changes still replace the active
+profile, and concrete-to-different-concrete changes clear `_auto_skipped_methods`
+under the same lock. Profile reads remain simple and lock-free, with a code
+comment documenting the CPython atomic attribute-reference read assumption at
+the guarded write site.
+
+Added lifecycle regression coverage for: `25.10` followed by a detection
+exception staying on `25.10` while recording `version_detection`; `25.10` then
+`26.0` updating the profile and clearing `_auto_skipped_methods`; and a
+first-ever detection failure selecting `unknown`.
+
+Verification passed:
+
+- `python3 -m pytest tests/test_runtime_lifecycle.py tests/test_removed_source_suppression.py tests/test_phase1_metrics.py -q`
+  (`90 passed`)
+- `./scripts/validate.sh` (`212 passed`, 91.45% coverage,
+  `dashboard_ok panels=318 metric_references=287`, generated checks,
+  `public_release_audit_ok`, Docker image build, version smoke `5.2.0`,
+  `validation_ok`)
+
+No live smoke was run because no read-only TrueNAS API target/key was available.
+This is patch-worthy: behavior/robustness only, with no metric or config
+contract changes.

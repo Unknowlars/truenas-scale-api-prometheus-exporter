@@ -62,6 +62,23 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T12 remediation: made compatibility profile updates monotonic and
+  lock-guarded so a transient `system.version_short` failure after detecting a
+  concrete `25.10` or `26.0` profile records `version_detection` but does not
+  downgrade the active profile to `unknown`. First-ever detection failure still
+  selects `unknown`, and legitimate concrete profile changes still update the
+  active profile while clearing `_auto_skipped_methods`. Focused verification
+  passed:
+  `python3 -m pytest tests/test_runtime_lifecycle.py tests/test_removed_source_suppression.py tests/test_phase1_metrics.py -q`
+  (`90 passed`). Regenerated API parity artifacts because runtime line
+  evidence changed. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `212 passed`, 91.45% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is patch-worthy because
+  it is a behavior/robustness fix with no metric or config changes.
+
 - 2026-07-16 T10 remediation: enabled the existing
   `truenas_disk_temperature_alert_count{disk}` gauge from the documented
   `disk.temperature_alerts([names])` method after confirming both the 25.10.2

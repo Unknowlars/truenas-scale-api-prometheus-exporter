@@ -24,6 +24,27 @@ class _CallClient:
         return self.result
 
 
+class _BootstrapClient:
+    def __init__(self, *version_results):
+        self.version_results = list(version_results)
+        self.calls = []
+
+    def authenticate(self, _key, call=None):
+        if call is not None:
+            call("auth.login_with_api_key", ["redacted-test-key"])
+
+    def call(self, method, params=None):
+        self.calls.append((method, params))
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            result = self.version_results.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+        return True
+
+
 def test_call_diagnostics_fallback_and_count(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config())
     client = _CallClient(result=3)
@@ -67,6 +88,42 @@ def test_call_diagnostics_fallback_and_count(monkeypatch):
         runtime.TrueNASExporter._call(exporter, broken, "pool.query")
     assert exporter._api_call_success["pool.query"] == 0
     assert exporter._api_call_errors[("pool.query", "ValueError")] == 1
+
+
+def test_bootstrap_failure_does_not_downgrade_detected_concrete_profile():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    client = _BootstrapClient("25.10.2", RuntimeError("temporary version failure"))
+
+    assert exporter._bootstrap_connection(client) == "25.10.2"
+    assert exporter.compatibility_profile.name == "25.10"
+
+    assert exporter._bootstrap_connection(client) is None
+
+    assert exporter.compatibility_profile.name == "25.10"
+    assert exporter._collector_errors["version_detection"] == 1
+
+
+def test_bootstrap_concrete_profile_change_clears_auto_skipped_methods():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    client = _BootstrapClient("25.10.2", "26.0.0")
+
+    assert exporter._bootstrap_connection(client) == "25.10.2"
+    exporter._auto_skipped_methods.add("pool.dataset.query")
+
+    assert exporter._bootstrap_connection(client) == "26.0.0"
+
+    assert exporter.compatibility_profile.name == "26.0"
+    assert exporter._auto_skipped_methods == set()
+
+
+def test_first_bootstrap_failure_still_selects_unknown_profile():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    client = _BootstrapClient(RuntimeError("version unavailable"))
+
+    assert exporter._bootstrap_connection(client) is None
+
+    assert exporter.compatibility_profile.name == "unknown"
+    assert exporter._collector_errors["version_detection"] == 1
 
 
 def test_timestamp_status_and_generic_extractors_cover_edge_shapes():

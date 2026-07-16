@@ -765,6 +765,7 @@ class TrueNASExporter:
         # when it changes, rather than exposing a UUID-valued label.
         self._last_boot_id: str | None = None
         self._auto_skipped_methods: set[str] = set()
+        self._has_detected_concrete_profile = False
 
     # ------------------------------------------------------------------
     # Internal utilities
@@ -939,6 +940,25 @@ class TrueNASExporter:
             return get_profile("26.0")
         return get_profile("unknown")
 
+    def _update_compatibility_profile(self, detected_profile: CompatibilityProfile) -> None:
+        # Profile reads stay lock-free: CPython attribute-reference reads are atomic.
+        # Guard writes with auto-skip clearing so both exporter threads see a coherent update.
+        with self._lock:
+            current_profile = self.compatibility_profile
+            if detected_profile.name == "unknown":
+                if (
+                    self._has_detected_concrete_profile
+                    and current_profile.name in {"25.10", "26.0"}
+                ):
+                    return
+                self.compatibility_profile = detected_profile
+                return
+
+            if current_profile.name != detected_profile.name:
+                self._auto_skipped_methods.clear()
+            self.compatibility_profile = detected_profile
+            self._has_detected_concrete_profile = True
+
     def _bootstrap_connection(self, client: JsonRpcWsClient) -> Any | None:
         """Authenticate and select the compatibility profile before telemetry."""
 
@@ -949,7 +969,7 @@ class TrueNASExporter:
         try:
             version_short = self._call(client, "system.version_short", [])
         except Exception:
-            self.compatibility_profile = get_profile("unknown")
+            self._update_compatibility_profile(get_profile("unknown"))
             self._collector_error(
                 "version_detection",
                 "system.version_short detection failed; using unknown compatibility profile",
@@ -958,10 +978,10 @@ class TrueNASExporter:
             return None
 
         if isinstance(version_short, str):
-            self.compatibility_profile = self._profile_for_version_short(version_short)
+            self._update_compatibility_profile(self._profile_for_version_short(version_short))
             return version_short
 
-        self.compatibility_profile = get_profile("unknown")
+        self._update_compatibility_profile(get_profile("unknown"))
         self._collector_error(
             "version_detection",
             f"system.version_short returned malformed {type(version_short).__name__}; "
