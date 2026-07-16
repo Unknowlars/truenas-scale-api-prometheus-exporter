@@ -1,0 +1,15 @@
+# Normalize line endings: everything git detects as text is stored with LF.
+* text=auto
+
+# Files that must keep LF in the working tree even on Windows checkouts
+# (bash rejects CRLF shebangs; docker --env-file keeps stray \r in values).
+*.sh text eol=lf
+*.py text eol=lf
+.env.example text eol=lf
+Dockerfile* text eol=lf
+
+# Binary assets — never touch line endings.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
