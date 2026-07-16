@@ -3837,15 +3837,14 @@
     },
     {
       "api_method_or_event": [
-        "pool.dataset.query",
         "pool.dataset.snapshot_count"
       ],
       "dashboard_usage": [
         "Dataset Capacity Detail",
         "Dataset Snapshot Counts"
       ],
-      "documented_type_unit": "pool.dataset.query: array of object; pool.dataset.snapshot_count: integer; Prometheus unit: count",
-      "fixture_test": "tests/fixtures/api_25_10_2/pool_dataset_query_selected.json; tests/test_phase1_metrics.py; tests/test_phase3_collector_mode.py",
+      "documented_type_unit": "pool.dataset.snapshot_count: integer; Prometheus unit: count",
+      "fixture_test": "tests/test_phase1_metrics.py; tests/test_phase3_collector_mode.py",
       "implementation_status": "active dedicated",
       "labels": [
         "dataset"
@@ -3855,7 +3854,7 @@
       "parser_conversion": "Server-side count mode or bounded len()/aggregation",
       "prometheus_metric": "truenas_dataset_snapshot_count",
       "response_field": [
-        "result"
+        "result via bounded per-dataset pool.dataset.snapshot_count fallback; default DATASET_SNAPSHOT_FALLBACK_LIMIT=25, capped by MAX_ENTITY_CALLS"
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2590",
@@ -29522,9 +29521,9 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_dataset_atime, truenas_dataset_available_bytes, truenas_dataset_compression_ratio, truenas_dataset_count, truenas_dataset_creation_timestamp_seconds, truenas_dataset_encrypted, truenas_dataset_exec, truenas_dataset_key_loaded, truenas_dataset_locked, truenas_dataset_quota_bytes, truenas_dataset_quota_critical_percent, truenas_dataset_quota_warning_percent, truenas_dataset_readonly, truenas_dataset_refquota_bytes, truenas_dataset_refquota_critical_percent, truenas_dataset_refquota_warning_percent, truenas_dataset_refreservation_bytes, truenas_dataset_reservation_bytes, truenas_dataset_snapshot_count, truenas_dataset_used_by_children_bytes, truenas_dataset_used_by_dataset_bytes, truenas_dataset_used_by_snapshots_bytes, truenas_dataset_used_bytes",
+      "Dashboard usage": "truenas_dataset_atime, truenas_dataset_available_bytes, truenas_dataset_compression_ratio, truenas_dataset_count, truenas_dataset_creation_timestamp_seconds, truenas_dataset_encrypted, truenas_dataset_exec, truenas_dataset_key_loaded, truenas_dataset_locked, truenas_dataset_quota_bytes, truenas_dataset_quota_critical_percent, truenas_dataset_quota_warning_percent, truenas_dataset_readonly, truenas_dataset_refquota_bytes, truenas_dataset_refquota_critical_percent, truenas_dataset_refquota_warning_percent, truenas_dataset_refreservation_bytes, truenas_dataset_reservation_bytes, truenas_dataset_used_by_children_bytes, truenas_dataset_used_by_dataset_bytes, truenas_dataset_used_by_snapshots_bytes, truenas_dataset_used_bytes",
       "Decision": "exported through dedicated metric",
-      "Dedicated metrics": "truenas_dataset_atime, truenas_dataset_available_bytes, truenas_dataset_compression_ratio, truenas_dataset_count, truenas_dataset_creation_timestamp_seconds, truenas_dataset_encrypted, truenas_dataset_exec, truenas_dataset_key_loaded, truenas_dataset_locked, truenas_dataset_quota_bytes, truenas_dataset_quota_critical_percent, truenas_dataset_quota_warning_percent, truenas_dataset_readonly, truenas_dataset_refquota_bytes, truenas_dataset_refquota_critical_percent, truenas_dataset_refquota_warning_percent, truenas_dataset_refreservation_bytes, truenas_dataset_reservation_bytes, truenas_dataset_snapshot_count, truenas_dataset_used_by_children_bytes, truenas_dataset_used_by_dataset_bytes, truenas_dataset_used_by_snapshots_bytes, truenas_dataset_used_bytes",
+      "Dedicated metrics": "truenas_dataset_atime, truenas_dataset_available_bytes, truenas_dataset_compression_ratio, truenas_dataset_count, truenas_dataset_creation_timestamp_seconds, truenas_dataset_encrypted, truenas_dataset_exec, truenas_dataset_key_loaded, truenas_dataset_locked, truenas_dataset_quota_bytes, truenas_dataset_quota_critical_percent, truenas_dataset_quota_warning_percent, truenas_dataset_readonly, truenas_dataset_refquota_bytes, truenas_dataset_refquota_critical_percent, truenas_dataset_refquota_warning_percent, truenas_dataset_refreservation_bytes, truenas_dataset_reservation_bytes, truenas_dataset_used_by_children_bytes, truenas_dataset_used_by_dataset_bytes, truenas_dataset_used_by_snapshots_bytes, truenas_dataset_used_bytes",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/pool/dataset/query.md) Query Pool Datasets with `query-filters` and `query-options`. We provide two ways to retrieve datasets. The first is a flat structure (default), where all datasets in the system are returned as separate objects which contain all data there is for their children. This retrieval type is slightly slower because of duplicates in each object. The second type is\u2026 roles: DATASET_READ return: Result / array of object",
       "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2485, src/truenas_exporter/runtime.py:2545",
@@ -29533,7 +29532,7 @@
       "Namespace": "pool.dataset",
       "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.max_datasets, 'extra': {'properties': ['used', 'available', 'quota', 'refquota', 'compressratio', 'reservation', 'refreservation', 'usedbychildren', 'usedbydataset', 'usedbysnapshots', 'readonly', 'atime', 'exec', 'quota_warning', 'quota_critical', 'refquota_warning', 'refquota_critical', 'creation']}, 'select': ['id', ['used.parsed', 'used'], ['available.parsed', 'available'], ['quota.parsed', 'quota'], ['refquota.parsed', 'refquota'], ['compressratio.parsed', 'compressratio'], ['reservation.parsed', 'reservation'], ['refreservation.parsed', 'refreservation'], ['usedbychildren.parsed', 'usedbychildren'], ['usedbydataset.parsed', 'usedbydataset'], ['usedbysnapshots.parsed', 'usedbysnapshots'], ['readonly.parsed', 'readonly'], ['atime.parsed', 'atime'], ['exec.parsed', 'exec'], ['quota_warning.parsed', 'quota_warning'], ['quota_critical.parsed', 'quota_critical'], ['refquota_warning.parsed', 'refquota_warning'], ['refquota_critical.parsed', 'refquota_critical'], ['creation.parsed', 'creation'], 'encrypted', 'key_loaded', 'locked']}]; wire [[], {count: true}] via _query_count",
       "Read-only classification": "documented read-only",
-      "Response fields used": "atime.parsed, available.parsed, compressratio.parsed, creation.parsed, encrypted, exec.parsed, key_loaded, locked, quota.parsed, quota_critical.parsed, quota_warning.parsed, readonly.parsed, refquota.parsed, refquota_critical.parsed, refquota_warning.parsed, refreservation.parsed, reservation.parsed, result, row count, used.parsed, usedbychildren.parsed, usedbydataset.parsed, usedbysnapshots.parsed"
+      "Response fields used": "atime.parsed, available.parsed, compressratio.parsed, creation.parsed, encrypted, exec.parsed, key_loaded, locked, quota.parsed, quota_critical.parsed, quota_warning.parsed, readonly.parsed, refquota.parsed, refquota_critical.parsed, refquota_warning.parsed, refreservation.parsed, reservation.parsed, row count, used.parsed, usedbychildren.parsed, usedbydataset.parsed, usedbysnapshots.parsed"
     },
     {
       "Dashboard usage": "none",
@@ -29603,7 +29602,7 @@
       "Namespace": "pool.dataset",
       "Parameters verified": "documented [1:dataset]; source call shape(s): wire [name]",
       "Read-only classification": "documented read-only",
-      "Response fields used": "result"
+      "Response fields used": "result via bounded per-dataset pool.dataset.snapshot_count fallback; default DATASET_SNAPSHOT_FALLBACK_LIMIT=25, capped by MAX_ENTITY_CALLS"
     },
     {
       "Dashboard usage": "none",

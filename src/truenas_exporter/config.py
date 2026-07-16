@@ -149,7 +149,7 @@ def load_config() -> Config:
         scrape_all_metrics=_bool_env("SCRAPE_ALL_METRICS", "false"),
         enable_generic_method_metrics=_bool_env("ENABLE_GENERIC_METHOD_METRICS", "false"),
         enable_generic_event_metrics=_bool_env("ENABLE_GENERIC_EVENT_METRICS", "false"),
-        dataset_snapshot_fallback_limit=_int_env("DATASET_SNAPSHOT_FALLBACK_LIMIT", "0", 0),
+        dataset_snapshot_fallback_limit=_int_env("DATASET_SNAPSHOT_FALLBACK_LIMIT", "25", 0),
         exporter_mode=exporter_mode,
         scrape_budget_seconds=_int_env("SCRAPE_BUDGET_SECONDS", "25", 1),
         event_stale_after_seconds=event_stale_after_seconds,

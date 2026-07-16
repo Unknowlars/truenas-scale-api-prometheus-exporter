@@ -1247,7 +1247,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
         },
         "pool.dataset.query",
     )
-    assign({"DATASET_SNAPSHOT_COUNT"}, "pool.dataset.query", "pool.dataset.snapshot_count")
+    assign({"DATASET_SNAPSHOT_COUNT"}, "pool.dataset.snapshot_count")
     assign({"FAILOVER_DISABLED_REASON", "FAILOVER_DISABLED_REASON_COUNT"}, "failover.disabled.reasons")
     assign({"TRUENAS_IS_IX_HARDWARE"}, "truenas.is_ix_hardware")
     assign({"TRUENAS_IS_PRODUCTION"}, "truenas.is_production")
@@ -1579,7 +1579,10 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "DATASET_REFERENCED_BYTES": ("referenced.parsed (not documented in 25.10.2 result)",),
         "DATASET_QUOTA_BYTES": ("quota.parsed",),
         "DATASET_REFQUOTA_BYTES": ("refquota.parsed",),
-        "DATASET_SNAPSHOT_COUNT": ("result",),
+        "DATASET_SNAPSHOT_COUNT": (
+            "result via bounded per-dataset pool.dataset.snapshot_count fallback; "
+            "default DATASET_SNAPSHOT_FALLBACK_LIMIT=25, capped by MAX_ENTITY_CALLS",
+        ),
         "DATASET_COMPRESSION_RATIO": ("compressratio.parsed",),
         "DATASET_ENCRYPTED": ("encrypted",),
         "DATASET_RESERVATION_BYTES": ("reservation.parsed",),

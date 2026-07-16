@@ -776,7 +776,7 @@ def test_load_config_new_flags_defaults(monkeypatch):
 
     assert config.enable_generic_method_metrics is False
     assert config.enable_generic_event_metrics is False
-    assert config.dataset_snapshot_fallback_limit == 0
+    assert config.dataset_snapshot_fallback_limit == 25
 
 
 def test_load_config_new_flags_enabled(monkeypatch):
@@ -795,8 +795,7 @@ def test_load_config_new_flags_enabled(monkeypatch):
     assert config.dataset_snapshot_fallback_limit == 25
 
 
-def test_dataset_snapshot_fallback_disabled_by_default(monkeypatch):
-    """With DATASET_SNAPSHOT_FALLBACK_LIMIT=0, no per-dataset snapshot_count calls are made."""
+def test_dataset_snapshot_fallback_can_be_disabled(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=0))
     calls = []
 
@@ -812,6 +811,54 @@ def test_dataset_snapshot_fallback_disabled_by_default(monkeypatch):
 
     methods_called = [c[0] for c in calls]
     assert "pool.dataset.snapshot_count" not in methods_called
+
+
+def test_dataset_snapshot_fallback_failure_leaves_count_absent(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=25))
+
+    def fake_call(client, method, params=None):
+        if method == "pool.dataset.query":
+            return [{"name": "tank/data", "used": 1.0, "available": 2.0}]
+        if method == "pool.dataset.snapshot_count":
+            raise RuntimeError("snapshot count unavailable")
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_dataset_metrics(object())
+
+    assert exporter_module.DATASET_USED_BYTES.labels(dataset="tank/data")._value.get() == 1.0
+    assert not list(exporter_module.DATASET_SNAPSHOT_COUNT.collect())[0].samples
+
+
+def test_dataset_snapshot_fallback_calls_are_capped_by_limit(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=2))
+    snapshot_calls = []
+
+    def fake_call(client, method, params=None):
+        if method == "pool.dataset.query":
+            return [
+                {"name": "tank/one", "used": 1.0},
+                {"name": "tank/two", "used": 2.0},
+                {"name": "tank/three", "used": 3.0},
+            ]
+        if method == "pool.dataset.snapshot_count":
+            snapshot_calls.append(params[0])
+            return len(snapshot_calls)
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_dataset_metrics(object())
+
+    assert snapshot_calls == ["tank/one", "tank/two"]
+    assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/one")._value.get() == 1.0
+    assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/two")._value.get() == 2.0
+    samples = {
+        sample.labels["dataset"]: sample.value
+        for sample in list(exporter_module.DATASET_SNAPSHOT_COUNT.collect())[0].samples
+    }
+    assert "tank/three" not in samples
 
 
 def test_generic_event_metrics_gated_by_flag():

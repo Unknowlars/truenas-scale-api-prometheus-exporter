@@ -22,7 +22,7 @@ Rules for updating:
 | [T04](tasks/T04-realtime-pool-metrics.md) | Realtime `pools` section: retire dead read/write rates, emit used/available/total bytes | metric value + gap | M | — | done | 2026-07-16 | minor-version-worthy |
 | [T05](tasks/T05-network-rate-fallback.md) | Remove cumulative-bytes fallback in network rx/tx rate gauges | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T06](tasks/T06-fabricated-zeros.md) | Eliminate fabricated zeros on partial failure (job flags, reporting_enabled) | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
-| [T07](tasks/T07-dataset-snapshot-count.md) | Make `dataset_snapshot_count` actually emit | metric gap | S | — | todo | | |
+| [T07](tasks/T07-dataset-snapshot-count.md) | Make `dataset_snapshot_count` actually emit | metric gap | S | — | done | 2026-07-16 | minor-version-worthy |
 | [T08](tasks/T08-task-outcome-metrics.md) | Emit replication/cloudsync/rsync/snapshottask outcome state + last-run | metric gap | L | — | todo | | Biggest operational blind spot |
 
 ## P2 — Hardening + high-value gaps
@@ -80,3 +80,5 @@ Move a one-line summary here when a task reaches `done`:
 - T06 — 2026-07-16 — job abortable/transient and reporting-enabled gauges now stay
   absent/NaN on unknown or failed source paths while legitimate zeroes still publish —
   local commit; patch-worthy
+- T07 — 2026-07-16 — dataset snapshot counts now emit by default through the documented
+  bounded `pool.dataset.snapshot_count` fallback — local commit; minor-version-worthy

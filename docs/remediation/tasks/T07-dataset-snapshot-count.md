@@ -82,4 +82,21 @@ python3 scripts/generate_api_exporter_parity.py
 
 ## Outcome
 
-_(fill in when done)_
+- 2026-07-16: Neither the 25.10.2 nor v26 `pool.dataset.query` docs, nor their
+  `pool/dataset/details.md` files, document `extra.snapshot_count`. Both corpora
+  document read-only `pool.dataset.snapshot_count` returning an integer.
+- Implemented the documented fallback path by changing the default
+  `DATASET_SNAPSHOT_FALLBACK_LIMIT` from `0` to `25`; the existing runtime cap
+  still honors `min(DATASET_SNAPSHOT_FALLBACK_LIMIT, MAX_ENTITY_CALLS)`.
+- Updated README and `.env.example` defaults, and regenerated parity artifacts
+  so `truenas_dataset_snapshot_count` maps to the bounded
+  `pool.dataset.snapshot_count` fallback instead of an undocumented
+  `pool.dataset.query` field.
+- Added regression coverage for default config, successful fallback emission,
+  fallback failure leaving the series absent while other dataset metrics emit,
+  disabled fallback behavior, and fallback call capping.
+- Verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_documented_api_shapes.py -q`
+  (`55 passed`), `python3 scripts/generate_api_exporter_parity.py`, and
+  `./scripts/validate.sh` (`validation_ok`, `202 passed`, 90.77% coverage,
+  Docker image build passed).

@@ -330,7 +330,7 @@ Existing metric names, types, help text, and label sets are preserved across pro
 | `ENABLE_GENERIC_EVENT_METRICS` | `false` | High — `EVENT_*` series with `[event, path]` labels. |
 | `AUTO_DISCOVER_METHODS` | `false` | High — feeds safe, non-sensitive telemetry candidates through generic extraction. |
 | `SCRAPE_ALL_METRICS` | `false` | High — adds reviewed telemetry candidates beyond the base set. |
-| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `0` | Medium — up to N extra API calls per scrape for per-dataset snapshot counts. |
+| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `25` | Medium — up to N extra API calls per scrape for per-dataset snapshot counts. |
 | `ENABLE_FILESYSTEM_LISTDIR` | `false` | Medium — per-path directory-listing metrics. |
 | `ENABLE_DATASET_METRICS` | `true` | Low–Medium — one gauge set per dataset. |
 | `ENABLE_TASK_METRICS` | `true` | Low — one set per configured task. |

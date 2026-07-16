@@ -52,6 +52,22 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T07 remediation: enabled
+  `truenas_dataset_snapshot_count` by default through the documented read-only
+  `pool.dataset.snapshot_count` fallback after confirming the 25.10.2 and v26
+  `pool.dataset.query` / `pool.dataset.details` docs do not document
+  `extra.snapshot_count`. `DATASET_SNAPSHOT_FALLBACK_LIMIT` now defaults to
+  `25` and remains capped by `MAX_ENTITY_CALLS`; README, `.env.example`, tests,
+  and generated parity artifacts were updated. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_documented_api_shapes.py -q`
+  (`55 passed`). Regenerated parity with
+  `python3 scripts/generate_api_exporter_parity.py`. Required full validation
+  passed: `./scripts/validate.sh` completed ruff, mypy, `202 passed`, 90.77%
+  coverage, dashboard validation, generated checks, `public_release_audit_ok`,
+  Docker image build, container version smoke `5.2.0`, and `validation_ok`.
+  Optional live smoke was skipped because no read-only live TrueNAS target/key
+  was available.
+
 - 2026-07-16 T06 remediation: removed fabricated zero publication for
   `truenas_job_abortable_active_count`,
   `truenas_job_transient_active_count`, and `truenas_reporting_enabled` on
