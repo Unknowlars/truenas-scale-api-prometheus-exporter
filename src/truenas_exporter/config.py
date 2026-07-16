@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -76,8 +77,19 @@ def _int_env(name: str, default: str, minimum: int, maximum: int | None = None) 
 
 def _bind_address_env(name: str, default: str = "") -> str:
     raw = os.getenv(name, default)
-    if ":" in raw or any(char.isspace() for char in raw):
+    if any(char.isspace() for char in raw):
         raise ValueError(f"{name} must be a host/IP without port or spaces")
+    if ":" in raw:
+        # Bracket-free IPv6 literals (e.g. "::1", "fd00::5") also contain ":".
+        # Only reject colon-containing values that are not valid IP literals
+        # (that's what actually catches a "host:port" mistake).
+        try:
+            ipaddress.ip_address(raw)
+        except ValueError as exc:
+            raise ValueError(
+                f"{name} must be a host/IP without port or spaces "
+                "(bracket-free IPv6 literals such as '::1' are accepted)"
+            ) from exc
     return raw
 
 

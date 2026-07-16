@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
+import socket
 import socketserver
 import threading
 from collections.abc import Callable
@@ -21,6 +23,27 @@ class _QuietHandler(WSGIRequestHandler):
 
 class _ThreadingWSGIServer(socketserver.ThreadingMixIn, WSGIServer):
     daemon_threads = True
+
+
+class _ThreadingWSGIServerV6(_ThreadingWSGIServer):
+    address_family = socket.AF_INET6
+
+
+def _server_class_for_host(host: str) -> type[_ThreadingWSGIServer]:
+    """Pick AF_INET6 for a bracket-free IPv6 bind literal, AF_INET otherwise.
+
+    wsgiref's WSGIServer defaults to AF_INET regardless of the address
+    passed to make_server(), so an IPv6 literal like "::1" would otherwise
+    fail to bind even though config.py accepts it (R05).
+    """
+    try:
+        return (
+            _ThreadingWSGIServerV6
+            if ipaddress.ip_address(host).version == 6
+            else _ThreadingWSGIServer
+        )
+    except ValueError:
+        return _ThreadingWSGIServer
 
 
 _LANDING_PAGE = b"""\
@@ -71,7 +94,11 @@ def start_http_server(
         return metrics_app(environ, start_response)
 
     server = make_server(
-        bind_host, bind_port, app, server_class=_ThreadingWSGIServer, handler_class=_QuietHandler
+        bind_host,
+        bind_port,
+        app,
+        server_class=_server_class_for_host(bind_host),
+        handler_class=_QuietHandler,
     )
     thread = threading.Thread(target=server.serve_forever, name="http-server", daemon=True)
     thread.start()

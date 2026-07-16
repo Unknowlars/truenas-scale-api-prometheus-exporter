@@ -43,6 +43,37 @@ def test_real_http_server_liveness_and_readiness():
         server.shutdown()
 
 
+def test_real_http_server_binds_ipv6_bracket_free_literal():
+    """R05: EXPORTER_BIND_ADDRESS="::1" must actually bind, not just pass
+    config validation. wsgiref's WSGIServer defaults to AF_INET regardless of
+    the host string, so this exercises the AF_INET6 server class selection.
+
+    Only a genuine environment permission issue is skipped — anything else
+    (e.g. the pre-fix AF_INET socket rejecting an IPv6 literal) must fail.
+    """
+    import socket as socket_module
+
+    if not socket_module.has_ipv6:
+        pytest.skip("this host has no IPv6 support")
+    try:
+        server = exporter_module._start_http_server(
+            "::1",
+            0,
+            threading.Lock(),
+            readiness_check=lambda: True,
+        )
+    except PermissionError:
+        pytest.skip("local sandbox does not permit binding a loopback socket")
+    base_url = f"http://[::1]:{server.server_port}"
+    try:
+        with urllib.request.urlopen(f"{base_url}/healthz", timeout=2) as response:
+            assert response.status == 200
+            assert response.read() == b"ok\n"
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_overlapping_metrics_are_consistent_and_health_stays_responsive():
     exporter = exporter_module.TrueNASExporter(
         exporter_module.Config(

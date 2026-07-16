@@ -146,6 +146,18 @@ def test_load_config_rejects_bind_address_with_port_or_spaces(monkeypatch, value
         exporter_module._load_config()
 
 
+@pytest.mark.parametrize("value", ["::1", "fd00::5", "2001:db8::1"])
+def test_load_config_accepts_ipv6_bind_address(monkeypatch, value):
+    """R05: bracket-free IPv6 literals contain ':' but must not be rejected as
+    a host:port mistake — an operator on an IPv6-only management network needs
+    to be able to restrict the bind address."""
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EXPORTER_BIND_ADDRESS", value)
+
+    assert exporter_module._load_config().exporter_bind_address == value
+
+
 def test_redacted_exception_log_preserves_traceback_without_host(caplog):
     runtime = sys.modules[exporter_module.TrueNASExporter.__module__]
     logger = logging.getLogger("truenas_exporter")
