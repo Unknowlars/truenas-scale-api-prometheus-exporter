@@ -1484,7 +1484,11 @@ class TrueNASExporter:
     def _safe_call_auto(self, client: JsonRpcWsClient, method: str) -> Any | None:
         if method in self._auto_skipped_methods:
             skipped_at = self._auto_skipped_at.get(method)
-            if skipped_at is None or time.monotonic() - skipped_at < 86400:
+            # A missing timestamp is treated as expired (retry now), not as a
+            # permanent skip — the skip-set/timestamp dict are only ever
+            # mutated together, but a defensive "skip forever" default here
+            # would reintroduce the exact permanence T14 removed.
+            if skipped_at is not None and time.monotonic() - skipped_at < 86400:
                 return None
             self._auto_skipped_methods.discard(method)
             self._auto_skipped_at.pop(method, None)

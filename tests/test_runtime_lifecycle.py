@@ -543,6 +543,23 @@ def test_safe_call_auto_does_not_retry_without_safe_query_options(monkeypatch):
     assert exporter._safe_call_auto(object(), "pool.query") is None
 
 
+def test_safe_call_auto_retries_when_skip_timestamp_is_missing(monkeypatch):
+    """R09: a method present in _auto_skipped_methods without a matching
+    _auto_skipped_at entry must be retried immediately, not skipped forever.
+    The two structures are only ever mutated together in normal operation,
+    but the defensive branch on a missing timestamp must not choose the
+    unsafe "skip forever" default.
+    """
+    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter._auto_skipped_methods.add("system.info")
+    assert "system.info" not in exporter._auto_skipped_at
+
+    monkeypatch.setattr(exporter, "_call", lambda _client, _method, params=None: {"ok": True})
+
+    assert exporter._safe_call_auto(object(), "system.info") == {"ok": True}
+    assert "system.info" not in exporter._auto_skipped_methods
+
+
 def test_dynamic_discovery_filters_mutations_and_handles_failure():
     exporter = exporter_module.TrueNASExporter(make_config(scrape_all_metrics=True))
     client = _CallClient(result={
