@@ -1,3 +1,4 @@
+import math
 import signal
 import sys
 from types import SimpleNamespace
@@ -11,6 +12,25 @@ import truenas_exporter as exporter_module
 runtime = sys.modules[exporter_module.TrueNASExporter.__module__]
 
 
+def _event_snapshot_families(exporter):
+    exporter._publish_cached_events_to_default_registry()
+    exporter._publish_metric_snapshot()
+    return list(exporter_module.TrueNASCollector(exporter).collect())
+
+
+def _family_samples(families, name):
+    for family in families:
+        if family.name == name:
+            return list(family.samples)
+    return []
+
+
+def _first_sample_value(families, name):
+    samples = _family_samples(families, name)
+    assert samples
+    return samples[0].value
+
+
 class _CallClient:
     def __init__(self, result=None, error=None):
         self.result = result
@@ -22,6 +42,46 @@ class _CallClient:
         if self.error is not None:
             raise self.error
         return self.result
+
+
+class _BootstrapClient:
+    def __init__(self, *version_results):
+        self.version_results = list(version_results)
+        self.calls = []
+
+    def authenticate(self, _key, call=None):
+        if call is not None:
+            call("auth.login_with_api_key", ["redacted-test-key"])
+
+    def call(self, method, params=None):
+        self.calls.append((method, params))
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            result = self.version_results.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+        return True
+
+
+class _ScrapeClient:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return None
+
+    def authenticate(self, _key, call=None):
+        if call is not None:
+            call("auth.login_with_api_key", ["redacted-test-key"])
+
+    def call(self, method, params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        return True
 
 
 def test_call_diagnostics_fallback_and_count(monkeypatch):
@@ -67,6 +127,65 @@ def test_call_diagnostics_fallback_and_count(monkeypatch):
         runtime.TrueNASExporter._call(exporter, broken, "pool.query")
     assert exporter._api_call_success["pool.query"] == 0
     assert exporter._api_call_errors[("pool.query", "ValueError")] == 1
+
+
+def test_bootstrap_failure_does_not_downgrade_detected_concrete_profile():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    client = _BootstrapClient("25.10.2", RuntimeError("temporary version failure"))
+
+    assert exporter._bootstrap_connection(client) == "25.10.2"
+    assert exporter.compatibility_profile.name == "25.10"
+
+    assert exporter._bootstrap_connection(client) is None
+
+    assert exporter.compatibility_profile.name == "25.10"
+    assert exporter._collector_errors["version_detection"] == 1
+
+
+def test_bootstrap_concrete_profile_change_clears_auto_skipped_methods():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    client = _BootstrapClient("25.10.2", "26.0.0")
+
+    assert exporter._bootstrap_connection(client) == "25.10.2"
+    exporter._auto_skipped_methods.add("pool.dataset.query")
+
+    assert exporter._bootstrap_connection(client) == "26.0.0"
+
+    assert exporter.compatibility_profile.name == "26.0"
+    assert exporter._auto_skipped_methods == set()
+
+
+def test_first_bootstrap_failure_still_selects_unknown_profile():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    client = _BootstrapClient(RuntimeError("version unavailable"))
+
+    assert exporter._bootstrap_connection(client) is None
+
+    assert exporter.compatibility_profile.name == "unknown"
+    assert exporter._collector_errors["version_detection"] == 1
+
+
+def test_scrape_wipes_polled_metrics_after_bootstrap_before_mid_cycle_failure(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="collector"))
+    labels = {"pool": "tank", "status": "ONLINE"}
+    exporter_module.POOL_STATUS.clear()
+    exporter_module.POOL_STATUS.labels(**labels).set(1)
+
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: _ScrapeClient())
+    monkeypatch.setattr(exporter, "_collect_reporting_timeseries", lambda *_args: None)
+    monkeypatch.setattr(
+        exporter,
+        "_collect_filesystem_metrics",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("mid-cycle failure")),
+    )
+
+    exporter.scrape_once()
+    snapshot = exporter.metric_snapshot()
+    pool_status = [family for family in snapshot if family.name == exporter_module.POOL_STATUS._name]
+    up = next(family for family in snapshot if family.name == exporter_module.SCRAPE_SUCCESS._name)
+
+    assert not pool_status or not pool_status[0].samples
+    assert up.samples[0].value == 0
 
 
 def test_timestamp_status_and_generic_extractors_cover_edge_shapes():
@@ -126,16 +245,18 @@ def test_event_cache_expiry_dispatch_and_snapshot(monkeypatch):
         "virt.instance.metrics",
         {"fields": [None, {"name": "vm", "cpu_usage": 7, "memory_usage": 8}]},
     )
-    snapshot = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(snapshot)
-    assert snapshot["scalar"]
-    assert snapshot["series"]
+    families = _event_snapshot_families(exporter)
+    assert _first_sample_value(families, exporter_module.CPU_USAGE_PERCENT._name) == 25
+    assert _family_samples(families, exporter_module.APP_CPU_PERCENT._name)
+    assert _family_samples(families, exporter_module.VIRT_INSTANCE_CPU._name)
 
     monkeypatch.setattr(runtime.time, "monotonic", lambda: 1_000_000_000_000.0)
     exporter._expire_stale_events(force=True)
-    stale = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(stale)
-    assert not stale["scalar"]
+    families = _event_snapshot_families(exporter)
+    assert math.isnan(
+        _first_sample_value(families, exporter_module.CPU_USAGE_PERCENT._name)
+    )
+    assert not _family_samples(families, exporter_module.APP_CPU_PERCENT._name)
 
     legacy = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
     legacy._dispatch_event("app.stats", {"fields": []})
@@ -420,6 +541,23 @@ def test_safe_call_auto_does_not_retry_without_safe_query_options(monkeypatch):
     monkeypatch.setattr(exporter, "_call", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("broken")))
     assert exporter._safe_call_auto(object(), "system.info") is None
     assert exporter._safe_call_auto(object(), "pool.query") is None
+
+
+def test_safe_call_auto_retries_when_skip_timestamp_is_missing(monkeypatch):
+    """R09: a method present in _auto_skipped_methods without a matching
+    _auto_skipped_at entry must be retried immediately, not skipped forever.
+    The two structures are only ever mutated together in normal operation,
+    but the defensive branch on a missing timestamp must not choose the
+    unsafe "skip forever" default.
+    """
+    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter._auto_skipped_methods.add("system.info")
+    assert "system.info" not in exporter._auto_skipped_at
+
+    monkeypatch.setattr(exporter, "_call", lambda _client, _method, params=None: {"ok": True})
+
+    assert exporter._safe_call_auto(object(), "system.info") == {"ok": True}
+    assert "system.info" not in exporter._auto_skipped_methods
 
 
 def test_dynamic_discovery_filters_mutations_and_handles_failure():

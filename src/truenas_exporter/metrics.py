@@ -125,12 +125,13 @@ POOL_FREE_BYTES = declare_gauge("POOL_FREE_BYTES", "truenas_pool_free_bytes", "P
 POOL_SCAN_PERCENT = declare_gauge("POOL_SCAN_PERCENT", "truenas_pool_scan_percent", "Active pool scan/scrub percentage (0 to 100)", ["pool"])
 POOL_FRAGMENTATION = declare_gauge("POOL_FRAGMENTATION", "truenas_pool_fragmentation_percent", "Pool fragmentation percentage (0 to 100)", ["pool"])
 POOL_AUTOTRIM_ENABLED = declare_gauge("POOL_AUTOTRIM_ENABLED", "truenas_pool_autotrim_enabled", "1 if autotrim is enabled on the pool", ["pool"])
-POOL_DEDUP_RATIO = declare_gauge("POOL_DEDUP_RATIO", "truenas_pool_dedup_ratio", "Pool deduplication ratio (1.0 means no dedup savings)", ["pool"])
+POOL_DEDUP_RATIO = declare_gauge("POOL_DEDUP_RATIO", "truenas_pool_dedup_ratio", "Deprecated: no documented ratio source in TrueNAS 25.10/26.0; always absent. Use truenas_pool_dedup_table_size_bytes for DDT size.", ["pool"])
 POOL_EXPAND_SIZE_BYTES = declare_gauge("POOL_EXPAND_SIZE_BYTES", "truenas_pool_expand_size_bytes", "Pool expandable size in bytes", ["pool"])
 POOL_DEDUP_TABLE_SIZE_BYTES = declare_gauge("POOL_DEDUP_TABLE_SIZE_BYTES", "truenas_pool_dedup_table_size_bytes", "Size of the pool deduplication table in bytes", ["pool"])
 POOL_EXPAND_REFLOWED_BYTES = declare_gauge("POOL_EXPAND_REFLOWED_BYTES", "truenas_pool_expand_reflowed_bytes", "API-reported bytes_reflowed value for the active pool expansion", ["pool"])
 POOL_EXPAND_TO_REFLOW_BYTES = declare_gauge("POOL_EXPAND_TO_REFLOW_BYTES", "truenas_pool_expand_to_reflow_bytes", "API-reported bytes_to_reflow value for the active pool expansion", ["pool"])
 POOL_EXPAND_PERCENT = declare_gauge("POOL_EXPAND_PERCENT", "truenas_pool_expand_percent", "Active pool expansion completion percentage (0 to 100)", ["pool"])
+POOL_STATUS_CODE = declare_gauge("POOL_STATUS_CODE", "truenas_pool_status_code", "Detailed v26 zpool status_code as label", ["pool", "status_code"])
 
 # ---------------------------------------------------------------------------
 # Datasets
@@ -167,16 +168,22 @@ DISK_COUNT = declare_gauge("DISK_COUNT", "truenas_disk_count", "Number of disks"
 DISK_SIZE_BYTES = declare_gauge("DISK_SIZE_BYTES", "truenas_disk_size_bytes", "Disk size in bytes", ["disk"])
 DISK_TEMPERATURE_C = declare_gauge("DISK_TEMPERATURE_C", "truenas_disk_temperature_celsius", "Disk temperature in Celsius", ["disk"])
 DISK_TEMP_ALERT_COUNT = declare_gauge("DISK_TEMP_ALERT_COUNT", "truenas_disk_temperature_alert_count", "Temperature alert count per disk", ["disk"])
-DISK_TEMP_AGG_C = declare_gauge("DISK_TEMP_AGG_C", "truenas_disk_temperature_agg_celsius", "Aggregated disk temperature metrics", ["disk", "kind"])
+DISK_TEMP_AGG_C = declare_gauge("DISK_TEMP_AGG_C", "truenas_disk_temperature_agg_celsius", "Aggregated disk temperature metrics refreshed every ~5 minutes", ["disk", "kind"])
 
 # ---------------------------------------------------------------------------
 # Network
 # ---------------------------------------------------------------------------
 INTERFACE_COUNT = declare_gauge("INTERFACE_COUNT", "truenas_interface_count", "Number of network interfaces")
 INTERFACE_LINK_UP = declare_gauge("INTERFACE_LINK_UP", "truenas_interface_link_up", "1 if interface link is up", ["interface"])
+INTERFACE_REALTIME_SPEED_MBITS = declare_gauge("INTERFACE_REALTIME_SPEED_MBITS", "truenas_interface_realtime_speed_mbits", "Realtime interface speed in megabits per second", ["interface"])
+INTERFACE_REALTIME_LINK_UP = declare_gauge("INTERFACE_REALTIME_LINK_UP", "truenas_interface_realtime_link_up", "1 if realtime interface link state is up", ["interface"])
 NETWORK_DEFAULT_ROUTES = declare_gauge("NETWORK_DEFAULT_ROUTES", "truenas_network_default_routes", "Number of default routes")
 NETWORK_NAMESERVERS = declare_gauge("NETWORK_NAMESERVERS", "truenas_network_nameservers", "Number of configured nameservers")
-NETWORK_GATEWAY_REACHABLE = declare_gauge("NETWORK_GATEWAY_REACHABLE", "truenas_network_gateway_reachable", "1 if the default IPv4 gateway is reachable")
+NETWORK_GATEWAY_REACHABLE = declare_gauge(
+    "NETWORK_GATEWAY_REACHABLE",
+    "truenas_network_gateway_reachable",
+    "Deprecated alias of truenas_network_default_gateway_configured (route presence only — does NOT test reachability); will be removed in a future release.",
+)
 NETWORK_DEFAULT_GATEWAY_CONFIGURED = declare_gauge("NETWORK_DEFAULT_GATEWAY_CONFIGURED", "truenas_network_default_gateway_configured", "1 if an applied default network route is configured")
 
 # ---------------------------------------------------------------------------
@@ -562,10 +569,10 @@ EVENT_LIST_LENGTH = declare_gauge("EVENT_LIST_LENGTH", "truenas_event_list_lengt
 
 # CPU usage (updated every time a reporting.realtime event arrives, ~1s interval)
 CPU_USAGE_PERCENT = declare_gauge("CPU_USAGE_PERCENT", "truenas_cpu_usage_percent", "Total host CPU usage percent (0 to 100, all cores combined)")
-CPU_USER_PERCENT = declare_gauge("CPU_USER_PERCENT", "truenas_cpu_user_percent", "Host CPU user-space usage percent (0 to 100); falls back to total CPU usage when user split is unavailable")
+CPU_USER_PERCENT = declare_gauge("CPU_USER_PERCENT", "truenas_cpu_user_percent", "Host CPU user-space usage percent (0 to 100); absent when the API does not report a user/system split")
 CPU_SYSTEM_PERCENT = declare_gauge("CPU_SYSTEM_PERCENT", "truenas_cpu_system_percent", "Host CPU kernel usage percent (0 to 100)")
 CPU_IOWAIT_PERCENT = declare_gauge("CPU_IOWAIT_PERCENT", "truenas_cpu_iowait_percent", "Host CPU I/O wait percent (0 to 100)")
-CPU_IDLE_PERCENT = declare_gauge("CPU_IDLE_PERCENT", "truenas_cpu_idle_percent", "Host CPU idle percent (0 to 100); inferred as 100-total usage when idle split is unavailable")
+CPU_IDLE_PERCENT = declare_gauge("CPU_IDLE_PERCENT", "truenas_cpu_idle_percent", "Host CPU idle percent (0 to 100); absent when the API does not report a user/system split")
 CPU_INTERRUPT_PERCENT = declare_gauge("CPU_INTERRUPT_PERCENT", "truenas_cpu_interrupt_percent", "Host CPU interrupt/hardware IRQ percent (0 to 100)")
 CPU_CORE_USAGE_PERCENT = declare_gauge("CPU_CORE_USAGE_PERCENT", "truenas_cpu_core_usage_percent", "Per-CPU-core usage percent (0 to 100)", ["core"])
 CPU_TEMPERATURE_C = declare_gauge("CPU_TEMPERATURE_C", "truenas_cpu_temperature_celsius", "Per-CPU-core temperature in Celsius", ["core"])
@@ -582,11 +589,36 @@ MEMORY_SWAP_FREE_BYTES = declare_gauge("MEMORY_SWAP_FREE_BYTES", "truenas_memory
 MEMORY_SWAP_USED_BYTES = declare_gauge("MEMORY_SWAP_USED_BYTES", "truenas_memory_swap_used_bytes", "Swap used in bytes")
 
 # Disk I/O rates (per disk, from reporting.realtime)
-DISK_READ_BYTES_RATE = declare_gauge("DISK_READ_BYTES_RATE", "truenas_disk_read_bytes_per_second", "Disk read throughput in bytes/sec (instantaneous snapshot from realtime API)", ["disk"])
-DISK_WRITE_BYTES_RATE = declare_gauge("DISK_WRITE_BYTES_RATE", "truenas_disk_write_bytes_per_second", "Disk write throughput in bytes/sec (instantaneous snapshot from realtime API)", ["disk"])
-DISK_READ_OPS_RATE = declare_gauge("DISK_READ_OPS_RATE", "truenas_disk_read_ops_per_second", "Disk read operations/sec (instantaneous snapshot from realtime API)", ["disk"])
-DISK_WRITE_OPS_RATE = declare_gauge("DISK_WRITE_OPS_RATE", "truenas_disk_write_ops_per_second", "Disk write operations/sec (instantaneous snapshot from realtime API)", ["disk"])
-DISK_BUSY_PERCENT = declare_gauge("DISK_BUSY_PERCENT", "truenas_disk_busy_percent", "Disk busy percentage (0–100)", ["disk"])
+DISK_READ_BYTES_RATE = declare_gauge(
+    "DISK_READ_BYTES_RATE",
+    "truenas_disk_read_bytes_per_second",
+    'Disk read throughput in bytes/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk="total" is exported.',
+    ["disk"],
+)
+DISK_WRITE_BYTES_RATE = declare_gauge(
+    "DISK_WRITE_BYTES_RATE",
+    "truenas_disk_write_bytes_per_second",
+    'Disk write throughput in bytes/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk="total" is exported.',
+    ["disk"],
+)
+DISK_READ_OPS_RATE = declare_gauge(
+    "DISK_READ_OPS_RATE",
+    "truenas_disk_read_ops_per_second",
+    'Disk read operations/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk="total" is exported.',
+    ["disk"],
+)
+DISK_WRITE_OPS_RATE = declare_gauge(
+    "DISK_WRITE_OPS_RATE",
+    "truenas_disk_write_ops_per_second",
+    'Disk write operations/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk="total" is exported.',
+    ["disk"],
+)
+DISK_BUSY_PERCENT = declare_gauge(
+    "DISK_BUSY_PERCENT",
+    "truenas_disk_busy_percent",
+    'Disk busy percentage (0–100); on systems reporting only aggregate disk stats a single series with disk="total" is exported.',
+    ["disk"],
+)
 
 # Network I/O rates (per interface, from reporting.realtime)
 NETWORK_RX_BYTES_RATE = declare_gauge("NETWORK_RX_BYTES_RATE", "truenas_network_rx_bytes_per_second", "Network interface receive bytes/sec (instantaneous snapshot from realtime API)", ["interface"])
@@ -637,14 +669,27 @@ ZFS_L2ARC_MISS_RATIO = declare_gauge("ZFS_L2ARC_MISS_RATIO", "truenas_zfs_l2arc_
 # Pool real-time I/O (from reporting.realtime pools section — v25+)
 POOL_REALTIME_READ_BYTES = declare_gauge("POOL_REALTIME_READ_BYTES", "truenas_pool_realtime_read_bytes_per_second", "Pool read throughput in bytes/sec (instantaneous snapshot from realtime API)", ["pool"])
 POOL_REALTIME_WRITE_BYTES = declare_gauge("POOL_REALTIME_WRITE_BYTES", "truenas_pool_realtime_write_bytes_per_second", "Pool write throughput in bytes/sec (instantaneous snapshot from realtime API)", ["pool"])
+POOL_REALTIME_USED_BYTES = declare_gauge("POOL_REALTIME_USED_BYTES", "truenas_pool_realtime_used_bytes", "Pool used bytes from the reporting.realtime event stream", ["pool"])
+POOL_REALTIME_AVAILABLE_BYTES = declare_gauge("POOL_REALTIME_AVAILABLE_BYTES", "truenas_pool_realtime_available_bytes", "Pool available bytes from the reporting.realtime event stream", ["pool"])
+POOL_REALTIME_TOTAL_BYTES = declare_gauge("POOL_REALTIME_TOTAL_BYTES", "truenas_pool_realtime_total_bytes", "Pool total bytes from the reporting.realtime event stream", ["pool"])
 
 # App/Container stats (from app.stats event in v25)
 APP_CPU_PERCENT = declare_gauge("APP_CPU_PERCENT", "truenas_app_cpu_percent", "App container CPU usage percent (0 to 100)", ["app"])
 APP_MEMORY_BYTES = declare_gauge("APP_MEMORY_BYTES", "truenas_app_memory_bytes", "App container memory usage bytes", ["app"])
 APP_NET_RX_BYTES_RATE = declare_gauge("APP_NET_RX_BYTES_RATE", "truenas_app_net_rx_bytes_per_second", "App container network receive bytes/sec (instantaneous snapshot from realtime API)", ["app", "interface"])
 APP_NET_TX_BYTES_RATE = declare_gauge("APP_NET_TX_BYTES_RATE", "truenas_app_net_tx_bytes_per_second", "App container network transmit bytes/sec (instantaneous snapshot from realtime API)", ["app", "interface"])
-APP_BLKIO_READ_BYTES = declare_gauge("APP_BLKIO_READ_BYTES", "truenas_app_blkio_read_bytes", "App container block I/O read bytes", ["app"])
-APP_BLKIO_WRITE_BYTES = declare_gauge("APP_BLKIO_WRITE_BYTES", "truenas_app_blkio_write_bytes", "App container block I/O write bytes", ["app"])
+APP_BLKIO_READ_BYTES = declare_gauge(
+    "APP_BLKIO_READ_BYTES",
+    "truenas_app_blkio_read_bytes",
+    "Cumulative block-I/O bytes read by the app's containers since container start (counter semantics; use rate()); resets when containers restart.",
+    ["app"],
+)
+APP_BLKIO_WRITE_BYTES = declare_gauge(
+    "APP_BLKIO_WRITE_BYTES",
+    "truenas_app_blkio_write_bytes",
+    "Cumulative block-I/O bytes written by the app's containers since container start (counter semantics; use rate()); resets when containers restart.",
+    ["app"],
+)
 
 # ---------------------------------------------------------------------------
 # Pool vdev error counters (from pool.query topology/stats)
@@ -669,7 +714,7 @@ POOL_VDEV_CHECKSUM_ERRORS = declare_gauge("POOL_VDEV_CHECKSUM_ERRORS",
 # SMB / NFS session metrics
 # ---------------------------------------------------------------------------
 SMB_SESSION_COUNT = declare_gauge("SMB_SESSION_COUNT", "truenas_smb_session_count", "Number of active SMB sessions")
-SMB_OPEN_FILE_COUNT = declare_gauge("SMB_OPEN_FILE_COUNT", "truenas_smb_open_file_count", "Number of SMB open files")
+SMB_OPEN_FILE_COUNT = declare_gauge("SMB_OPEN_FILE_COUNT", "truenas_smb_open_file_count", "Number of SMB lock records reported by smb.status LOCKS (approximates open files).")
 SMB_CONNECTION_COUNT = declare_gauge("SMB_CONNECTION_COUNT", "truenas_smb_connection_count", "Number of active SMB connections")
 NFS_SERVER_STAT_OPS = declare_gauge("NFS_SERVER_STAT_OPS", "truenas_nfs_server_ops_per_second", "NFS server operations per second (instantaneous snapshot from realtime API)")
 
@@ -751,7 +796,11 @@ POOL_SCRUB_LAST_RUN_TS = declare_gauge("POOL_SCRUB_LAST_RUN_TS", "truenas_pool_s
 # Snapshots (v5 — pool.snapshot.query)
 # ---------------------------------------------------------------------------
 SNAPSHOT_TOTAL_COUNT = declare_gauge("SNAPSHOT_TOTAL_COUNT", "truenas_snapshot_count", "Total number of ZFS snapshots")
-SNAPSHOT_OLDEST_TS = declare_gauge("SNAPSHOT_OLDEST_TS", "truenas_snapshot_oldest_timestamp_seconds", "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots)")
+SNAPSHOT_OLDEST_TS = declare_gauge(
+    "SNAPSHOT_OLDEST_TS",
+    "truenas_snapshot_oldest_timestamp_seconds",
+    "Unix timestamp of the oldest ZFS snapshot; absent when there are no snapshots; refreshed every ~5 minutes.",
+)
 
 # ---------------------------------------------------------------------------
 # SMART test results (legacy declarations; no documented 25.10.2 producer)
@@ -826,6 +875,7 @@ UI_HTTPS_PORT = declare_gauge("UI_HTTPS_PORT", "truenas_ui_https_port", "Web UI 
 # KMIP / support / systemdataset (v5)
 # ---------------------------------------------------------------------------
 KMIP_ENABLED = declare_gauge("KMIP_ENABLED", "truenas_kmip_enabled", "1 if KMIP key management is enabled")
+KMIP_SYNC_PENDING = declare_gauge("KMIP_SYNC_PENDING", "truenas_kmip_sync_pending", "1 if KMIP key synchronization is pending")
 SUPPORT_AVAILABLE = declare_gauge("SUPPORT_AVAILABLE", "truenas_support_available", "1 if proactive support is available")
 SUPPORT_AVAILABLE_AND_ENABLED = declare_gauge("SUPPORT_AVAILABLE_AND_ENABLED", 
     "truenas_support_available_and_enabled",
@@ -1001,11 +1051,15 @@ REPORTING_TIER1_UPDATE_INTERVAL_SECONDS = declare_gauge("REPORTING_TIER1_UPDATE_
 # ---------------------------------------------------------------------------
 # IOMMU / 2FA / mail / alerts (v5)
 # ---------------------------------------------------------------------------
+API_KEY_COUNT = declare_gauge("API_KEY_COUNT", "truenas_api_key_count", "Number of API keys")
+API_KEY_EXPIRY_TS = declare_gauge("API_KEY_EXPIRY_TS", "truenas_api_key_expiry_timestamp_seconds", "API key expiration timestamp as Unix seconds", ["name"])
+API_KEY_REVOKED_COUNT = declare_gauge("API_KEY_REVOKED_COUNT", "truenas_api_key_revoked_count", "Number of revoked API keys")
 IOMMU_ENABLED = declare_gauge("IOMMU_ENABLED", "truenas_iommu_enabled", "1 if IOMMU/PCI passthrough is enabled")
 TWOFACTOR_ENABLED = declare_gauge("TWOFACTOR_ENABLED", "truenas_2fa_enabled", "1 if two-factor authentication is enabled")
 MAIL_CONFIGURED = declare_gauge("MAIL_CONFIGURED", "truenas_mail_configured", "1 if outgoing email (SMTP) is configured")
 ALERTSERVICE_COUNT = declare_gauge("ALERTSERVICE_COUNT", "truenas_alertservice_count", "Number of alert notification services")
 ALERTSERVICE_ENABLED = declare_gauge("ALERTSERVICE_ENABLED", "truenas_alertservice_enabled", "1 if alert service is enabled", ["name", "type"])
+FAILOVER_NODE_REBOOT_REQUIRED = declare_gauge("FAILOVER_NODE_REBOOT_REQUIRED", "truenas_failover_node_reboot_required", "1 if a failover node has documented reboot-required reasons", ["node"])
 
 # ---------------------------------------------------------------------------
 # Init/shutdown scripts / keychain / system global ID (v5)

@@ -1,9 +1,15 @@
+import json
+import logging
 import math
+import sys
+from pathlib import Path
 
 import pytest
 from conftest import make_config
 
 import truenas_exporter as exporter_module
+
+REALTIME_FIXTURE = Path(__file__).parent / "fixtures" / "realtime" / "reporting_realtime_25_10_shape.json"
 
 
 def _scalar_sample(families, name):
@@ -12,15 +18,47 @@ def _scalar_sample(families, name):
     return family.samples[0].value
 
 
-def test_collector_realtime_zero_replaces_previous_value():
+def _event_snapshot_families(exporter):
+    exporter._publish_cached_events_to_default_registry()
+    exporter._publish_metric_snapshot()
+    return list(exporter_module.TrueNASCollector(exporter).collect())
+
+
+def test_collector_realtime_usage_only_omits_split_metrics():
     exporter = exporter_module.TrueNASExporter(make_config())
 
     exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 50.0}}})
-    exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 0.0}}})
 
-    assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 0.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 0.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 100.0
+    assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 50.0
+    assert exporter_module.CPU_USER_PERCENT._name not in exporter._collector_event_scalars
+    assert exporter_module.CPU_IDLE_PERCENT._name not in exporter._collector_event_scalars
+
+
+def test_collector_realtime_honors_explicit_cpu_split_values():
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    exporter._dispatch_event(
+        "reporting.realtime",
+        {"cpu": {"cpu": {"usage": 50.0, "user": 12.5, "idle": 81.25}}},
+    )
+
+    assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 50.0
+    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 12.5
+    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 81.25
+
+
+def test_collector_realtime_fixture_outputs_usage_without_fabricated_split():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    payload = json.loads(REALTIME_FIXTURE.read_text(encoding="utf-8"))
+
+    exporter._dispatch_event("reporting.realtime", payload)
+    exporter._publish_cached_events_to_default_registry()
+    exporter._publish_metric_snapshot()
+    families = list(exporter_module.TrueNASCollector(exporter).collect())
+
+    assert _scalar_sample(families, "truenas_cpu_usage_percent") == 25.0
+    assert math.isnan(_scalar_sample(families, "truenas_cpu_user_percent"))
+    assert math.isnan(_scalar_sample(families, "truenas_cpu_idle_percent"))
 
 
 def test_legacy_app_and_vm_zero_values_are_exported():
@@ -40,14 +78,12 @@ def test_collector_omits_expired_event_metrics(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(event_stale_after_seconds=15))
     exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 25.0}}})
 
-    fresh = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(fresh)
-    assert fresh["scalar"][exporter_module.CPU_USAGE_PERCENT._name] == 25.0
+    families = _event_snapshot_families(exporter)
+    assert _scalar_sample(families, exporter_module.CPU_USAGE_PERCENT._name) == 25.0
 
     now["value"] = 116.0
-    stale = {"scalar": {}, "series": {}}
-    exporter._merge_event_snapshot(stale)
-    assert exporter_module.CPU_USAGE_PERCENT._name not in stale["scalar"]
+    families = _event_snapshot_families(exporter)
+    assert math.isnan(_scalar_sample(families, exporter_module.CPU_USAGE_PERCENT._name))
 
 
 def test_readiness_requires_recent_success(monkeypatch):
@@ -84,6 +120,64 @@ def test_load_config_supports_custom_ca_file(monkeypatch, tmp_path):
     assert exporter_module._load_config().ca_file == str(ca_file)
 
 
+def test_load_config_supports_bind_address(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EXPORTER_BIND_ADDRESS", "127.0.0.1")
+
+    assert exporter_module._load_config().exporter_bind_address == "127.0.0.1"
+
+
+def test_load_config_bind_address_defaults_to_all_interfaces(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.delenv("EXPORTER_BIND_ADDRESS", raising=False)
+
+    assert exporter_module._load_config().exporter_bind_address == ""
+
+
+@pytest.mark.parametrize("value", ["127.0.0.1:9108", "nas example", " 127.0.0.1"])
+def test_load_config_rejects_bind_address_with_port_or_spaces(monkeypatch, value):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EXPORTER_BIND_ADDRESS", value)
+
+    with pytest.raises(ValueError, match="EXPORTER_BIND_ADDRESS"):
+        exporter_module._load_config()
+
+
+@pytest.mark.parametrize("value", ["::1", "fd00::5", "2001:db8::1"])
+def test_load_config_accepts_ipv6_bind_address(monkeypatch, value):
+    """R05: bracket-free IPv6 literals contain ':' but must not be rejected as
+    a host:port mistake — an operator on an IPv6-only management network needs
+    to be able to restrict the bind address."""
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EXPORTER_BIND_ADDRESS", value)
+
+    assert exporter_module._load_config().exporter_bind_address == value
+
+
+def test_redacted_exception_log_preserves_traceback_without_host(caplog):
+    runtime = sys.modules[exporter_module.TrueNASExporter.__module__]
+    logger = logging.getLogger("truenas_exporter")
+    caplog.set_level(logging.ERROR, logger="truenas_exporter")
+
+    try:
+        raise RuntimeError("connection failed: wss://nas.example:443/api/current")
+    except RuntimeError:
+        runtime._log_exception_redacted(
+            logger,
+            logging.ERROR,
+            "scrubbed failure",
+            "wss://nas.example/api/current",
+        )
+
+    assert "<redacted-host>" in caplog.text
+    assert "Traceback (most recent call last)" in caplog.text
+    assert "nas.example" not in caplog.text
+
+
 def test_load_config_rejects_invalid_url_and_boolean(monkeypatch):
     monkeypatch.setenv("TRUENAS_WS_URL", "https://nas.example/api/current")
     monkeypatch.setenv("TRUENAS_API_KEY", "secret")
@@ -101,8 +195,22 @@ def test_load_config_rejects_event_ttl_shorter_than_interval(monkeypatch):
     monkeypatch.setenv("TRUENAS_API_KEY", "secret")
     monkeypatch.setenv("EVENT_INTERVAL_SECONDS", "30")
     monkeypatch.setenv("EVENT_STALE_AFTER_SECONDS", "15")
-    with pytest.raises(ValueError, match="must be >="):
+    with pytest.raises(ValueError, match="must be >= 2 \\* EVENT_INTERVAL_SECONDS"):
         exporter_module._load_config()
+
+
+def test_load_config_rejects_event_ttl_below_twice_the_interval(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EVENT_INTERVAL_SECONDS", "10")
+    # Exactly 2x is required; one second short must still be rejected so an event
+    # arriving right at the expiry boundary can't flap present/absent.
+    monkeypatch.setenv("EVENT_STALE_AFTER_SECONDS", "19")
+    with pytest.raises(ValueError, match="must be >= 2 \\* EVENT_INTERVAL_SECONDS"):
+        exporter_module._load_config()
+
+    monkeypatch.setenv("EVENT_STALE_AFTER_SECONDS", "20")
+    exporter_module._load_config()
 
 
 @pytest.mark.parametrize(

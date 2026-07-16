@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pytest
 from conftest import make_config
 
 import truenas_exporter as runtime
-from truenas_exporter.compat_profiles import PROFILE_25_10, PROFILE_26_0, PROFILE_UNKNOWN
+from truenas_exporter.compat_profiles import (
+    PROFILE_25_10,
+    PROFILE_26_0,
+    PROFILE_UNKNOWN,
+    V26_ADDED_METHODS,
+)
 
 REMOVED_METHODS = {
     "virt.instance.query",
@@ -114,6 +120,33 @@ def test_app_image_query_remains_eligible_for_reviewed_count_use(profile: Any) -
     assert exporter._query_count(client, "app.image.query") == 0
 
     assert client.calls == [("app.image.query", [[], {"count": True}])]
+
+
+def test_profile_change_clears_auto_skipped_methods_and_retries(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_UNKNOWN)
+    exporter._auto_skipped_methods.add("container.query")
+    exporter._auto_skipped_at["container.query"] = 123.0
+    calls: list[tuple[str, Any]] = []
+
+    def fake_call(client: Any, method: str, params: Any = None) -> Any:
+        calls.append((method, params))
+        return []
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    with caplog.at_level(logging.INFO):
+        exporter._note_profile(PROFILE_26_0)
+
+    assert exporter.compatibility_profile is PROFILE_26_0
+    assert exporter._auto_skipped_methods == set()
+    assert exporter._auto_skipped_at == {}
+    assert "Cleared 1 auto-skipped methods" in caplog.text
+
+    assert exporter._safe_call_auto(object(), "container.query") == []
+    assert [method for method, _params in calls] == ["container.query"]
 
 
 def test_v25_still_transports_removed_in_v26_sources() -> None:
@@ -260,9 +293,8 @@ class ContainerClient:
         return 0
 
 
-@pytest.mark.parametrize("profile", [PROFILE_26_0, PROFILE_UNKNOWN])
-def test_v26_virt_metrics_use_container_query_without_sensitive_fields(profile: Any) -> None:
-    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=profile)
+def test_v26_virt_metrics_use_container_query_without_sensitive_fields() -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_26_0)
     client = ContainerClient()
 
     exporter._collect_virt_metrics(client, {})
@@ -279,9 +311,21 @@ def test_v26_virt_metrics_use_container_query_without_sensitive_fields(profile: 
     assert exporter._collector_errors.get("profile_removed_method_suppressed", 0) == 0
 
 
-@pytest.mark.parametrize("profile", [PROFILE_26_0, PROFILE_UNKNOWN])
-def test_v26_webshare_metrics_populate_count_and_enabled(profile: Any) -> None:
-    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=profile)
+def test_unknown_virt_metrics_call_neither_v25_removed_nor_v26_added_source() -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_UNKNOWN)
+    client = ContainerClient()
+
+    exporter._collect_virt_metrics(client, {})
+
+    methods = [method for method, _ in client.calls]
+    assert "container.query" not in methods
+    assert "virt.instance.query" not in methods
+    assert "virt.volume.query" not in methods
+    assert exporter._collector_errors["profile_removed_method_suppressed"] >= 2
+
+
+def test_v26_webshare_metrics_populate_count_and_enabled() -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_26_0)
     client = ContainerClient()
 
     exporter._collect_app_extras(client, {})
@@ -294,9 +338,20 @@ def test_v26_webshare_metrics_populate_count_and_enabled(profile: Any) -> None:
     assert runtime.WEBSHARE_ENABLED._value.get() == 1
 
 
-@pytest.mark.parametrize("profile", [PROFILE_26_0, PROFILE_UNKNOWN])
-def test_v26_smb_status_populates_counts_without_pii_labels(profile: Any) -> None:
-    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=profile)
+def test_unknown_webshare_methods_are_blocked_before_transport() -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_UNKNOWN)
+    client = ContainerClient()
+
+    exporter._collect_app_extras(client, {})
+
+    methods = [method for method, _ in client.calls]
+    assert "sharing.webshare.query" not in methods
+    assert "webshare.config" not in methods
+    assert V26_ADDED_METHODS.isdisjoint(methods)
+
+
+def test_v26_smb_status_populates_counts_without_pii_labels() -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_26_0)
     client = ContainerClient()
 
     exporter._collect_smb_nfs_sessions(client)
@@ -312,6 +367,15 @@ def test_v26_smb_status_populates_counts_without_pii_labels(profile: Any) -> Non
 
 def test_v25_does_not_call_smb_status() -> None:
     exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_25_10)
+    client = ContainerClient()
+
+    exporter._collect_smb_nfs_sessions(client)
+
+    assert "smb.status" not in [method for method, _ in client.calls]
+
+
+def test_unknown_does_not_call_smb_status() -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_UNKNOWN)
     client = ContainerClient()
 
     exporter._collect_smb_nfs_sessions(client)

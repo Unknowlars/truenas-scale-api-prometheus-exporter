@@ -162,8 +162,13 @@ def test_compatibility_profiles_encode_reviewed_intersections() -> None:
     assert PROFILE_26_0.reviewed_methods >= V26_ADDED_METHODS
     assert V26_ADDED_METHODS.isdisjoint(PROFILE_25_10.reviewed_methods)
     assert PROFILE_26_0.reviewed_methods - V26_ADDED_METHODS < PROFILE_25_10.reviewed_methods
-    assert PROFILE_UNKNOWN.reviewed_methods == PROFILE_26_0.reviewed_methods
-    assert PROFILE_UNKNOWN.reviewed_events == PROFILE_26_0.reviewed_events
+    assert PROFILE_UNKNOWN.reviewed_methods == (
+        PROFILE_25_10.reviewed_methods & PROFILE_26_0.reviewed_methods
+    )
+    assert PROFILE_UNKNOWN.reviewed_events == (
+        PROFILE_25_10.reviewed_events & PROFILE_26_0.reviewed_events
+    )
+    assert V26_ADDED_METHODS.isdisjoint(PROFILE_UNKNOWN.reviewed_methods)
 
     removed_methods = {
         "virt.instance.query",
@@ -184,7 +189,7 @@ def test_compatibility_profiles_encode_reviewed_intersections() -> None:
     # container.metrics is the v26 rename of virt.instance.metrics.
     assert "container.metrics" not in PROFILE_25_10.reviewed_events
     assert "container.metrics" in PROFILE_26_0.reviewed_events
-    assert "container.metrics" in PROFILE_UNKNOWN.reviewed_events
+    assert "container.metrics" not in PROFILE_UNKNOWN.reviewed_events
 
     assert "app.image.query" in PROFILE_25_10.reviewed_methods
     assert "app.image.query" in PROFILE_26_0.reviewed_methods

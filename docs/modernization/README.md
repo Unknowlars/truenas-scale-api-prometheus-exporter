@@ -46,11 +46,349 @@ review evidence. Future changes remain subject to `./scripts/validate.sh`, the
 generated metric-contract check, the read-only API policy, and the prohibition
 on hosted CI.
 
+The 2026-07-16 T11 remediation made `PROFILE_UNKNOWN` a true 25.10/26.0 API
+intersection, excluding v26-added methods/events when version detection falls
+back to unknown while preserving removed-method suppression logging. Verification
+passed locally: `python3 -m pytest tests/test_removed_source_suppression.py
+tests/test_api_catalog.py tests/test_phase1_metrics.py -q` (74 tests),
+`python3 scripts/generate_api_exporter_parity.py`, and `./scripts/validate.sh`
+(ruff, mypy, 209 tests at 91.42% coverage, dashboard validation, parity checks,
+public-release audit, Docker image build, version smoke, `validation_ok`). No
+live smoke was run because no read-only TrueNAS API key was available.
+
 The 2026-07-15 public-release hardening pass restored the local release gate,
 added a tracked-file public-release audit, and completed Docker-backed
 validation on this host.
 
 ## Verification evidence
+
+- 2026-07-16 T21 remediation: added the low-cost metrics batch with only
+  documented read-only methods/events and fixture/synthetic validation. New
+  metrics are `truenas_api_key_count`,
+  `truenas_api_key_expiry_timestamp_seconds{name}`,
+  `truenas_api_key_revoked_count`,
+  `truenas_failover_node_reboot_required{node}`,
+  `truenas_kmip_sync_pending`,
+  `truenas_interface_realtime_speed_mbits{interface}`,
+  `truenas_interface_realtime_link_up{interface}`, and v26-only
+  `truenas_pool_status_code{pool,status_code}`. `api_key.query` uses a strict
+  non-secret select, `zpool.query` is profile-gated through `V26_ADDED_METHODS`,
+  and realtime interface metrics are event-owned for publish/expiry/reset
+  behavior. No T21 sub-items were skipped. Regenerated metric contract and
+  parity artifacts; dashboard generation produced no dashboard file diff.
+  Required verification passed: focused
+  `python3 -m pytest tests/test_t21_low_cost_metrics.py tests/test_phase2_events.py tests/test_api_catalog.py tests/test_runtime_api_parity.py -q`
+  (`60 passed`), full `python3 -m pytest tests/ -q` (`241 passed,
+  4 skipped`), generators
+  `python3 scripts/generate_metric_contract.py`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `python3 scripts/generate_truenas_dashboard.py`, and
+  `./scripts/validate.sh` (ruff, mypy, `245 passed`, 91.31% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is minor-version-worthy because it adds metrics.
+
+- 2026-07-16 T20 remediation: removed cleanup-only runtime dead code without
+  changing metric behavior. The large historical module changelog is now a
+  short current summary, `_merge_event_snapshot` is gone, no-op SMART/UPS/
+  TrueNAS Connect/TrueCommand/disk-used collector stubs were replaced by
+  call-site safety notes, and event freshness tests now use
+  `_publish_cached_events_to_default_registry()` plus `TrueNASCollector`
+  snapshots. Regenerated parity artifacts for runtime line-number evidence
+  churn only; `python3 scripts/generate_metric_contract.py --check` produced
+  no diff. Required verification passed: `python3 -m pytest tests/ -q`
+  (`233 passed, 4 skipped`),
+  `python3 scripts/generate_metric_contract.py --check`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `./scripts/validate.sh` (ruff, mypy, `237 passed`, 91.40% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is patch-worthy cleanup with no metric names, types, HELP
+  text, label sets, or API calls changed.
+
+- 2026-07-16 T19 remediation: corrected misleading HELP/contract text for
+  `truenas_network_gateway_reachable`, app blkio byte gauges,
+  `truenas_smb_open_file_count`, `truenas_snapshot_oldest_timestamp_seconds`,
+  and realtime disk I/O gauges without renaming, retyping, changing label sets,
+  or adding API calls. The gateway metric remains a deprecated alias of
+  `truenas_network_default_gateway_configured`; the dashboard generator already
+  referenced the configured metric. Regenerated metric contract and parity
+  artifacts; dashboard generation produced no dashboard diff. Focused
+  verification passed: `python3 -m pytest tests/ -q` (`233 passed, 4 skipped`).
+  Required generation passed:
+  `python3 scripts/generate_metric_contract.py &&
+  python3 scripts/generate_api_exporter_parity.py &&
+  python3 scripts/generate_truenas_dashboard.py`. Full verification passed:
+  `./scripts/validate.sh` (ruff, mypy, `237 passed`, 91.41% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is patch-worthy because it corrects existing HELP/parity
+  contract text without adding metrics or config.
+
+- 2026-07-16 T18 remediation: added `EXPORTER_BIND_ADDRESS` with an unchanged
+  all-interface default, documented the env var in `.env.example`, README, and
+  Compose forwarding, and redacted the configured TrueNAS WebSocket host from
+  preserved traceback logs at the listed exception sites. Focused verification
+  passed:
+  `python3 -m pytest tests/test_http_integration.py tests/test_reliability.py tests/test_cli.py -q`
+  (`33 passed, 4 skipped`). Full verification passed: `./scripts/validate.sh`
+  (ruff, mypy, `236 passed`, 91.41% coverage, dashboard validation, generated
+  checks, `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`). Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available.
+
+- 2026-07-16 T17 remediation: legacy mode `/metrics` now serves the last
+  complete immutable snapshot through `TrueNASCollector` instead of taking the
+  scrape lock per request. Event dispatch in legacy mode republishes snapshots
+  after updating event-owned metrics, with a one-second throttle that schedules
+  one delayed publish for bursts so single events become visible without a poll
+  cycle. No metric names, types, HELP text, or label sets changed; generated
+  parity artifacts were refreshed for runtime line-reference drift only.
+  Focused verification passed:
+  `python3 -m pytest tests/test_http_integration.py tests/test_phase3_collector_mode.py tests/test_runtime_lifecycle.py -q`
+  (`34 passed, 3 skipped`). Full verification passed: `./scripts/validate.sh`
+  (ruff, mypy, `229 passed`, 91.50% coverage, dashboard validation, generated
+  checks, `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`). Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available.
+
+- 2026-07-16 T16 remediation: reduced server-heavy read-only query cadence for
+  7-day disk temperature aggregation and the oldest-snapshot sorted query.
+  Both metrics now fetch on the first cycle, refresh every 10 cycles, re-emit
+  cached values between refreshes, keep serving cache after refresh failures,
+  count/log collector errors, and expire stale cache after 3x cadence cycles.
+  `truenas_snapshot_count` remains every-cycle via `_query_count`. No metric
+  names or label sets changed; the required HELP cadence suffixes were
+  regenerated into the generated artifacts. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py -q` (`55 passed`).
+  Required generation passed:
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Full verification passed: `./scripts/validate.sh` (ruff, mypy, `226 passed`,
+  91.55% coverage, dashboard validation, generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`). Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available.
+
+- 2026-07-16 T15 remediation: deduplicated redundant per-cycle read-only API
+  calls without metric or config contract changes. The main and extended disk
+  collectors now share one selected `disk.query`; service, protocol, and
+  reporting-enabled collectors share one selected `service.query`; the VM list
+  fetch is skipped when generic method metrics are disabled; and T15-listed
+  bounded list+count collectors use list length unless the limit is reached.
+  A default synthetic `RecordingClient` scrape measured 128 JSON-RPC calls
+  before T15 and 117 after. Focused verification passed:
+  `python3 -m pytest tests/test_t15_duplicate_api_calls.py tests/test_phase1_metrics.py::test_cronjob_collector_skips_count_for_short_list_and_excludes_command -q`
+  (`5 passed`). Required full verification passed:
+  `python3 -m pytest tests/ -q` (`219 passed, 2 skipped`),
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `./scripts/validate.sh` (ruff, mypy, `221 passed`, 91.38% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is patch-worthy performance work with no metric contract
+  change.
+
+- 2026-07-16 T14 remediation: auto-skipped methods now heal on compatibility
+  profile changes and through a per-method 24-hour amnesty window. The
+  `_note_profile` helper centralizes T12's monotonic profile update behavior
+  with T14's auto-skip clearing, logs the number of cleared methods at INFO,
+  and clears the new skip timestamp map with `_auto_skipped_methods`. Focused
+  verification passed:
+  `python3 -m pytest tests/test_removed_source_suppression.py tests/test_phase1_metrics.py -q`
+  (`70 passed`). Regenerated API parity artifacts because runtime line
+  evidence changed. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `217 passed`, 91.47% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is patch-worthy because
+  it is a behavior/robustness fix with no metric or config changes.
+
+- 2026-07-16 T13 remediation: delayed the polling metric wipe until
+  `scrape_once` has constructed the client and completed authentication plus
+  version bootstrap, so pre-auth connection/auth/version failures republish the
+  previous collector snapshot with `truenas_up=0` instead of blanking polled
+  metrics. Post-bootstrap failures still publish the fresh partial/absent
+  cycle with `truenas_up=0`. A stale guard now wipes after
+  `max(3 * interval_seconds, 300)` since the last successful scrape so old
+  values cannot survive indefinitely. Focused verification passed:
+  `python3 -m pytest tests/test_runtime_lifecycle.py tests/test_phase3_collector_mode.py tests/test_http_integration.py -q`
+  (`32 passed, 2 skipped`). Regenerated API parity artifacts because runtime
+  line evidence changed. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `215 passed`, 91.44% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is patch-worthy because
+  it is a behavior/robustness fix with no metric or config changes.
+
+- 2026-07-16 T12 remediation: made compatibility profile updates monotonic and
+  lock-guarded so a transient `system.version_short` failure after detecting a
+  concrete `25.10` or `26.0` profile records `version_detection` but does not
+  downgrade the active profile to `unknown`. First-ever detection failure still
+  selects `unknown`, and legitimate concrete profile changes still update the
+  active profile while clearing `_auto_skipped_methods`. Focused verification
+  passed:
+  `python3 -m pytest tests/test_runtime_lifecycle.py tests/test_removed_source_suppression.py tests/test_phase1_metrics.py -q`
+  (`90 passed`). Regenerated API parity artifacts because runtime line
+  evidence changed. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `212 passed`, 91.45% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is patch-worthy because
+  it is a behavior/robustness fix with no metric or config changes.
+
+- 2026-07-16 T10 remediation: enabled the existing
+  `truenas_disk_temperature_alert_count{disk}` gauge from the documented
+  `disk.temperature_alerts([names])` method after confirming both the 25.10.2
+  and v26 docs require one disk-name list parameter and return a bare array of
+  alert objects. Successful calls publish per-queried-disk counts, including
+  `0` for disks without alert rows; failed calls leave alert-count samples
+  absent while sibling disk size and temperature metrics continue collecting.
+  `disk.temperature_alerts` remains blocked from generic/auto-discovery bare
+  calls through `REQUIRES_ENTITY_PARAM`. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py -q` (`49 passed`).
+  Regenerated required parity artifacts with
+  `python3 scripts/generate_api_exporter_parity.py`. Required full validation
+  passed: `./scripts/validate.sh` completed ruff, mypy, `209 passed`, 91.41%
+  coverage, dashboard validation (`dashboard_ok panels=318
+  metric_references=287`), generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`. Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is minor-version-worthy because a declared compatibility
+  metric now emits.
+
+- 2026-07-16 T09 remediation: re-enabled
+  `truenas_pool_vdev_read_errors`, `truenas_pool_vdev_write_errors`, and
+  `truenas_pool_vdev_checksum_errors` from documented `pool.query.topology`
+  data while preserving the existing gauge names, help text, labels, and
+  fail-closed walker behavior. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_runtime_api_parity.py -q`
+  (`81 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `206 passed`, 91.40% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is
+  minor-version-worthy because declared compatibility metrics now emit.
+
+- 2026-07-16 T08 remediation: enabled existing
+  `truenas_task_state{task_type,name,state}` and
+  `truenas_task_last_run_timestamp_seconds{task_type,name}` producers for
+  replication, cloudsync, rsynctask, and snapshottask tasks using only safe
+  selected fields. State labels are allowlisted with unknown values mapped to
+  `UNKNOWN`; null/missing/unparseable task outcome data leaves samples absent.
+  Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_runtime_api_parity.py -q`
+  (`79 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `204 passed`, 90.77% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available.
+
+- 2026-07-16 T07 remediation: enabled
+  `truenas_dataset_snapshot_count` by default through the documented read-only
+  `pool.dataset.snapshot_count` fallback after confirming the 25.10.2 and v26
+  `pool.dataset.query` / `pool.dataset.details` docs do not document
+  `extra.snapshot_count`. `DATASET_SNAPSHOT_FALLBACK_LIMIT` now defaults to
+  `25` and remains capped by `MAX_ENTITY_CALLS`; README, `.env.example`, tests,
+  and generated parity artifacts were updated. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_documented_api_shapes.py -q`
+  (`55 passed`). Regenerated parity with
+  `python3 scripts/generate_api_exporter_parity.py`. Required full validation
+  passed: `./scripts/validate.sh` completed ruff, mypy, `202 passed`, 90.77%
+  coverage, dashboard validation, generated checks, `public_release_audit_ok`,
+  Docker image build, container version smoke `5.2.0`, and `validation_ok`.
+  Optional live smoke was skipped because no read-only live TrueNAS target/key
+  was available.
+
+- 2026-07-16 T06 remediation: removed fabricated zero publication for
+  `truenas_job_abortable_active_count`,
+  `truenas_job_transient_active_count`, and `truenas_reporting_enabled` on
+  partial failure or unknown service-name paths. Active-job counts still publish
+  after successful count queries, the no-active-jobs path still publishes
+  legitimate zeroes, and `truenas_reporting_enabled` now publishes only when a
+  `netdata` or `reporting` service row exists. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py -q` (`40 passed`). Required
+  full validation passed: `./scripts/validate.sh` completed ruff, mypy,
+  `200 passed`, 90.73% coverage, dashboard validation (`dashboard_ok
+  panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`.
+
+- 2026-07-16 T05 remediation: removed the `received_bytes` /
+  `sent_bytes` fallback from `truenas_network_rx_bytes_per_second` and
+  `truenas_network_tx_bytes_per_second`, so cumulative-only
+  `reporting.realtime` interface payloads leave the `_per_second` samples
+  absent instead of reporting byte totals as rates. Focused verification passed:
+  `python3 -m pytest tests/test_phase2_events.py tests/test_reliability.py -q`
+  (`37 passed`). Regenerated metric contract, API parity, and dashboard
+  artifacts; they produced no file changes. Required full validation passed:
+  `./scripts/validate.sh` completed ruff, mypy, `195 passed`, 90.67%
+  coverage, dashboard validation (`dashboard_ok panels=318
+  metric_references=287`), generated checks, `public_release_audit_ok`,
+  Docker image build, container version smoke `5.2.0`, and `validation_ok`.
+  Optional live smoke was skipped because no read-only live TrueNAS target/key
+  was provided.
+
+- 2026-07-16 T04 remediation: added
+  `truenas_pool_realtime_used_bytes`,
+  `truenas_pool_realtime_available_bytes`, and
+  `truenas_pool_realtime_total_bytes` from the `reporting.realtime`
+  `pools.<pool>.used/available/total` byte fields. The existing read/write
+  rate probes remain, but regenerated API parity marks them
+  `opportunistic dedicated` and notes that documented/observed payloads carry
+  space stats, not rates. Focused verification passed:
+  `python3 -m pytest tests/test_phase2_events.py tests/test_phase3_collector_mode.py tests/test_reliability.py -q`
+  (`43 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `python3 scripts/generate_truenas_dashboard.py`; confirmed all five realtime
+  pool parity rows. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `194 passed`, 90.64% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was provided.
+
+- 2026-07-16 T03 remediation: stopped exporting `pool.query.dedup_table_size`
+  bytes through the ratio-named `truenas_pool_dedup_ratio` metric. The ratio
+  metric remains declared for one compatibility release with HELP text and API
+  parity notes documenting that no TrueNAS 25.10/26.0 ratio source is
+  documented and the series is intentionally absent; DDT size continues through
+  `truenas_pool_dedup_table_size_bytes`. Focused verification passed:
+  `python3 -m pytest tests/test_runtime_api_parity.py tests/test_phase1_metrics.py -q`
+  (`70 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `191 passed`, 90.55% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was provided.
+
+- 2026-07-16 T02 remediation: stopped fabricating `truenas_cpu_user_percent`
+  from aggregate realtime CPU usage and `truenas_cpu_idle_percent` from
+  `100 - usage` when `reporting.realtime` does not provide split fields.
+  Explicit `cpu.user`/`cpu.idle` values remain exported. Updated HELP text and
+  regenerated the metric contract, API parity docs, and dashboard output.
+  Focused verification passed:
+  `python3 -m pytest tests/test_reliability.py tests/test_phase2_events.py tests/test_phase3_collector_mode.py -q`
+  (`40 passed`). Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `191 passed`, 90.56% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Compose validation, Docker image build, container
+  version smoke `5.2.0`, and `validation_ok`. Optional live smoke was skipped
+  because no read-only live TrueNAS target/key was provided.
 
 - 2026-07-15 startup configuration fix: removed the Compose-level
   `EVENT_SUBSCRIPTIONS` injection so sample deployments do not force the newest

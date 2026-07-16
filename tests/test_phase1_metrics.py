@@ -143,8 +143,51 @@ def reset_gauges():
         exporter_module.REPORTING_TIER0_RETENTION_DAYS,
         exporter_module.REPORTING_TIER1_RETENTION_DAYS,
         exporter_module.REPORTING_TIER1_UPDATE_INTERVAL_SECONDS,
+        exporter_module.TASK_COUNT,
+        exporter_module.TASK_ENABLED,
+        exporter_module.TASK_STATE,
+        exporter_module.TASK_LAST_RUN_TS,
+        exporter_module.POOL_VDEV_READ_ERRORS,
+        exporter_module.POOL_VDEV_WRITE_ERRORS,
+        exporter_module.POOL_VDEV_CHECKSUM_ERRORS,
+        exporter_module.DISK_TEMP_ALERT_COUNT,
     ):
         reset_metric(metric)
+
+
+def test_vdev_error_walker_fails_closed_on_malformed_topology():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+
+    exporter._extract_vdev_errors(
+        "tank",
+        {
+            "data": [
+                {"name": "missing-stats"},
+                {"name": "missing-keys", "stats": {"alloc": 1}},
+                {
+                    "name": "non-list-children",
+                    "children": {"bad": {"stats": {"read_errors": 1}}},
+                },
+                "not-a-vdev",
+            ],
+            "cache": None,
+        },
+    )
+
+    assert list(exporter_module.POOL_VDEV_READ_ERRORS.collect())[0].samples == []
+    assert list(exporter_module.POOL_VDEV_WRITE_ERRORS.collect())[0].samples == []
+    assert list(exporter_module.POOL_VDEV_CHECKSUM_ERRORS.collect())[0].samples == []
+
+
+def test_vdev_error_walker_stops_at_existing_depth_guard():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    vdev = {"name": "leaf-too-deep", "stats": {"read_errors": 1}}
+    for depth in range(8):
+        vdev = {"name": f"level-{depth}", "children": [vdev]}
+
+    exporter._extract_vdev_errors("tank", {"data": [vdev]})
+
+    assert list(exporter_module.POOL_VDEV_READ_ERRORS.collect())[0].samples == []
 
 
 def test_snapshot_count_uses_exact_count_query(monkeypatch):
@@ -167,6 +210,27 @@ def test_snapshot_count_uses_exact_count_query(monkeypatch):
 
     assert gauge_value(exporter_module.SNAPSHOT_TOTAL_COUNT) == 321
     assert calls[0][1][1] == {"count": True}
+
+
+def test_snapshot_count_failure_routes_through_collector_error(monkeypatch):
+    """R07: pool.snapshot.query count failures must update
+    exporter._collector_errors, not just the Prometheus counter directly."""
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
+
+    def fake_call(client, method, params=None):
+        assert method == "pool.snapshot.query"
+        options = params[1]
+        if options.get("count"):
+            raise exporter_module.JsonRpcError("snapshot count unavailable")
+        return [{"properties": {"creation": {"parsed": 1700000000}}}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_snapshot_metrics(object(), {})
+
+    assert exporter._collector_errors["snapshots"] >= 1
 
 
 def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
@@ -194,6 +258,92 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
     assert oldest_options["order_by"] == ["properties.creation.parsed"]
     assert oldest_options["extra"] == {"properties": ["creation"]}
     assert "select" not in oldest_options
+
+
+def test_oldest_snapshot_timestamp_uses_reduced_cadence_cache(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
+    oldest_calls = []
+
+    def fake_call(client, method, params=None):
+        assert method == "pool.snapshot.query"
+        options = params[1]
+        if options.get("count"):
+            return 321
+        oldest_calls.append(params)
+        return [{"properties": {"creation": {"parsed": 1700000000 + len(oldest_calls)}}}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_snapshot_metrics(object(), {})
+    assert gauge_value(exporter_module.SNAPSHOT_TOTAL_COUNT) == 321
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000001
+    assert len(oldest_calls) == 1
+
+    # R06: refresh happens every SNAPSHOT_OLDEST_REFRESH_CYCLES cycles (a full
+    # 10-cycle gap from the initial fetch at cycle 1 to the next at cycle 11).
+    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1):
+        exporter._reset_poll_metrics()
+        exporter._collect_snapshot_metrics(object(), {})
+        assert gauge_value(exporter_module.SNAPSHOT_TOTAL_COUNT) == 321
+        assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000001
+        assert len(oldest_calls) == 1
+
+    exporter._reset_poll_metrics()
+    exporter._collect_snapshot_metrics(object(), {})
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000002
+    assert len(oldest_calls) == 2
+
+
+def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
+    fail_oldest = False
+
+    def fake_call(client, method, params=None):
+        assert method == "pool.snapshot.query"
+        options = params[1]
+        if options.get("count"):
+            return 321
+        if fail_oldest:
+            raise exporter_module.JsonRpcError("oldest snapshot unavailable")
+        return [{"properties": {"creation": {"parsed": 1700000000}}}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_snapshot_metrics(object(), {})
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000000
+
+    before_errors = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="snapshots"
+    )._value.get()
+    fail_oldest = True
+    # R06: the retry attempt now lands one cycle later (cycle 11, not 10).
+    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 2):
+        exporter._reset_poll_metrics()
+        exporter._collect_snapshot_metrics(object(), {})
+
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000000
+    assert (
+        exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots")._value.get()
+        == before_errors + 1
+    )
+    # R07: failure accounting must go through _collector_error, not just the
+    # Prometheus counter, like every sibling collector.
+    assert exporter._collector_errors["snapshots"] >= 1
+
+    for _ in range(
+        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 2,
+        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES
+        * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        + 2,
+    ):
+        exporter._reset_poll_metrics()
+        exporter._collect_snapshot_metrics(object(), {})
+
+    assert math.isnan(gauge_value(exporter_module.SNAPSHOT_OLDEST_TS))
 
 
 def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeypatch):
@@ -411,6 +561,55 @@ def test_job_metrics_use_exact_active_counts_and_filtered_detail_query(monkeypat
     ]
 
 
+def test_job_flag_metrics_stay_nan_when_detail_query_fails(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", query_limit=1))
+    exporter._reset_poll_metrics()
+
+    def fake_call(client, method, params=None):
+        assert method == "core.get_jobs"
+        filters, options = params
+        if options == {"count": True}:
+            if filters == [["state", "=", "WAITING"]]:
+                return 3
+            if filters == [["state", "=", "RUNNING"]]:
+                return 4
+        raise RuntimeError("detail query failed")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_job_metrics(object())
+
+    assert gauge_value(exporter_module.JOB_ACTIVE_COUNT) == 7
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_STATE, "WAITING") == 3
+    assert labeled_value(exporter_module.JOB_ACTIVE_COUNT_BY_STATE, "RUNNING") == 4
+    assert math.isnan(gauge_value(exporter_module.JOB_ABORTABLE_ACTIVE_COUNT))
+    assert math.isnan(gauge_value(exporter_module.JOB_TRANSIENT_ACTIVE_COUNT))
+
+
+def test_job_flag_metrics_publish_zero_when_no_active_jobs(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", query_limit=1))
+    exporter._reset_poll_metrics()
+
+    def fake_call(client, method, params=None):
+        assert method == "core.get_jobs"
+        filters, options = params
+        assert options == {"count": True}
+        if filters in (
+            [["state", "=", "WAITING"]],
+            [["state", "=", "RUNNING"]],
+        ):
+            return 0
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_job_metrics(object())
+
+    assert gauge_value(exporter_module.JOB_ACTIVE_COUNT) == 0
+    assert gauge_value(exporter_module.JOB_ABORTABLE_ACTIVE_COUNT) == 0
+    assert gauge_value(exporter_module.JOB_TRANSIENT_ACTIVE_COUNT) == 0
+
+
 def test_app_query_enrichment_metrics(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
 
@@ -615,6 +814,50 @@ def test_enabled_gauges_follow_service_enable_state(monkeypatch):
     assert gauge_value(exporter_module.REPORTING_ENABLED) == 1
 
 
+@pytest.mark.parametrize(
+    ("reporting_rows", "expected"),
+    [
+        ([], math.nan),
+        ([{"service": "netdata", "enable": False}], 0),
+        ([{"service": "netdata", "enable": True}], 1),
+    ],
+)
+def test_reporting_enabled_requires_matching_service_row(monkeypatch, reporting_rows, expected):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
+    exporter._reset_poll_metrics()
+
+    def fake_call(client, method, params=None):
+        if method == "network.configuration.config":
+            return {"httpproxy": ""}
+        if method == "app.image.query":
+            return 0
+        if method == "replication.config.config":
+            return {"max_parallel_replication_tasks": 2}
+        if method == "reporting.exporters.query":
+            return 0
+        if method == "service.query":
+            requested = tuple(params[0][0][2])
+            assert requested == ("netdata", "reporting")
+            return reporting_rows
+        if method == "dns.query":
+            return 1
+        if method == "reporting.config":
+            return {"tier0_days": 7, "tier1_days": 30, "tier1_update_interval_seconds": 300}
+        if method == "system.ntpserver.query":
+            return []
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_misc_configs(object(), {})
+
+    value = gauge_value(exporter_module.REPORTING_ENABLED)
+    if math.isnan(expected):
+        assert math.isnan(value)
+    else:
+        assert value == expected
+
+
 def test_load_config_parses_defaults_and_lists(monkeypatch):
     for key in (
         "TRUENAS_WS_URL",
@@ -683,7 +926,7 @@ def test_load_config_new_flags_defaults(monkeypatch):
 
     assert config.enable_generic_method_metrics is False
     assert config.enable_generic_event_metrics is False
-    assert config.dataset_snapshot_fallback_limit == 0
+    assert config.dataset_snapshot_fallback_limit == 25
 
 
 def test_load_config_new_flags_enabled(monkeypatch):
@@ -702,8 +945,7 @@ def test_load_config_new_flags_enabled(monkeypatch):
     assert config.dataset_snapshot_fallback_limit == 25
 
 
-def test_dataset_snapshot_fallback_disabled_by_default(monkeypatch):
-    """With DATASET_SNAPSHOT_FALLBACK_LIMIT=0, no per-dataset snapshot_count calls are made."""
+def test_dataset_snapshot_fallback_can_be_disabled(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=0))
     calls = []
 
@@ -719,6 +961,54 @@ def test_dataset_snapshot_fallback_disabled_by_default(monkeypatch):
 
     methods_called = [c[0] for c in calls]
     assert "pool.dataset.snapshot_count" not in methods_called
+
+
+def test_dataset_snapshot_fallback_failure_leaves_count_absent(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=25))
+
+    def fake_call(client, method, params=None):
+        if method == "pool.dataset.query":
+            return [{"name": "tank/data", "used": 1.0, "available": 2.0}]
+        if method == "pool.dataset.snapshot_count":
+            raise RuntimeError("snapshot count unavailable")
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_dataset_metrics(object())
+
+    assert exporter_module.DATASET_USED_BYTES.labels(dataset="tank/data")._value.get() == 1.0
+    assert not list(exporter_module.DATASET_SNAPSHOT_COUNT.collect())[0].samples
+
+
+def test_dataset_snapshot_fallback_calls_are_capped_by_limit(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=2))
+    snapshot_calls = []
+
+    def fake_call(client, method, params=None):
+        if method == "pool.dataset.query":
+            return [
+                {"name": "tank/one", "used": 1.0},
+                {"name": "tank/two", "used": 2.0},
+                {"name": "tank/three", "used": 3.0},
+            ]
+        if method == "pool.dataset.snapshot_count":
+            snapshot_calls.append(params[0])
+            return len(snapshot_calls)
+        raise AssertionError(f"Unexpected call: {method} {params}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_dataset_metrics(object())
+
+    assert snapshot_calls == ["tank/one", "tank/two"]
+    assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/one")._value.get() == 1.0
+    assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/two")._value.get() == 2.0
+    samples = {
+        sample.labels["dataset"]: sample.value
+        for sample in list(exporter_module.DATASET_SNAPSHOT_COUNT.collect())[0].samples
+    }
+    assert "tank/three" not in samples
 
 
 def test_generic_event_metrics_gated_by_flag():
@@ -782,12 +1072,28 @@ def test_disable_created_metrics():
     assert "truenas_api_call_errors_created" not in output
 
 
+def test_t19_help_text_contract_updates():
+    from prometheus_client import generate_latest
+
+    output = generate_latest().decode()
+
+    assert (
+        "# HELP truenas_network_gateway_reachable Deprecated alias of "
+        "truenas_network_default_gateway_configured (route presence only — does NOT "
+        "test reachability); will be removed in a future release."
+    ) in output
+    assert (
+        "# HELP truenas_snapshot_oldest_timestamp_seconds Unix timestamp of the oldest "
+        "ZFS snapshot; absent when there are no snapshots; refreshed every ~5 minutes."
+    ) in output
+
+
 # ---------------------------------------------------------------------------
 # Phase 2 additions — performance and cardinality tuning
 # ---------------------------------------------------------------------------
 
 
-def test_scrub_task_collector_uses_exact_count_and_bounded_detail(monkeypatch):
+def test_scrub_task_collector_skips_count_for_short_list(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
@@ -804,12 +1110,12 @@ def test_scrub_task_collector_uses_exact_count_and_bounded_detail(monkeypatch):
     exporter._collect_scrub_task_metrics(object(), {})
 
     scrub_calls = [c for c in calls if c[0] == "pool.scrub.query"]
-    assert len(scrub_calls) == 2
-    assert scrub_calls[1][1] == [[], {"count": True}]
-    assert gauge_value(exporter_module.POOL_SCRUB_TASK_COUNT) == 301
+    assert len(scrub_calls) == 1
+    assert scrub_calls[0][1][1]["select"] == ["id", "pool_name", "enabled"]
+    assert gauge_value(exporter_module.POOL_SCRUB_TASK_COUNT) == 1
 
 
-def test_cloud_backup_collector_uses_exact_count_and_safe_detail_select(monkeypatch):
+def test_cloud_backup_collector_skips_count_for_short_list_and_safe_detail_select(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
@@ -829,13 +1135,13 @@ def test_cloud_backup_collector_uses_exact_count_and_safe_detail_select(monkeypa
     exporter._collect_cloud_backup_metrics(object(), {})
 
     backup_calls = [c for c in calls if c[0] == "cloud_backup.query"]
-    assert len(backup_calls) == 2
+    assert len(backup_calls) == 1
     assert backup_calls[0][1][1]["select"] == ["id", "enabled"]
-    assert gauge_value(exporter_module.CLOUD_BACKUP_TASK_COUNT) == 402
+    assert gauge_value(exporter_module.CLOUD_BACKUP_TASK_COUNT) == 2
     assert not list(exporter_module.CLOUD_BACKUP_TASK_STATE.collect())[0].samples
 
 
-def test_cronjob_collector_uses_exact_count_and_excludes_command(monkeypatch):
+def test_cronjob_collector_skips_count_for_short_list_and_excludes_command(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
@@ -852,23 +1158,71 @@ def test_cronjob_collector_uses_exact_count_and_excludes_command(monkeypatch):
     exporter._collect_cronjob_metrics(object(), {})
 
     cron_calls = [c for c in calls if c[0] == "cronjob.query"]
-    assert len(cron_calls) == 2
+    assert len(cron_calls) == 1
     assert cron_calls[0][1][1]["select"] == ["id", "enabled"]
-    assert gauge_value(exporter_module.CRONJOB_COUNT) == 503
+    assert gauge_value(exporter_module.CRONJOB_COUNT) == 1
 
 
-def test_task_collectors_use_exact_counts_per_type(monkeypatch):
+def task_samples(metric, **labels):
+    family = list(metric.collect())[0]
+    return [
+        sample
+        for sample in family.samples
+        if sample.name == family.name and all(sample.labels.get(key) == value for key, value in labels.items())
+    ]
+
+
+def task_sample_value(metric, **labels):
+    samples = task_samples(metric, **labels)
+    assert len(samples) == 1
+    return samples[0].value
+
+
+def test_task_collectors_emit_outcomes_and_use_safe_selects(monkeypatch):
     config = make_config(exporter_mode="legacy", enable_task_metrics=True)
     exporter = exporter_module.TrueNASExporter(config)
     calls = []
 
     def fake_call(client, method, params=None):
         calls.append((method, params))
-        if method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
-            options = params[1] if params and len(params) > 1 else {}
+        if method == "replication.query":
+            options = params[1]
             if options.get("count"):
-                return 0
-            return []
+                return 1
+            return [{
+                "id": 1,
+                "name": "replicate-nightly",
+                "enabled": True,
+                "state": {"state": "ERROR", "datetime": {"$date": 1750000000000}},
+            }]
+        if method == "cloudsync.query":
+            options = params[1]
+            if options.get("count"):
+                return 1
+            return [{
+                "id": 2,
+                "description": "cloud-nightly",
+                "enabled": False,
+                "job": {
+                    "state": "SUCCESS",
+                    "time_finished": {"$date": 1750000100000},
+                    "progress": {"percent": 100},
+                },
+            }]
+        if method == "rsynctask.query":
+            options = params[1]
+            if options.get("count"):
+                return 1
+            return [{"id": 3, "enabled": True, "job": None}]
+        if method == "pool.snapshottask.query":
+            options = params[1]
+            if options.get("count"):
+                return 1
+            return [{
+                "id": 4,
+                "enabled": True,
+                "state": {"state": "FINISHED", "datetime": {"$date": 1750000200000}},
+            }]
         if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
             return 0
         raise AssertionError(f"Unexpected call: {method}")
@@ -877,14 +1231,121 @@ def test_task_collectors_use_exact_counts_per_type(monkeypatch):
 
     exporter._collect_task_metrics(object())
 
-    for method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
-        method_calls = [c for c in calls if c[0] == method]
-        assert len(method_calls) == 2
-        assert method_calls[0][1][1]["select"] == ["id", "enabled"]
-        assert method_calls[1][1] == [[], {"count": True}]
+    expected_selects = {
+        "replication.query": ["id", "name", "enabled", "state"],
+        "cloudsync.query": ["id", "description", "enabled", "job"],
+        "rsynctask.query": ["id", "enabled", "job"],
+        "pool.snapshottask.query": ["id", "enabled", "state"],
+    }
+    for method, expected_select in expected_selects.items():
+        method_calls = [call for call in calls if call[0] == method]
+        assert len(method_calls) == 1
+        assert method_calls[0][1][1]["select"] == expected_select
 
-    assert not list(exporter_module.TASK_STATE.collect())[0].samples
-    assert not list(exporter_module.TASK_LAST_RUN_TS.collect())[0].samples
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="replication",
+        name="replicate-nightly",
+        state="ERROR",
+    ) == 1
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="cloudsync",
+        name="cloud-nightly",
+        state="SUCCESS",
+    ) == 1
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="snapshottask",
+        name="4",
+        state="FINISHED",
+    ) == 1
+    assert task_sample_value(
+        exporter_module.TASK_LAST_RUN_TS,
+        task_type="replication",
+        name="replicate-nightly",
+    ) == 1750000000.0
+    assert task_sample_value(
+        exporter_module.TASK_LAST_RUN_TS,
+        task_type="cloudsync",
+        name="cloud-nightly",
+    ) == 1750000100.0
+    assert task_sample_value(
+        exporter_module.TASK_LAST_RUN_TS,
+        task_type="snapshottask",
+        name="4",
+    ) == 1750000200.0
+    assert task_sample_value(exporter_module.TASK_ENABLED, task_type="rsynctask", name="3") == 1
+    assert not task_samples(exporter_module.TASK_STATE, task_type="rsynctask", name="3")
+    assert not task_samples(exporter_module.TASK_LAST_RUN_TS, task_type="rsynctask", name="3")
+
+
+def test_task_outcome_unknown_state_maps_to_unknown(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_task_metrics=True))
+
+    def fake_call(client, method, params=None):
+        if method == "replication.query":
+            if params[1].get("count"):
+                return 1
+            return [{
+                "id": 1,
+                "name": "replicate-nightly",
+                "enabled": True,
+                "state": {"state": "WEIRD_NEW_STATE", "datetime": {"$date": 1750000000000}},
+            }]
+        if method in ("cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
+            return 0 if params[1].get("count") else []
+        if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
+            return 0
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_task_metrics(object())
+
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="replication",
+        name="replicate-nightly",
+        state="UNKNOWN",
+    ) == 1
+
+
+def test_task_query_failure_leaves_that_type_absent(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_task_metrics=True))
+
+    def fake_call(client, method, params=None):
+        if method == "replication.query":
+            raise RuntimeError("replication unavailable")
+        if method == "cloudsync.query":
+            if params[1].get("count"):
+                return 1
+            return [{
+                "id": 2,
+                "description": "cloud-nightly",
+                "enabled": True,
+                "job": {"state": "SUCCESS", "time_finished": {"$date": 1750000100000}},
+            }]
+        if method in ("rsynctask.query", "pool.snapshottask.query"):
+            return 0 if params[1].get("count") else []
+        if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
+            return 0
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_task_metrics(object())
+
+    assert not task_samples(exporter_module.TASK_COUNT, task_type="replication")
+    assert not task_samples(exporter_module.TASK_ENABLED, task_type="replication")
+    assert not task_samples(exporter_module.TASK_STATE, task_type="replication")
+    assert not task_samples(exporter_module.TASK_LAST_RUN_TS, task_type="replication")
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="cloudsync",
+        name="cloud-nightly",
+        state="SUCCESS",
+    ) == 1
 
 
 def test_reporting_graph_discovery_skipped_when_generic_disabled(monkeypatch):
@@ -937,24 +1398,18 @@ def test_reporting_graph_discovery_runs_when_generic_enabled(monkeypatch):
     assert "reporting.netdata_graphs" in extracted
 
 
-def test_undocumented_smart_results_method_is_never_called(monkeypatch):
+def test_undocumented_smart_results_collector_is_not_present():
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
-    monkeypatch.setattr(
-        exporter,
-        "_safe_call_auto",
-        lambda *_args, **_kwargs: pytest.fail("undocumented SMART RPC must not be called"),
-    )
 
-    exporter._collect_smart_test_results(object())
+    assert not hasattr(exporter, "_collect_smart_test_results")
     assert not list(exporter_module.SMART_TEST_LAST_RESULT.collect())[0].samples
     assert not list(exporter_module.SMART_TEST_LAST_TIMESTAMP.collect())[0].samples
 
 
-def test_smart_results_unavailable_is_non_fatal(monkeypatch):
+def test_smart_results_unavailable_is_non_fatal():
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
-    monkeypatch.setattr(exporter, "_safe_call_auto", lambda client, method: None)
 
-    exporter._collect_smart_test_results(object())
+    assert not hasattr(exporter, "_collect_smart_test_results")
 
 
 def test_safe_call_auto_runtime_skips_missing_argument_methods(monkeypatch):
@@ -973,6 +1428,44 @@ def test_safe_call_auto_runtime_skips_missing_argument_methods(monkeypatch):
     assert exporter._safe_call_auto(object(), "virt.global.get_network") is None
     assert len(calls) == 1
     assert "virt.global.get_network" in exporter._auto_skipped_methods
+
+
+def test_safe_call_auto_runtime_skips_missing_method_until_amnesty(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
+    calls = []
+    now = 1000.0
+
+    def fake_monotonic():
+        return now
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        raise exporter_module.JsonRpcError(
+            "container.query failed: {'error': 'Method does not exist'}"
+        )
+
+    monkeypatch.setattr(exporter_module.time, "monotonic", fake_monotonic)
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    skipped_before = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="auto_discovery_skipped"
+    )._value.get()
+
+    assert exporter._safe_call_auto(object(), "container.query") is None
+    assert exporter._safe_call_auto(object(), "container.query") is None
+    assert len(calls) == 1
+    assert exporter._auto_skipped_methods == {"container.query"}
+
+    now += 86400
+    assert exporter._safe_call_auto(object(), "container.query") is None
+    assert exporter._safe_call_auto(object(), "container.query") is None
+
+    assert len(calls) == 2
+    assert exporter._auto_skipped_methods == {"container.query"}
+    skipped_after = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="auto_discovery_skipped"
+    )._value.get()
+    assert skipped_after - skipped_before == 2
 
 
 def test_requires_entity_param_includes_virt_global_get_network():
@@ -1345,3 +1838,239 @@ def test_full_domain_scrape_accepts_rich_read_only_fixture(monkeypatch):
     exporter.scrape_once()
 
     assert exporter_module.SCRAPE_SUCCESS._value.get() == 1
+
+
+def test_disk_temperature_alert_count_emits_zero_for_queried_disks_without_alerts(monkeypatch):
+    class DiskClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: DiskClient())
+
+    def disk_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {}
+        if method == "disk.query":
+            return [
+                {"name": "sda", "size": 100, "pool": "tank"},
+                {"name": "sdb", "size": 200, "pool": None},
+            ]
+        if method == "disk.temperature_agg":
+            return {}
+        if method == "disk.temperature_alerts":
+            assert _params == [["sda", "sdb"]]
+            return [
+                {"args": {"device": "sda"}, "id": "alert-1"},
+                {"args": {"device": "sda"}, "id": "alert-2"},
+            ]
+        if method == "disk.temperatures":
+            return {}
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return []
+        if method.endswith((".config", ".status", ".info", ".summary")):
+            return {}
+        return {}
+
+    monkeypatch.setattr(exporter, "_call", disk_call)
+    exporter.scrape_once()
+
+    assert labeled_value(exporter_module.DISK_TEMP_ALERT_COUNT, "sda") == 2
+    assert labeled_value(exporter_module.DISK_TEMP_ALERT_COUNT, "sdb") == 0
+
+
+def test_disk_temperature_alert_failure_keeps_sibling_disk_metrics(monkeypatch):
+    class DiskClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: DiskClient())
+
+    def disk_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {}
+        if method == "disk.query":
+            return [{"name": "sda", "size": 100, "pool": "tank"}]
+        if method == "disk.temperature_agg":
+            return {"sda": {"min": 31, "max": 35, "avg": 33}}
+        if method == "disk.temperature_alerts":
+            raise exporter_module.JsonRpcError("temperature alerts unavailable")
+        if method == "disk.temperatures":
+            return {"sda": 34}
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return []
+        if method.endswith((".config", ".status", ".info", ".summary")):
+            return {}
+        return {}
+
+    monkeypatch.setattr(exporter, "_call", disk_call)
+    exporter.scrape_once()
+
+    assert list(exporter_module.DISK_TEMP_ALERT_COUNT.collect())[0].samples == []
+    assert labeled_value(exporter_module.DISK_SIZE_BYTES, "sda") == 100
+    assert labeled_value(exporter_module.DISK_TEMPERATURE_C, "sda") == 34
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+
+
+def test_disk_temperature_agg_uses_reduced_cadence_cache(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    temp_calls = []
+
+    def fake_call(client, method, params=None):
+        assert method == "disk.temperature_agg"
+        temp_calls.append(params)
+        return {"sda": {"min": 30 + len(temp_calls), "max": 40, "avg": 35}}
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+    assert len(temp_calls) == 1
+
+    # R06: refresh happens every DISK_TEMP_AGG_REFRESH_CYCLES cycles (a full
+    # 10-cycle gap from the initial fetch at cycle 1 to the next at cycle 11).
+    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1):
+        exporter._reset_poll_metrics()
+        exporter._collect_disk_temperature_agg(object(), ["sda"])
+        assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+        assert len(temp_calls) == 1
+
+    exporter._reset_poll_metrics()
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 32
+    assert len(temp_calls) == 2
+
+
+def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    fail_agg = False
+
+    def fake_call(client, method, params=None):
+        assert method == "disk.temperature_agg"
+        if fail_agg:
+            raise exporter_module.JsonRpcError("temperature agg unavailable")
+        return {"sda": {"min": 31, "max": 35, "avg": 33}}
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+
+    before_errors = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="disks"
+    )._value.get()
+    fail_agg = True
+    # R06: the retry attempt now lands one cycle later (cycle 11, not 10).
+    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 2):
+        exporter._reset_poll_metrics()
+        exporter._collect_disk_temperature_agg(object(), ["sda"])
+
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+    assert (
+        exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="disks")._value.get()
+        == before_errors + 1
+    )
+    # R07: failure accounting must go through _collector_error, not just the
+    # Prometheus counter, like every sibling collector.
+    assert exporter._collector_errors["disks"] >= 1
+
+    for _ in range(
+        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 2,
+        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES
+        * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        + 2,
+    ):
+        exporter._reset_poll_metrics()
+        exporter._collect_disk_temperature_agg(object(), ["sda"])
+
+    assert list(exporter_module.DISK_TEMP_AGG_C.collect())[0].samples == []
+
+
+def test_disk_temperature_agg_refetches_when_disk_list_changes(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    temp_calls = []
+
+    def fake_call(client, method, params=None):
+        assert method == "disk.temperature_agg"
+        temp_calls.append(params[0])
+        return {
+            disk_name: {"min": 30 + len(temp_calls), "max": 40, "avg": 35}
+            for disk_name in params[0]
+        }
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+    assert temp_calls == [["sda"]]
+
+    exporter._reset_poll_metrics()
+    exporter._collect_disk_temperature_agg(object(), ["sda", "sdb"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 32
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sdb", "min") == 32
+    assert temp_calls == [["sda"], ["sda", "sdb"]]
+
+
+def test_disk_temperature_alerts_not_called_without_disks(monkeypatch):
+    class DiskClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: DiskClient())
+    calls = []
+
+    def disk_call(_client, method, _params=None):
+        calls.append(method)
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {}
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return []
+        if method.endswith((".config", ".status", ".info", ".summary")):
+            return {}
+        return {}
+
+    monkeypatch.setattr(exporter, "_call", disk_call)
+    exporter.scrape_once()
+
+    assert "disk.temperature_alerts" not in calls

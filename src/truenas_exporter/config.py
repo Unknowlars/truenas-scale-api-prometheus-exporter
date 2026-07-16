@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,6 +44,7 @@ class Config:
     enable_generic_event_metrics: bool
     dataset_snapshot_fallback_limit: int
     exporter_mode: str
+    exporter_bind_address: str = ""
     scrape_budget_seconds: int = 25
     event_stale_after_seconds: int = 15
     ca_file: str | None = None
@@ -71,6 +73,24 @@ def _int_env(name: str, default: str, minimum: int, maximum: int | None = None) 
         bounds = f"between {minimum} and {maximum}" if maximum is not None else f">= {minimum}"
         raise ValueError(f"{name} must be {bounds}, got {value}")
     return value
+
+
+def _bind_address_env(name: str, default: str = "") -> str:
+    raw = os.getenv(name, default)
+    if any(char.isspace() for char in raw):
+        raise ValueError(f"{name} must be a host/IP without port or spaces")
+    if ":" in raw:
+        # Bracket-free IPv6 literals (e.g. "::1", "fd00::5") also contain ":".
+        # Only reject colon-containing values that are not valid IP literals
+        # (that's what actually catches a "host:port" mistake).
+        try:
+            ipaddress.ip_address(raw)
+        except ValueError as exc:
+            raise ValueError(
+                f"{name} must be a host/IP without port or spaces "
+                "(bracket-free IPv6 literals such as '::1' are accepted)"
+            ) from exc
+    return raw
 
 
 def load_config() -> Config:
@@ -106,9 +126,9 @@ def load_config() -> Config:
 
     event_interval_seconds = _int_env("EVENT_INTERVAL_SECONDS", "2", 1)
     event_stale_after_seconds = _int_env("EVENT_STALE_AFTER_SECONDS", "15", 1)
-    if event_stale_after_seconds < event_interval_seconds:
+    if event_stale_after_seconds < 2 * event_interval_seconds:
         raise ValueError(
-            "EVENT_STALE_AFTER_SECONDS must be >= EVENT_INTERVAL_SECONDS"
+            "EVENT_STALE_AFTER_SECONDS must be >= 2 * EVENT_INTERVAL_SECONDS"
         )
 
     event_subscriptions = _list_env(
@@ -128,6 +148,7 @@ def load_config() -> Config:
         timeout_seconds=_int_env("TRUENAS_TIMEOUT_SECONDS", "20", 1),
         verify_tls=_bool_env("TRUENAS_VERIFY_TLS", "true"),
         exporter_port=_int_env("EXPORTER_PORT", "9108", 1, 65535),
+        exporter_bind_address=_bind_address_env("EXPORTER_BIND_ADDRESS"),
         auto_discover_methods=_bool_env("AUTO_DISCOVER_METHODS", "false"),
         query_limit=_int_env("QUERY_LIMIT", "200", 1),
         max_method_calls=_int_env("MAX_METHOD_CALLS", "250", 1),
@@ -149,7 +170,7 @@ def load_config() -> Config:
         scrape_all_metrics=_bool_env("SCRAPE_ALL_METRICS", "false"),
         enable_generic_method_metrics=_bool_env("ENABLE_GENERIC_METHOD_METRICS", "false"),
         enable_generic_event_metrics=_bool_env("ENABLE_GENERIC_EVENT_METRICS", "false"),
-        dataset_snapshot_fallback_limit=_int_env("DATASET_SNAPSHOT_FALLBACK_LIMIT", "0", 0),
+        dataset_snapshot_fallback_limit=_int_env("DATASET_SNAPSHOT_FALLBACK_LIMIT", "25", 0),
         exporter_mode=exporter_mode,
         scrape_budget_seconds=_int_env("SCRAPE_BUDGET_SECONDS", "25", 1),
         event_stale_after_seconds=event_stale_after_seconds,

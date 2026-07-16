@@ -127,6 +127,29 @@
       "variable": "API_CALL_SUCCESS"
     },
     {
+      "help": "Number of API keys",
+      "labels": [],
+      "name": "truenas_api_key_count",
+      "type": "gauge",
+      "variable": "API_KEY_COUNT"
+    },
+    {
+      "help": "API key expiration timestamp as Unix seconds",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_api_key_expiry_timestamp_seconds",
+      "type": "gauge",
+      "variable": "API_KEY_EXPIRY_TS"
+    },
+    {
+      "help": "Number of revoked API keys",
+      "labels": [],
+      "name": "truenas_api_key_revoked_count",
+      "type": "gauge",
+      "variable": "API_KEY_REVOKED_COUNT"
+    },
+    {
       "help": "Bytes available for new app installs",
       "labels": [],
       "name": "truenas_app_available_space_bytes",
@@ -134,7 +157,7 @@
       "variable": "APP_AVAILABLE_SPACE_BYTES"
     },
     {
-      "help": "App container block I/O read bytes",
+      "help": "Cumulative block-I/O bytes read by the app's containers since container start (counter semantics; use rate()); resets when containers restart.",
       "labels": [
         "app"
       ],
@@ -143,7 +166,7 @@
       "variable": "APP_BLKIO_READ_BYTES"
     },
     {
-      "help": "App container block I/O write bytes",
+      "help": "Cumulative block-I/O bytes written by the app's containers since container start (counter semantics; use rate()); resets when containers restart.",
       "labels": [
         "app"
       ],
@@ -618,7 +641,7 @@
       "variable": "CPU_CORE_USAGE_PERCENT"
     },
     {
-      "help": "Host CPU idle percent (0 to 100); inferred as 100-total usage when idle split is unavailable",
+      "help": "Host CPU idle percent (0 to 100); absent when the API does not report a user/system split",
       "labels": [],
       "name": "truenas_cpu_idle_percent",
       "type": "gauge",
@@ -662,7 +685,7 @@
       "variable": "CPU_USAGE_PERCENT"
     },
     {
-      "help": "Host CPU user-space usage percent (0 to 100); falls back to total CPU usage when user split is unavailable",
+      "help": "Host CPU user-space usage percent (0 to 100); absent when the API does not report a user/system split",
       "labels": [],
       "name": "truenas_cpu_user_percent",
       "type": "gauge",
@@ -981,7 +1004,7 @@
       "variable": "DIRECTORYSERVICES_TIMEOUT_SECONDS"
     },
     {
-      "help": "Disk busy percentage (0\u2013100)",
+      "help": "Disk busy percentage (0\u2013100); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1018,7 +1041,7 @@
       "variable": "DISK_INFO"
     },
     {
-      "help": "Disk read throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk read throughput in bytes/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1027,7 +1050,7 @@
       "variable": "DISK_READ_BYTES_RATE"
     },
     {
-      "help": "Disk read operations/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk read operations/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1063,7 +1086,7 @@
       "variable": "DISK_SMART_ENABLED"
     },
     {
-      "help": "Aggregated disk temperature metrics",
+      "help": "Aggregated disk temperature metrics refreshed every ~5 minutes",
       "labels": [
         "disk",
         "kind"
@@ -1091,7 +1114,7 @@
       "variable": "DISK_TEMPERATURE_C"
     },
     {
-      "help": "Disk write throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk write throughput in bytes/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1100,7 +1123,7 @@
       "variable": "DISK_WRITE_BYTES_RATE"
     },
     {
-      "help": "Disk write operations/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk write operations/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1237,6 +1260,15 @@
       "name": "truenas_failover_disabled_reason_count",
       "type": "gauge",
       "variable": "FAILOVER_DISABLED_REASON_COUNT"
+    },
+    {
+      "help": "1 if a failover node has documented reboot-required reasons",
+      "labels": [
+        "node"
+      ],
+      "name": "truenas_failover_node_reboot_required",
+      "type": "gauge",
+      "variable": "FAILOVER_NODE_REBOOT_REQUIRED"
     },
     {
       "help": "Number of Fibre Channel host adapters",
@@ -1472,6 +1504,24 @@
       "name": "truenas_interface_mtu",
       "type": "gauge",
       "variable": "INTERFACE_MTU"
+    },
+    {
+      "help": "1 if realtime interface link state is up",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_interface_realtime_link_up",
+      "type": "gauge",
+      "variable": "INTERFACE_REALTIME_LINK_UP"
+    },
+    {
+      "help": "Realtime interface speed in megabits per second",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_interface_realtime_speed_mbits",
+      "type": "gauge",
+      "variable": "INTERFACE_REALTIME_SPEED_MBITS"
     },
     {
       "help": "Interface type (PHYSICAL/BRIDGE/etc)",
@@ -1717,6 +1767,13 @@
       "variable": "KMIP_ENABLED"
     },
     {
+      "help": "1 if KMIP key synchronization is pending",
+      "labels": [],
+      "name": "truenas_kmip_sync_pending",
+      "type": "gauge",
+      "variable": "KMIP_SYNC_PENDING"
+    },
+    {
       "help": "Unix timestamp of last scrape attempt",
       "labels": [],
       "name": "truenas_last_scrape_timestamp_seconds",
@@ -1870,7 +1927,7 @@
       "variable": "NETWORK_DEFAULT_ROUTES"
     },
     {
-      "help": "1 if the default IPv4 gateway is reachable",
+      "help": "Deprecated alias of truenas_network_default_gateway_configured (route presence only \u2014 does NOT test reachability); will be removed in a future release.",
       "labels": [],
       "name": "truenas_network_gateway_reachable",
       "type": "gauge",
@@ -2081,7 +2138,7 @@
       "variable": "POOL_COUNT"
     },
     {
-      "help": "Pool deduplication ratio (1.0 means no dedup savings)",
+      "help": "Deprecated: no documented ratio source in TrueNAS 25.10/26.0; always absent. Use truenas_pool_dedup_table_size_bytes for DDT size.",
       "labels": [
         "pool"
       ],
@@ -2171,6 +2228,15 @@
       "variable": "POOL_LAST_SCAN_TS"
     },
     {
+      "help": "Pool available bytes from the reporting.realtime event stream",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_available_bytes",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_AVAILABLE_BYTES"
+    },
+    {
       "help": "Pool read throughput in bytes/sec (instantaneous snapshot from realtime API)",
       "labels": [
         "pool"
@@ -2178,6 +2244,24 @@
       "name": "truenas_pool_realtime_read_bytes_per_second",
       "type": "gauge",
       "variable": "POOL_REALTIME_READ_BYTES"
+    },
+    {
+      "help": "Pool total bytes from the reporting.realtime event stream",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_total_bytes",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_TOTAL_BYTES"
+    },
+    {
+      "help": "Pool used bytes from the reporting.realtime event stream",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_used_bytes",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_USED_BYTES"
     },
     {
       "help": "Pool write throughput in bytes/sec (instantaneous snapshot from realtime API)",
@@ -2293,6 +2377,16 @@
       "name": "truenas_pool_status",
       "type": "gauge",
       "variable": "POOL_STATUS"
+    },
+    {
+      "help": "Detailed v26 zpool status_code as label",
+      "labels": [
+        "pool",
+        "status_code"
+      ],
+      "name": "truenas_pool_status_code",
+      "type": "gauge",
+      "variable": "POOL_STATUS_CODE"
     },
     {
       "help": "Checksum errors on pool vdev since last scrub clear",
@@ -2477,7 +2571,7 @@
       "variable": "SMB_NTLMV1_AUTH_ENABLED"
     },
     {
-      "help": "Number of SMB open files",
+      "help": "Number of SMB lock records reported by smb.status LOCKS (approximates open files).",
       "labels": [],
       "name": "truenas_smb_open_file_count",
       "type": "gauge",
@@ -2505,7 +2599,7 @@
       "variable": "SNAPSHOT_TOTAL_COUNT"
     },
     {
-      "help": "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots)",
+      "help": "Unix timestamp of the oldest ZFS snapshot; absent when there are no snapshots; refreshed every ~5 minutes.",
       "labels": [],
       "name": "truenas_snapshot_oldest_timestamp_seconds",
       "type": "gauge",

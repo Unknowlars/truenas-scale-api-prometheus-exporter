@@ -6,6 +6,8 @@ import pytest
 from conftest import make_config
 
 import truenas_exporter as exporter_module
+from truenas_exporter.events import _EVENT_SOURCE_BY_METRIC_NAME
+from truenas_exporter.metrics import metric_name
 
 REALTIME_FIXTURE = Path(__file__).parent / "fixtures" / "realtime" / "reporting_realtime_25_10_shape.json"
 
@@ -42,8 +44,13 @@ def reset_phase2_metrics():
         exporter_module.DISK_BUSY_PERCENT,
         exporter_module.NETWORK_RX_BYTES_RATE,
         exporter_module.NETWORK_TX_BYTES_RATE,
+        exporter_module.INTERFACE_REALTIME_SPEED_MBITS,
+        exporter_module.INTERFACE_REALTIME_LINK_UP,
         exporter_module.POOL_REALTIME_READ_BYTES,
         exporter_module.POOL_REALTIME_WRITE_BYTES,
+        exporter_module.POOL_REALTIME_USED_BYTES,
+        exporter_module.POOL_REALTIME_AVAILABLE_BYTES,
+        exporter_module.POOL_REALTIME_TOTAL_BYTES,
     ):
         reset_metric(metric)
 
@@ -168,18 +175,27 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
                 "sda": {"read_bytes": 1, "write_bytes": 2, "read_ops": 3, "write_ops": 4, "busy": 5},
             },
             "interfaces": {
-                "eth0": {"received_bytes": 100, "sent_bytes": 200},
+                "eth0": {
+                    "received_bytes": 100,
+                    "sent_bytes": 200,
+                    "speed": 1000,
+                    "link_state": "LINK_STATE_UP",
+                },
             },
             "pools": {
-                "tank": {"read_bytes": 300, "write_bytes": 400},
+                "tank": {"read_bytes": 300, "write_bytes": 400, "used": 500, "available": 600, "total": 1100},
             },
         }
     )
 
     assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "1") == 20.0
     assert labeled_value(exporter_module.DISK_READ_BYTES_RATE, "sda") == 1.0
-    assert labeled_value(exporter_module.NETWORK_RX_BYTES_RATE, "eth0") == 100.0
+    assert ("eth0",) not in exporter_module.NETWORK_RX_BYTES_RATE._metrics
+    assert ("eth0",) not in exporter_module.NETWORK_TX_BYTES_RATE._metrics
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_SPEED_MBITS, "eth0") == 1000.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_LINK_UP, "eth0") == 1.0
     assert labeled_value(exporter_module.POOL_REALTIME_READ_BYTES, "tank") == 300.0
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "tank") == 500.0
 
     exporter._dispatch_event("reporting.realtime", 
         {
@@ -189,10 +205,15 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
             },
             "disls": {"read_bytes": 11, "write_bytes": 12, "read_ops": 13, "write_ops": 14, "busy": 15},
             "interfaces": {
-                "eth1": {"received_bytes_rate": 500, "sent_bytes_rate": 600},
+                "eth1": {
+                    "received_bytes_rate": 500,
+                    "sent_bytes_rate": 600,
+                    "speed": 100,
+                    "link_state": "LINK_STATE_DOWN",
+                },
             },
             "pools": {
-                "fast": {"read_bytes_per_second": 700, "write_bytes_per_second": 800},
+                "fast": {"read_bytes_per_second": 700, "write_bytes_per_second": 800, "used": 900, "available": 1000, "total": 1900},
             },
         }
     )
@@ -203,9 +224,15 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
     assert ("sda",) not in exporter_module.DISK_READ_BYTES_RATE._metrics
     assert labeled_value(exporter_module.DISK_READ_BYTES_RATE, "total") == 11.0
     assert ("eth0",) not in exporter_module.NETWORK_RX_BYTES_RATE._metrics
+    assert ("eth0",) not in exporter_module.INTERFACE_REALTIME_SPEED_MBITS._metrics
+    assert ("eth0",) not in exporter_module.INTERFACE_REALTIME_LINK_UP._metrics
     assert labeled_value(exporter_module.NETWORK_TX_BYTES_RATE, "eth1") == 600.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_SPEED_MBITS, "eth1") == 100.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_LINK_UP, "eth1") == 0.0
     assert ("tank",) not in exporter_module.POOL_REALTIME_READ_BYTES._metrics
+    assert ("tank",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
     assert labeled_value(exporter_module.POOL_REALTIME_WRITE_BYTES, "fast") == 800.0
+    assert labeled_value(exporter_module.POOL_REALTIME_AVAILABLE_BYTES, "fast") == 1000.0
 
 
 def test_realtime_event_accepts_alternative_cpu_core_and_temperature_shapes():
@@ -241,8 +268,8 @@ def test_realtime_event_parses_25_10_sibling_cores_and_aggregate_rates():
     exporter._dispatch_event("reporting.realtime", payload)
 
     assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 25.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 25.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 75.0
+    assert exporter_module.CPU_USER_PERCENT._name not in exporter._collector_event_scalars
+    assert exporter_module.CPU_IDLE_PERCENT._name not in exporter._collector_event_scalars
     assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "0") == 18.0
     assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "1") == 32.0
     assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "0") == 46.0
@@ -255,6 +282,98 @@ def test_realtime_event_parses_25_10_sibling_cores_and_aggregate_rates():
     assert labeled_value(exporter_module.DISK_BUSY_PERCENT, "total") == 1.67
     assert labeled_value(exporter_module.NETWORK_RX_BYTES_RATE, "enp8s0") == 33830.0
     assert labeled_value(exporter_module.NETWORK_TX_BYTES_RATE, "enp8s0") == 61204.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_SPEED_MBITS, "enp8s0") == 1000.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_LINK_UP, "enp8s0") == 1.0
 
     assert ("big_data",) not in exporter_module.POOL_REALTIME_READ_BYTES._metrics
     assert ("big_data",) not in exporter_module.POOL_REALTIME_WRITE_BYTES._metrics
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "big_data") == 8690991542272.0
+    assert labeled_value(exporter_module.POOL_REALTIME_AVAILABLE_BYTES, "big_data") == 3188529774592.0
+    assert labeled_value(exporter_module.POOL_REALTIME_TOTAL_BYTES, "big_data") == 11879521316864.0
+
+
+def test_realtime_network_rate_metrics_ignore_cumulative_byte_fields():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+
+    exporter._dispatch_event(
+        "reporting.realtime",
+        {
+            "interfaces": {
+                "eth0": {
+                    "received_bytes": 123456789,
+                    "sent_bytes": 987654321,
+                },
+                "eth1": {
+                    "speed": "not-a-number",
+                    "link_state": "UNKNOWN",
+                },
+            }
+        },
+    )
+
+    assert ("eth0",) not in exporter_module.NETWORK_RX_BYTES_RATE._metrics
+    assert ("eth0",) not in exporter_module.NETWORK_TX_BYTES_RATE._metrics
+    assert ("eth1",) not in exporter_module.INTERFACE_REALTIME_SPEED_MBITS._metrics
+    assert ("eth1",) not in exporter_module.INTERFACE_REALTIME_LINK_UP._metrics
+
+
+def test_realtime_pool_space_metrics_expire_when_event_is_stale(monkeypatch):
+    now = 1000.0
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now)
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", event_stale_after_seconds=5))
+    payload = json.loads(REALTIME_FIXTURE.read_text(encoding="utf-8"))
+
+    exporter._dispatch_event("reporting.realtime", payload)
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "big_data") == 8690991542272.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_SPEED_MBITS, "enp8s0") == 1000.0
+
+    now = 1006.0
+    exporter._publish_cached_events_to_default_registry()
+
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_AVAILABLE_BYTES._metrics
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_TOTAL_BYTES._metrics
+    assert ("enp8s0",) not in exporter_module.INTERFACE_REALTIME_SPEED_MBITS._metrics
+    assert ("enp8s0",) not in exporter_module.INTERFACE_REALTIME_LINK_UP._metrics
+
+
+def test_realtime_pool_space_metrics_are_event_owned_and_survive_poll_reset():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    payload = json.loads(REALTIME_FIXTURE.read_text(encoding="utf-8"))
+
+    exporter._dispatch_event("reporting.realtime", payload)
+    for metric in (
+        exporter_module.POOL_REALTIME_USED_BYTES,
+        exporter_module.POOL_REALTIME_AVAILABLE_BYTES,
+        exporter_module.POOL_REALTIME_TOTAL_BYTES,
+        exporter_module.INTERFACE_REALTIME_SPEED_MBITS,
+        exporter_module.INTERFACE_REALTIME_LINK_UP,
+    ):
+        assert _EVENT_SOURCE_BY_METRIC_NAME[metric_name(metric)] == "reporting.realtime"
+
+    exporter._reset_poll_metrics()
+
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "big_data") == 8690991542272.0
+    assert labeled_value(exporter_module.POOL_REALTIME_AVAILABLE_BYTES, "big_data") == 3188529774592.0
+    assert labeled_value(exporter_module.POOL_REALTIME_TOTAL_BYTES, "big_data") == 11879521316864.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_SPEED_MBITS, "enp8s0") == 1000.0
+    assert labeled_value(exporter_module.INTERFACE_REALTIME_LINK_UP, "enp8s0") == 1.0
+
+
+def test_realtime_pool_space_metrics_ignore_malformed_entries():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+
+    exporter._dispatch_event(
+        "reporting.realtime",
+        {
+            "pools": {
+                "bad_entry": "not a dict",
+                "bad_values": {"used": "bad", "available": None, "total": {}},
+            }
+        },
+    )
+
+    assert ("bad_entry",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
+    assert ("bad_values",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
+    assert ("bad_values",) not in exporter_module.POOL_REALTIME_AVAILABLE_BYTES._metrics
+    assert ("bad_values",) not in exporter_module.POOL_REALTIME_TOTAL_BYTES._metrics

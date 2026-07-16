@@ -273,8 +273,9 @@ MANUAL_GENERIC_METHODS = frozenset(
 
 DEPRECATED_METRICS: dict[str, str] = {
     "POOL_DEDUP_RATIO": (
-        "Compatibility alias: it historically exported pool.query.dedup_table_size bytes "
-        "despite a ratio name; use truenas_pool_dedup_table_size_bytes."
+        "Deprecated compatibility metric: no documented ratio source in TrueNAS "
+        "25.10/26.0; declared for one release but intentionally absent. Use "
+        "truenas_pool_dedup_table_size_bytes for DDT size."
     ),
     "NETWORK_GATEWAY_REACHABLE": (
         "Compatibility alias: the documented route inventory proves configuration, not "
@@ -1082,6 +1083,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     assign({"INTERFACE_COUNT", "INTERFACE_LINK_UP", "INTERFACE_MTU", "INTERFACE_TYPE"}, "interface.query")
     assign({"SERVICE_COUNT", "SERVICE_ENABLED", "SERVICE_RUNNING"}, "service.query")
     assign({"UPDATE_STATUS", "UPDATE_AVAILABLE", "UPDATE_DOWNLOAD_PROGRESS_PERCENT"}, "update.status")
+    assign({"API_KEY_COUNT", "API_KEY_EXPIRY_TS", "API_KEY_REVOKED_COUNT"}, "api_key.query")
     assign(
         {"TASK_COUNT", "TASK_ENABLED", "TASK_STATE", "TASK_LAST_RUN_TS"},
         "replication.query",
@@ -1120,6 +1122,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     assign({"UI_HTTPS_PORT"}, "system.general.config")
     assign({"SYSTEM_GLOBAL_ID"}, "system.global.id")
     assign({"KMIP_ENABLED"}, "kmip.config")
+    assign({"KMIP_SYNC_PENDING"}, "kmip.kmip_sync_pending")
     assign({"SUPPORT_CONFIG_ENABLED"}, "support.config")
     assign({"NETWORK_HTTPPROXY_CONFIGURED"}, "network.configuration.config")
     assign({"MAIL_CONFIGURED"}, "mail.config")
@@ -1129,6 +1132,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     assign({"APP_WEBDAV_SHARE_COUNT"}, "sharing.webshare.query")
     assign({"SMART_TEST_LAST_RESULT", "SMART_TEST_LAST_TIMESTAMP"}, "smart.test.results")
     assign({"SMB_SESSION_COUNT", "SMB_OPEN_FILE_COUNT", "SMB_CONNECTION_COUNT"}, "smb.status")
+    assign({"POOL_STATUS_CODE"}, "zpool.query")
     assign({"NFS_SERVER_STAT_OPS"}, "reporting.realtime")
     assign({"EXPORTER_INFO"}, "exporter build metadata")
 
@@ -1246,8 +1250,9 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
         },
         "pool.dataset.query",
     )
-    assign({"DATASET_SNAPSHOT_COUNT"}, "pool.dataset.query", "pool.dataset.snapshot_count")
+    assign({"DATASET_SNAPSHOT_COUNT"}, "pool.dataset.snapshot_count")
     assign({"FAILOVER_DISABLED_REASON", "FAILOVER_DISABLED_REASON_COUNT"}, "failover.disabled.reasons")
+    assign({"FAILOVER_NODE_REBOOT_REQUIRED"}, "failover.reboot.info")
     assign({"TRUENAS_IS_IX_HARDWARE"}, "truenas.is_ix_hardware")
     assign({"TRUENAS_IS_PRODUCTION"}, "truenas.is_production")
     assign({"SYSTEM_REBOOT_REQUIRED", "SYSTEM_REBOOT_REASON"}, "system.reboot.info")
@@ -1371,6 +1376,8 @@ EVENT_SOURCE_OVERRIDES: dict[str, str] = {
             "DISK_BUSY_PERCENT",
             "NETWORK_RX_BYTES_RATE",
             "NETWORK_TX_BYTES_RATE",
+            "INTERFACE_REALTIME_SPEED_MBITS",
+            "INTERFACE_REALTIME_LINK_UP",
             "ZFS_ARC_SIZE_BYTES",
             "ZFS_ARC_MAX_SIZE_BYTES",
             "ZFS_ARC_MIN_SIZE_BYTES",
@@ -1403,6 +1410,9 @@ EVENT_SOURCE_OVERRIDES: dict[str, str] = {
             "ZFS_L2ARC_MISS_RATIO",
             "POOL_REALTIME_READ_BYTES",
             "POOL_REALTIME_WRITE_BYTES",
+            "POOL_REALTIME_USED_BYTES",
+            "POOL_REALTIME_AVAILABLE_BYTES",
+            "POOL_REALTIME_TOTAL_BYTES",
         }
     },
     **{
@@ -1418,6 +1428,41 @@ EVENT_SOURCE_OVERRIDES: dict[str, str] = {
     },
     "VIRT_INSTANCE_CPU": "virt.instance.metrics",
     "VIRT_INSTANCE_MEM": "virt.instance.metrics",
+}
+
+DOCUMENTED_TYPE_UNIT_OVERRIDES: dict[str, str] = {
+    "APP_BLKIO_READ_BYTES": "app.stats: integer cumulative bytes; Prometheus unit: bytes",
+    "APP_BLKIO_WRITE_BYTES": "app.stats: integer cumulative bytes; Prometheus unit: bytes",
+    "NETWORK_GATEWAY_REACHABLE": "route.system_routes: array of object; Prometheus unit: boolean gauge (1/0)",
+    # zpool.query is v26-only (V26_ADDED_METHODS) and absent from the pinned
+    # 25.10.2 doc corpus this table audits by default, so the generic lookup
+    # cannot resolve it; documented directly from the v26 corpus instead (R08).
+    "POOL_STATUS_CODE": (
+        "zpool.query (v26-only; docs/truenas-api-v26/methods/zpool/query.md): "
+        "string/null; Prometheus unit: dimensionless gauge"
+    ),
+}
+
+PARSER_CONVERSION_OVERRIDES: dict[str, str] = {
+    "NETWORK_GATEWAY_REACHABLE": "_as_optional_bool accepts documented booleans/0/1 and omits malformed values",
+}
+
+# Hand-maintained per-metric overrides for rows whose generic evidence/note
+# derivation is misleading because the source method is version-gated outside
+# the default 25.10.2 doc corpus this table audits (see AGENTS.md rule 6).
+FIXTURE_TEST_EVIDENCE_OVERRIDES: dict[str, str] = {
+    # The generic fixture matcher does substring matching on the source name
+    # ("zpool.query" -> "zpool_query") against fixture file stems, and
+    # "pool_query" (the unrelated 25.10 pool.query fixture) is a substring of
+    # "zpool_query" — citing the wrong fixture for a v26-only method (R08).
+    "POOL_STATUS_CODE": "tests/test_t21_low_cost_metrics.py",
+}
+
+NOTES_OVERRIDES: dict[str, str] = {
+    "POOL_STATUS_CODE": (
+        "v26-only zpool.query, profile-gated via V26_ADDED_METHODS; absent on "
+        "25.10/unknown; status_code documented in the v26 corpus."
+    ),
 }
 
 
@@ -1555,7 +1600,7 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "POOL_SCAN_PERCENT": ("scan.percentage",),
         "POOL_FRAGMENTATION": ("fragmentation",),
         "POOL_AUTOTRIM_ENABLED": ("autotrim.value",),
-        "POOL_DEDUP_RATIO": ("dedup_table_size",),
+        "POOL_DEDUP_RATIO": (),
         "POOL_DEDUP_TABLE_SIZE_BYTES": ("dedup_table_size",),
         "POOL_EXPAND_SIZE_BYTES": ("expand.bytes_to_reflow",),
         "POOL_EXPAND_REFLOWED_BYTES": ("expand.bytes_reflowed",),
@@ -1566,16 +1611,28 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "POOL_SCAN_BYTES_TOTAL": ("scan.bytes_to_process",),
         "POOL_SCAN_SECONDS_REMAINING": ("scan.total_secs_left",),
         "POOL_LAST_SCAN_TS": ("scan.end_time",),
-        "POOL_VDEV_READ_ERRORS": ("topology.stats.read_errors (schema opaque)",),
-        "POOL_VDEV_WRITE_ERRORS": ("topology.stats.write_errors (schema opaque)",),
-        "POOL_VDEV_CHECKSUM_ERRORS": ("topology.stats.checksum_errors (schema opaque)",),
+        "POOL_VDEV_READ_ERRORS": (
+            "topology.<class>[].stats.read_errors "
+            "(inner vdev stats schema opaque; extraction fails closed)",
+        ),
+        "POOL_VDEV_WRITE_ERRORS": (
+            "topology.<class>[].stats.write_errors "
+            "(inner vdev stats schema opaque; extraction fails closed)",
+        ),
+        "POOL_VDEV_CHECKSUM_ERRORS": (
+            "topology.<class>[].stats.checksum_errors "
+            "(inner vdev stats schema opaque; extraction fails closed)",
+        ),
         "DATASET_COUNT": ("row count",),
         "DATASET_USED_BYTES": ("used.parsed",),
         "DATASET_AVAILABLE_BYTES": ("available.parsed",),
         "DATASET_REFERENCED_BYTES": ("referenced.parsed (not documented in 25.10.2 result)",),
         "DATASET_QUOTA_BYTES": ("quota.parsed",),
         "DATASET_REFQUOTA_BYTES": ("refquota.parsed",),
-        "DATASET_SNAPSHOT_COUNT": ("result",),
+        "DATASET_SNAPSHOT_COUNT": (
+            "result via bounded per-dataset pool.dataset.snapshot_count fallback; "
+            "default DATASET_SNAPSHOT_FALLBACK_LIMIT=25, capped by MAX_ENTITY_CALLS",
+        ),
         "DATASET_COMPRESSION_RATIO": ("compressratio.parsed",),
         "DATASET_ENCRYPTED": ("encrypted",),
         "DATASET_RESERVATION_BYTES": ("reservation.parsed",),
@@ -1602,6 +1659,9 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "DISK_SMART_ENABLED": ("smartoptions (no documented enabled field)",),
         "DISK_INFO": ("name/model/bus; serial deliberately redacted",),
         "DISK_IN_USE": ("pool",),
+        "API_KEY_COUNT": ("row count",),
+        "API_KEY_EXPIRY_TS": ("expires_at",),
+        "API_KEY_REVOKED_COUNT": ("revoked count",),
         "INTERFACE_COUNT": ("row count",),
         "INTERFACE_LINK_UP": ("state.link_state",),
         "INTERFACE_MTU": ("state.mtu/mtu",),
@@ -1652,6 +1712,9 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "IPMI_SEL_FREE_SPACE_BYTES": ("free_space_remaining",),
         "FAILOVER_DISABLED_REASON_COUNT": ("result length",),
         "FAILOVER_DISABLED_REASON": ("result items",),
+        "FAILOVER_NODE_REBOOT_REQUIRED": ("this_node/other_node reboot_required_reasons length",),
+        "KMIP_SYNC_PENDING": ("result",),
+        "POOL_STATUS_CODE": ("status_code",),
         "SYSTEM_PRODUCT_TYPE": ("result",),
         "SYSTEM_VERSION": ("result",),
         "SYSTEM_HOST_ID": ("result",),
@@ -1807,8 +1870,18 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "SYSTEMDATASET_POOL": ("pool",),
         "TASK_COUNT": ("count mode result per task query",),
         "TASK_ENABLED": ("id/name", "enabled"),
-        "TASK_LAST_RUN_TS": ("job.time_finished/lastrun/last_run",),
-        "TASK_STATE": ("job.state/state",),
+        "TASK_LAST_RUN_TS": (
+            "replication.state.datetime",
+            "cloudsync.job.time_finished",
+            "rsynctask.job.time_finished",
+            "snapshottask.state.datetime",
+        ),
+        "TASK_STATE": (
+            "replication.state.state",
+            "cloudsync.job.state",
+            "rsynctask.job.state",
+            "snapshottask.state.state",
+        ),
         "TUNABLE_COUNT": ("count mode result",),
         "UI_HTTPS_PORT": ("ui_httpsport",),
         "UPDATE_AUTOCHECK_ENABLED": ("autocheck",),
@@ -1889,6 +1962,8 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
             "DISK_BUSY_PERCENT": "disls.busy",
             "NETWORK_RX_BYTES_RATE": "schema opaque; compatibility parser key interfaces.received_bytes",
             "NETWORK_TX_BYTES_RATE": "schema opaque; compatibility parser key interfaces.sent_bytes",
+            "INTERFACE_REALTIME_SPEED_MBITS": "interfaces.<interface>.speed",
+            "INTERFACE_REALTIME_LINK_UP": "interfaces.<interface>.link_state via _link_is_up",
             "ZFS_ARC_SIZE_BYTES": "memory.arc_size",
             "ZFS_ARC_MAX_SIZE_BYTES": "schema absent from reporting.realtime 25.10.2",
             "ZFS_ARC_MIN_SIZE_BYTES": "schema absent from reporting.realtime 25.10.2",
@@ -1919,8 +1994,11 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
             "ZFS_L2ARC_MISS_RATIO": "zfs.l2arc_miss_percentage / 100",
             "ZFS_L2ARC_READ_BYTES_RATE": "zfs.bytes_read_per_second_from_the_l2arc",
             "ZFS_L2ARC_WRITE_BYTES_RATE": "zfs.bytes_written_per_second_to_the_l2arc",
-            "POOL_REALTIME_READ_BYTES": "schema opaque; compatibility parser key pools.read_bytes",
-            "POOL_REALTIME_WRITE_BYTES": "schema opaque; compatibility parser key pools.write_bytes",
+            "POOL_REALTIME_READ_BYTES": "opportunistic parser key pools.<pool>.read_bytes/read_bytes_per_second; documented and observed payload carries pools.<pool>.used/available/total space stats, not rates",
+            "POOL_REALTIME_WRITE_BYTES": "opportunistic parser key pools.<pool>.write_bytes/write_bytes_per_second; documented and observed payload carries pools.<pool>.used/available/total space stats, not rates",
+            "POOL_REALTIME_USED_BYTES": "pools.<pool>.used",
+            "POOL_REALTIME_AVAILABLE_BYTES": "pools.<pool>.available",
+            "POOL_REALTIME_TOTAL_BYTES": "pools.<pool>.total",
         }
         if variable in event_fields:
             return (event_fields[variable],)
@@ -2098,9 +2176,6 @@ def build_metric_mappings(
     forced_unavailable = {
         "CLOUD_BACKUP_TASK_STATE",
         "CONSOLEMENU_ENABLED",
-        "POOL_VDEV_READ_ERRORS",
-        "POOL_VDEV_WRITE_ERRORS",
-        "POOL_VDEV_CHECKSUM_ERRORS",
         "MEMORY_PHYSICAL_FREE_BYTES",
         "MEMORY_PHYSICAL_CACHED_BYTES",
         "MEMORY_PHYSICAL_BUFFERS_BYTES",
@@ -2108,8 +2183,10 @@ def build_metric_mappings(
         "MEMORY_SWAP_FREE_BYTES",
         "MEMORY_SWAP_USED_BYTES",
         "SERIALCONSOLE_ENABLED",
-        "TASK_LAST_RUN_TS",
-        "TASK_STATE",
+    }
+    opportunistic_dedicated = {
+        "POOL_REALTIME_READ_BYTES",
+        "POOL_REALTIME_WRITE_BYTES",
     }
     mappings: list[dict[str, Any]] = []
     for metric in metrics:
@@ -2123,6 +2200,8 @@ def build_metric_mappings(
             status = "deprecated compatibility"
         elif variable in forced_unavailable or variable not in analysis.functional_metric_variables:
             status = "unavailable: no reachable 25.10.2 producer"
+        elif variable in opportunistic_dedicated:
+            status = "opportunistic dedicated"
         else:
             status = "active dedicated"
 
@@ -2134,6 +2213,11 @@ def build_metric_mappings(
             notes.append("Issuer label is forced to unknown because the 25.10.2 selected response does not source it.")
         if variable == "DISK_INFO":
             notes.append("Serial label is deliberately redacted; only disk/model/bus are sourced.")
+        if variable in {"TASK_STATE", "TASK_LAST_RUN_TS"}:
+            notes.append(
+                "Task state objects are opaquely typed in the doc corpus but stable in middleware; "
+                "collector selects only id/name/description/enabled/state/job fields."
+            )
         if source_kind == "unavailable/undocumented":
             notes.append("Named source is absent from the pinned method/event leaves or deliberately not called.")
         if status.startswith("unavailable") and not notes:
@@ -2141,29 +2225,41 @@ def build_metric_mappings(
                 "Declared contract retained; source field is absent/opaque, sensitive, or producer is unreachable."
             )
 
-        mapping = {
-            "variable": variable,
-            "source_kind": source_kind,
-            "api_method_or_event": list(sources) if sources else ["exporter-owned state"],
-            "response_field": list(fields),
-            "documented_type_unit": _documented_type_unit(
+        documented_type_unit = DOCUMENTED_TYPE_UNIT_OVERRIDES.get(
+            variable,
+            _documented_type_unit(
                 sources,
                 fields,
                 pages_by_kind_and_title,
                 source_kind,
                 _metric_output_unit(metric),
             ),
-            "parser_conversion": _parser_conversion(metric, fields, status),
+        )
+
+        mapping = {
+            "variable": variable,
+            "source_kind": source_kind,
+            "api_method_or_event": list(sources) if sources else ["exporter-owned state"],
+            "response_field": list(fields),
+            "documented_type_unit": documented_type_unit,
+            "parser_conversion": PARSER_CONVERSION_OVERRIDES.get(
+                variable,
+                _parser_conversion(metric, fields, status),
+            ),
             "prometheus_metric": metric["name"],
             "metric_type": metric["type"],
             "labels": list(metric["labels"]),
-            "fixture_test": _test_fixture_evidence(metric, sources, status, analysis),
+            "fixture_test": FIXTURE_TEST_EVIDENCE_OVERRIDES.get(
+                variable,
+                _test_fixture_evidence(metric, sources, status, analysis),
+            ),
             "implementation_status": status,
             "dashboard_usage": list(dashboard_refs.get(metric["name"], ())),
             "runtime_evidence": [
                 f"src/truenas_exporter/runtime.py:{line}" for line in analysis.metric_lines.get(variable, ())[:4]
             ],
-            "notes": " ".join(notes)
+            "notes": NOTES_OVERRIDES.get(variable)
+            or " ".join(notes)
             or "Owned metric mapping; absent/null/malformed values fail closed by omitting the sample.",
         }
         mappings.append(mapping)

@@ -216,6 +216,7 @@ Every option is documented with inline comments in [`.env.example`](.env.example
 | `TRUENAS_VERIFY_TLS` | no | `true` | Set `false` only on a trusted LAN with a self-signed certificate |
 | `TRUENAS_CA_FILE` | no | — | Path to a custom CA bundle for TLS verification |
 | `EXPORTER_PORT` | no | `9108` | HTTP port for `/metrics`, `/healthz`, `/readyz` |
+| `EXPORTER_BIND_ADDRESS` | no | `""` | HTTP bind host/IP; empty binds all interfaces. Accepts hostnames, IPv4 literals, and bracket-free IPv6 literals (e.g. `::1`, `fd00::5`) |
 | `SCRAPE_INTERVAL_SECONDS` | no | `30` | Poll interval for collectors |
 | `SCRAPE_BUDGET_SECONDS` | no | `25` | Hard deadline for a single scrape |
 | `LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
@@ -330,7 +331,7 @@ Existing metric names, types, help text, and label sets are preserved across pro
 | `ENABLE_GENERIC_EVENT_METRICS` | `false` | High — `EVENT_*` series with `[event, path]` labels. |
 | `AUTO_DISCOVER_METHODS` | `false` | High — feeds safe, non-sensitive telemetry candidates through generic extraction. |
 | `SCRAPE_ALL_METRICS` | `false` | High — adds reviewed telemetry candidates beyond the base set. |
-| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `0` | Medium — up to N extra API calls per scrape for per-dataset snapshot counts. |
+| `DATASET_SNAPSHOT_FALLBACK_LIMIT` | `25` | Medium — up to N extra API calls per scrape for per-dataset snapshot counts. |
 | `ENABLE_FILESYSTEM_LISTDIR` | `false` | Medium — per-path directory-listing metrics. |
 | `ENABLE_DATASET_METRICS` | `true` | Low–Medium — one gauge set per dataset. |
 | `ENABLE_TASK_METRICS` | `true` | Low — one set per configured task. |

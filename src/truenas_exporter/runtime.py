@@ -1,236 +1,15 @@
 #!/usr/bin/env python3
-"""TrueNAS JSON-RPC to Prometheus exporter — v5.1 historical change notes.
+"""Runtime for the TrueNAS SCALE JSON-RPC Prometheus exporter.
 
-The notes below describe earlier implementation passes. The current verified
-25.10.2 source/field contract is generated in ``docs/api-exporter-parity.md``.
+``TrueNASExporter`` polls documented read-only middleware methods on a
+background scrape thread and maintains a separate event-stream thread for
+subscribed push updates. Collector mode serves the last complete immutable
+snapshot; legacy mode exposes the default registry directly for one
+compatibility release.
 
-v5.1 fixes vs v5 (gap-analysis follow-up):
-
-  BUG FIXES
-  - "disls" key fix: reporting.realtime disk I/O section uses key "disls" in
-    v25.10.2 (confirmed in API schema), not "disks". All five disk I/O rate
-    metrics (read/write bytes, read/write ops, busy%) were zero on every v25
-    system. Handler now tries "disls" first, falls back to "disks" for v24.
-  - truenas_snapshot_oldest_timestamp_seconds: advertised in v5 changelog but
-    never implemented. Gauge now declared and populated; snapshot query updated
-    to select properties.creation so the timestamp can be extracted.
-  - event_interval_seconds config was read but never passed to core.subscribe.
-    Subscription loop now uses "event:{"interval": N}" colon-notation for
-    reporting.realtime, app.stats, and virt.instance.metrics when the
-    configured interval exceeds the API default of 2 seconds.
-
-  NEW METRICS
-  - truenas_zfs_demand_accesses_per_second (total demand_accesses_per_second)
-  - truenas_zfs_demand_data_io_hits_per_second (raw I/O hit rate)
-  - truenas_zfs_demand_metadata_accesses_per_second
-  - truenas_zfs_demand_metadata_io_hits_per_second
-  - truenas_zfs_demand_metadata_io_hit_ratio
-  - truenas_zfs_demand_metadata_miss_ratio
-  - truenas_zfs_l2arc_accesses_per_second (total_l2arc_accesses_per_second)
-  - truenas_zfs_l2arc_miss_ratio
-  - ZFS hit/miss ratios now prefer API-provided percentages over computed
-    values — the pre-computed percentages account for prefetch hits that are
-    not in the demand hits+misses sum, making them more accurate.
-  - truenas_pool_realtime_read_bytes_per_second{pool} (from realtime pools section)
-  - truenas_pool_realtime_write_bytes_per_second{pool} (from realtime pools section)
-  - truenas_nfs_v3_client_count (from nfs.get_nfs3_clients, was generic only)
-  - truenas_nfs_v4_client_count (from nfs.get_nfs4_clients, was generic only)
-
-  OTHER
-  - default event subscriptions now align with the v25.10.2 API docs:
-    virt.instance.metrics added and legacy container.metrics removed.
-
-v5 fixes vs v4 (code-review pass):
-
-  BUG FIXES
-  - _last_boot_id initialised in __init__ (was in dead scrape_loop() method — AttributeError)
-  - scrape_loop() dead method removed
-  - SCRAPE_DURATION `started` assigned inside lock (dead pre-lock assignment removed)
-  - Pool scan bytes_to_process / total_secs_left conflation fixed:
-      separate truenas_pool_scan_seconds_remaining gauge added
-  - Swap-free overwrite bug: inversion block now guarded by `not has_free_key`
-  - Version string in main() updated to v5
-  - DOCKER_STATUS added to bulk .clear() list
-  - _total suffix removed from vdev error Gauge names (reserved for Counters)
-  - All label-carrying info Gauges added to bulk .clear() block
-
-  PROMETHEUS BEST-PRACTICE FIXES
-  - truenas_exporter_info metric added (exporter version label)
-  - truenas_collector_errors_total Counter added — silent try/except failures now counted
-  - _rate suffix metrics renamed to _per_second to avoid PromQL `rate()` confusion
-
-  NEW API ENDPOINTS (35+ read-only methods)
-  - pool.scrub.query → truenas_pool_scrub_task_enabled/state/last_run
-  - pool.snapshot.query → truenas_snapshot_count, truenas_snapshot_oldest_timestamp
-  - pool.resilver.config → truenas_pool_resilver_enabled
-  - pool.dataset.details → fed through generic extractor
-  - cloud_backup.query → truenas_cloud_backup_task_count/enabled/state
-  - cronjob.query → truenas_cronjob_count/enabled/state
-  - disk.get_used → truenas_disk_in_use
-  - dns.query → truenas_dns_resolver_count
-  - smb.config → truenas_smb_config_info (multichannel, aapl_extensions)
-  - nfs.config → truenas_nfs_v4_enabled, truenas_nfs_servers
-  - ssh.config → truenas_ssh_enabled, truenas_ssh_password_auth
-  - ftp.config → truenas_ftp_enabled
-  - snmp.config → truenas_snmp_enabled
-  - system.advanced.config → truenas_consolemenu_enabled, truenas_serialconsole_enabled
-  - system.general.config → truenas_ui_https_port
-  - kmip.config → truenas_kmip_enabled
-  - support.is_available → truenas_support_available
-  - systemdataset.config → truenas_systemdataset_pool
-  - user.query → truenas_local_user_count
-  - group.query → truenas_local_group_count
-  - staticroute.query → truenas_static_route_count
-  - tunable.query → truenas_tunable_count
-  - iscsi.target.query → truenas_iscsi_target_count
-  - iscsi.portal.query → truenas_iscsi_portal_count
-  - iscsi.extent.query → truenas_iscsi_extent_count
-  - iscsi.initiator.query → truenas_iscsi_initiator_count
-  - nvmet.host.query → truenas_nvmet_host_count
-  - nvmet.namespace.query → truenas_nvmet_namespace_count
-  - network.configuration.config → truenas_network_httpproxy_configured
-  - app.image.query → truenas_docker_image_count
-  - replication.config.config → truenas_replication_max_parallel
-  - reporting.exporters.query → truenas_reporting_exporter_count
-  - reporting.config → truenas_reporting_enabled
-  - vm.device.iommu_enabled → truenas_iommu_enabled
-  - auth.twofactor.config → truenas_2fa_enabled
-  - mail.config → truenas_mail_configured
-  - alertservice.query → truenas_alertservice_count, truenas_alertservice_enabled
-  - alertclasses.config → fed through generic extractor
-  - initshutdownscript.query → truenas_initshutdownscript_count
-  - privilege.query → truenas_privilege_count
-  - keychaincredential.query → truenas_keychain_credential_count
-  - system.global.id → truenas_system_global_id
-  - kerberos.config → fed through generic extractor
-
-  NEW EVENT SUBSCRIPTIONS
-  - container.query (container state changes)
-  - vm.query (VM state changes)
-
-v3 additions vs v2:
-
-  NEW HOST METRICS (CPU / RAM / Disk I/O / Network / ZFS ARC)
-  - reporting.realtime dedicated handler (_handle_realtime_event) replaces generic
-    event extraction for that stream, emitting clean named metrics:
-      truenas_cpu_usage_percent, truenas_cpu_user/system/iowait/idle/interrupt_percent
-      truenas_cpu_core_usage_percent{core=N}    (per-core)
-      truenas_cpu_temperature_celsius{core=N}   (per-core temps from IPMI/hwmon)
-      truenas_memory_physical_total/available/free/cached/buffers/used_bytes
-      truenas_memory_swap_total/free/used_bytes
-      truenas_disk_read/write_bytes_per_second{disk}  (live I/O rates per disk)
-      truenas_disk_read/write_ops_per_second{disk}
-      truenas_disk_busy_percent{disk}
-      truenas_network_rx/tx_bytes_per_second{interface}
-      truenas_zfs_arc_size/max_size/min_size_bytes
-      truenas_zfs_arc_hit_ratio, truenas_zfs_arc_hits/misses_per_second
-
-  NEW POOL METRICS
-  - pool.query now requests topology field; _extract_vdev_errors walks the vdev
-    tree and emits per-vdev error gauges:
-      truenas_pool_vdev_read/write/checksum_errors_total{pool, vdev}
-  - Detailed scan sub-metrics extracted:
-      truenas_pool_scan_errors{pool}, truenas_pool_scan_bytes_processed/total{pool}
-      truenas_pool_last_scan_timestamp_seconds{pool}
-
-  NEW COLLECTORS
-  - SMB sessions: _collect_smb_nfs_sessions → truenas_smb_session/connection/open_file_count
-  - GPU: _collect_gpu_metrics (device.get_info GPU) → truenas_gpu_count, truenas_gpu_info{...}
-  - JBOF: _collect_jbof_metrics → truenas_jbof_count
-  - Active API sessions: _collect_auth_session_metrics → truenas_auth_sessions_active
-  - Disk extended: _collect_disk_extended_metrics → truenas_disk_rotational, truenas_disk_smart_enabled
-
-  ENHANCED SYSTEM.INFO EXTRACTION
-  - truenas_host_ecc_memory (1 if ECC RAM present)
-  - truenas_host_cpu_info{model=...} (CPU model string from DMI)
-  - truenas_host_system_info{manufacturer, product} (hardware DMI labels)
-
-v2 fixes vs v1 (see code-review for full details):
-  BUG FIXES
-  - call() recv-loop: bounded to MAX_STRAY_MESSAGES iterations to prevent infinite
-    spin when unsolicited push messages arrive on the scrape WebSocket connection.
-  - Duplicate API calls eliminated: generic extraction loop now populates a per-scrape
-    result cache; dedicated collectors consume cached results instead of re-calling the
-    API (halves WebSocket round-trips for ~15 high-cost methods).
-  - system.security.info removed from BASE_METHODS (was also in REQUIRES_ENTITY_PARAM
-    — the blocklist always wins, making the BASE_METHODS entry dead / misleading code).
-  - core.get_jobs now receives a limit param in _auto_params (previously called with no
-    params on a busy system could return thousands of job records).
-
-  PROMETHEUS BEST-PRACTICE FIXES
-  - API_CALL_ERRORS changed from Gauge to Counter (truenas_api_call_errors_total).
-    The old Gauge created confusing zero-value "none" error_type series on success
-    alongside stale "TimeoutError" series on recovery.
-  - _status_like() isupper() fallback removed: previously matched any all-caps word
-    (CPU, ARC, NFS, OK …) creating unbounded METHOD_STATUS_VALUE / EVENT_STATUS_VALUE
-    cardinality; now only matches the explicit known-good set.
-  - _normalize_path() regex pre-compiled at module level (was recompiled on every
-    recursive call inside the generic extractor — potentially thousands of times per
-    scrape).
-  - truenas_system_boot_id UUID-as-label replaced with truenas_system_boot_changes_total
-    Counter: the old metric created a new zombie series in Prometheus on every reboot
-    that was never cleaned up; the Counter increments when a boot ID change is detected.
-  - SCRAPE_DURATION now measured strictly inside the lock (previously included any
-    lock-wait time from concurrent callers, masking true API latency).
-  - Redundant .clear() calls removed from _collect_dataset_metrics(): gauges were
-    already cleared unconditionally at the top of scrape_once().
-  - /healthz endpoint added on the same port alongside /metrics so container
-    orchestrators and load balancers can distinguish exporter crashes from scrape
-    failures.
-
-  Inherited fixes from v1:
-  - auth.login_with_api_key return value now accepts dict/str/bool (v25 returns session dict)
-  - sslopt explicitly sets check_hostname=False when verify_tls=False
-  - Event subscription name no longer appends JSON payload (core.subscribe takes name only)
-  - vm.status removed from BASE_METHODS (requires vm_id, already handled per-entity)
-  - Gauge clears moved inside scrape lock to prevent partial-clear races
-  - Exponential backoff (2s → 120s cap) in event stream reconnect loop
-  - nfs.get_nfs3_clients / nfs.get_nfs4_clients called with correct query params
-
-New metrics:
-  - Boot pool health (boot.get_state, boot.get_disks)
-  - Certificate expiry in days (certificate.query)
-  - Per-dataset space / quota (pool.dataset.query)
-  - Task health — replication, cloudsync, rsynctask, snapshottask
-  - Directory services health (directoryservices.status)
-  - IPMI chassis + SEL (gated on ipmi.is_loaded)
-  - NFS/SMB share counts (sharing.nfs.query, sharing.smb.query)
-  - ZFS resource query (zfs.resource.query via generic extraction)
-  - System reboot pending (system.reboot.info)
-  - Gateway reachability (route.ipv4gw_reachable)
-  - TrueNAS identity flags (truenas.is_production, truenas.is_ix_hardware)
-  - HA failover disabled reasons (failover.disabled.reasons)
-  - Disk details (disk.details)
-
-New default event subscriptions:
-  - pool.scan (real-time scrub/resilver progress)
-  - pool.query (pool state-change push events)
-  - disk.query (hotplug/removal events)
-  - docker.state (Docker daemon transitions)
-  - container.metrics (per-container CPU/mem)
-  - alert.list (push-based new alert delivery)
-  - interface.query (link up/down events)
-  - directoryservices.status (AD/LDAP health push)
-  - failover.status (HA state transitions)
-  - update.status (update progress events)
-  - system.shutdown (shutdown initiated event)
-  - core.get_jobs (background job progress)
-
-v3 additions (Tier 1 + Tier 2):
-  - system.product_type, system.version_short, system.host_id, system.boot_id
-  - update.available_versions (version names available to upgrade to)
-  - boot.environment.query (BE count, active, keep flags)
-  - vm.supports_virtualization, vm.maximum_supported_vcpus
-  - virt.instance.query, virt.volume.query (Incus/LXD — 25.x new resource type)
-  - fc.fc_host.query, fcport.status (Fibre Channel HBAs and ports)
-  - nvmet.global.sessions, nvmet.subsys.query, nvmet.port.query (NVMe-oF)
-  - iscsi.global.alua_enabled, iscsi.global.iser_enabled (protocol flags)
-  - interface.has_pending_changes, interface.checkin_waiting (network extras)
-  - app.available_space, sharing.webshare.query (app/WebDAV)
-  - ups.config (UPS status and mode)
-  - catalog.trains (catalog health)
-  - ipmi.lan.channels → ipmi.lan.query with correct channel param
-  - truenas.managed_by_truecommand (fleet management)
+Metric declarations live in ``metrics.py`` and the generated field/source
+contract lives in ``docs/api-exporter-parity.md``. Use git history for release
+changelogs; this module documents only current behavior.
 """
 
 from __future__ import annotations
@@ -239,8 +18,10 @@ import logging
 import os
 import re
 import signal
+import sys
 import threading
 import time
+import traceback
 from typing import Any, cast
 from urllib.parse import urlparse
 
@@ -300,6 +81,9 @@ from .metrics import (
     API_CALL_DURATION,
     API_CALL_ERRORS_TOTAL,
     API_CALL_SUCCESS,
+    API_KEY_COUNT,
+    API_KEY_EXPIRY_TS,
+    API_KEY_REVOKED_COUNT,
     APP_AVAILABLE_SPACE_BYTES,
     APP_BLKIO_READ_BYTES,
     APP_BLKIO_WRITE_BYTES,
@@ -428,6 +212,7 @@ from .metrics import (
     EVENT_STREAM_UP,
     FAILOVER_DISABLED_REASON,
     FAILOVER_DISABLED_REASON_COUNT,
+    FAILOVER_NODE_REBOOT_REQUIRED,
     FC_HOST_COUNT,
     FC_PORT_COUNT,
     FEATURE_ENABLED,
@@ -455,6 +240,8 @@ from .metrics import (
     INTERFACE_HAS_PENDING_CHANGES,
     INTERFACE_LINK_UP,
     INTERFACE_MTU,
+    INTERFACE_REALTIME_LINK_UP,
+    INTERFACE_REALTIME_SPEED_MBITS,
     INTERFACE_TYPE,
     IOMMU_ENABLED,
     IPMI_CHASSIS_DRIVE_FAULT,
@@ -485,6 +272,7 @@ from .metrics import (
     JOB_PROGRESS_PERCENT,
     JOB_TRANSIENT_ACTIVE_COUNT,
     KEYCHAIN_CREDENTIAL_COUNT,
+    KMIP_SYNC_PENDING,
     LAST_SCRAPE_TS,
     LOCAL_GROUP_COUNT,
     LOCAL_USER_COUNT,
@@ -533,7 +321,10 @@ from .metrics import (
     POOL_FREE_BYTES,
     POOL_HEALTHY,
     POOL_LAST_SCAN_TS,
+    POOL_REALTIME_AVAILABLE_BYTES,
     POOL_REALTIME_READ_BYTES,
+    POOL_REALTIME_TOTAL_BYTES,
+    POOL_REALTIME_USED_BYTES,
     POOL_REALTIME_WRITE_BYTES,
     POOL_RESILVER_ENABLED,
     POOL_SCAN_BYTES_PROCESSED,
@@ -547,6 +338,7 @@ from .metrics import (
     POOL_SCRUB_TASK_STATE,
     POOL_SIZE_BYTES,
     POOL_STATUS,
+    POOL_STATUS_CODE,
     POOL_VDEV_CHECKSUM_ERRORS,
     POOL_VDEV_READ_ERRORS,
     POOL_VDEV_WRITE_ERRORS,
@@ -674,6 +466,34 @@ del _metric_spec
 LOG = logging.getLogger("truenas_exporter")
 EXPORTER_VERSION = __version__
 
+
+def _redacted_traceback_text(ws_url: str) -> str:
+    exc_text = "".join(traceback.format_exception(*sys.exc_info()))
+    parsed = urlparse(ws_url)
+    hostname = parsed.hostname
+    if not hostname:
+        return exc_text
+    replacements = {hostname}
+    if parsed.port is not None:
+        replacements.add(f"{hostname}:{parsed.port}")
+    elif parsed.scheme == "wss":
+        replacements.add(f"{hostname}:443")
+    elif parsed.scheme == "ws":
+        replacements.add(f"{hostname}:80")
+    for target in sorted(replacements, key=len, reverse=True):
+        exc_text = exc_text.replace(target, "<redacted-host>")
+    return exc_text
+
+
+def _log_exception_redacted(
+    logger: logging.Logger,
+    level: int,
+    message: str,
+    ws_url: str,
+    *args: Any,
+) -> None:
+    logger.log(level, "%s\n%s", message % args if args else message, _redacted_traceback_text(ws_url))
+
 # Pre-compiled regex for _normalize_path — avoids recompiling on every recursive call
 # inside _extract_generic_metrics / _extract_event_metrics.
 _PATH_NORMALIZE_RE = re.compile(r"[^a-zA-Z0-9_./\-]")
@@ -699,20 +519,18 @@ _POLL_RESET_EXCLUDED_NAMES = {
     *_EVENT_SOURCE_BY_METRIC_NAME,
 }
 
+# Heavy middleware-side aggregations are slow-moving; refresh them less often
+# while re-emitting cached values between refreshes.
+DISK_TEMP_AGG_REFRESH_CYCLES = 10
+SNAPSHOT_OLDEST_REFRESH_CYCLES = 10
+HEAVY_QUERY_CACHE_MAX_STALE_FACTOR = 3
+
 
 def _set_optional_bool_gauge(gauge: Any, value: Any) -> None:
     parsed = _as_optional_bool(value)
     if parsed is not None:
         gauge.set(1 if parsed else 0)
 
-# Maximum number of out-of-order / unsolicited messages the recv loop will skip
-# before giving up, to prevent an infinite spin if the server sends unexpected pushes.
-
-
-
-# ---------------------------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Main exporter class
@@ -747,6 +565,8 @@ class TrueNASExporter:
         self._last_scrape_success_monotonic: float | None = None
         self._last_scrape_attempt_monotonic: float | None = None
         self._snapshot_lock = threading.Lock()
+        self._last_metric_snapshot_publish_monotonic = 0.0
+        self._metric_snapshot_publish_timer: threading.Timer | None = None
         self._reset_poll_metrics()
         # Event-owned realtime scalar gauges are excluded from _reset_poll_metrics
         # (the event stream owns their lifecycle), so before the first event they
@@ -762,6 +582,18 @@ class TrueNASExporter:
         # when it changes, rather than exposing a UUID-valued label.
         self._last_boot_id: str | None = None
         self._auto_skipped_methods: set[str] = set()
+        self._auto_skipped_at: dict[str, float] = {}
+        self._has_detected_concrete_profile = False
+        self._disk_temp_agg_cycle = 0
+        self._disk_temp_agg_disk_names: tuple[str, ...] = ()
+        self._disk_temp_agg_cache: dict[tuple[str, str], float] = {}
+        self._disk_temp_agg_last_success_cycle: int | None = None
+        self._disk_temp_agg_last_attempt_cycle: int | None = None
+        self._snapshot_oldest_cycle = 0
+        self._snapshot_oldest_cached_value: float | None = None
+        self._snapshot_oldest_has_cache = False
+        self._snapshot_oldest_last_success_cycle: int | None = None
+        self._snapshot_oldest_last_attempt_cycle: int | None = None
 
     # ------------------------------------------------------------------
     # Internal utilities
@@ -790,26 +622,147 @@ class TrueNASExporter:
             else:
                 cast(Gauge, spec.metric).set(float("nan"))
 
-    def _merge_event_snapshot(self, snapshot: dict[str, dict[str, Any]]) -> None:
-        with self._lock:
-            for name, value in self._collector_event_scalars.items():
-                source = _EVENT_SOURCE_BY_METRIC_NAME.get(name)
-                if source is not None and not self._event_is_fresh(source):
-                    continue
-                snapshot["scalar"][name] = value
-            for name, series in self._collector_event_series.items():
-                source = _EVENT_SOURCE_BY_METRIC_NAME.get(name)
-                if source is not None and not self._event_is_fresh(source):
-                    continue
-                snapshot["series"][name] = dict(series)
-            if self._collector_event_messages:
-                snapshot["series"][metric_name(EVENT_LAST_MESSAGE_TS)] = {
-                    (event,): value for event, value in self._collector_event_messages.items()
-                }
-            if self._collector_event_stream_up:
-                snapshot["series"][metric_name(EVENT_STREAM_UP)] = {
-                    (event,): value for event, value in self._collector_event_stream_up.items()
-                }
+    def _reset_poll_cycle_metrics(self) -> None:
+        self._reset_poll_metrics()
+
+        # Clear label-carrying gauges INSIDE the lock to prevent a window where
+        # Prometheus scrapes partially-cleared / partially-refilled data.
+        SYSTEM_STATE.clear()
+        SYSTEM_REBOOT_REASON.clear()
+        API_KEY_EXPIRY_TS.clear()
+        FAILOVER_NODE_REBOOT_REQUIRED.clear()
+        BOOT_POOL_STATUS.clear()
+        BOOT_POOL_SCAN_STATE.clear()
+        POOL_HEALTHY.clear()
+        POOL_STATUS.clear()
+        POOL_STATUS_CODE.clear()
+        POOL_SIZE_BYTES.clear()
+        POOL_ALLOCATED_BYTES.clear()
+        POOL_FREE_BYTES.clear()
+        POOL_SCAN_PERCENT.clear()
+        POOL_FRAGMENTATION.clear()
+        POOL_AUTOTRIM_ENABLED.clear()
+        POOL_DEDUP_RATIO.clear()
+        POOL_EXPAND_SIZE_BYTES.clear()
+        POOL_WARNING.clear()
+        DATASET_USED_BYTES.clear()
+        DATASET_AVAILABLE_BYTES.clear()
+        DATASET_REFERENCED_BYTES.clear()
+        DATASET_QUOTA_BYTES.clear()
+        DATASET_REFQUOTA_BYTES.clear()
+        DATASET_SNAPSHOT_COUNT.clear()
+        DATASET_COMPRESSION_RATIO.clear()
+        DATASET_ENCRYPTED.clear()
+        DATASET_RESERVATION_BYTES.clear()
+        DATASET_REFRESERVATION_BYTES.clear()
+        DATASET_USED_BY_CHILDREN_BYTES.clear()
+        DATASET_USED_BY_DATASET_BYTES.clear()
+        DATASET_USED_BY_SNAPSHOTS_BYTES.clear()
+        DATASET_READONLY.clear()
+        DATASET_ATIME.clear()
+        DATASET_EXEC.clear()
+        DATASET_KEY_LOADED.clear()
+        DATASET_LOCKED.clear()
+        DATASET_QUOTA_WARNING_PERCENT.clear()
+        DATASET_QUOTA_CRITICAL_PERCENT.clear()
+        DATASET_REFQUOTA_WARNING_PERCENT.clear()
+        DATASET_REFQUOTA_CRITICAL_PERCENT.clear()
+        DATASET_CREATION_TS.clear()
+        DISK_SIZE_BYTES.clear()
+        DISK_TEMPERATURE_C.clear()
+        DISK_TEMP_ALERT_COUNT.clear()
+        DISK_TEMP_AGG_C.clear()
+        INTERFACE_LINK_UP.clear()
+        INTERFACE_MTU.clear()
+        INTERFACE_TYPE.clear()
+        SERVICE_ENABLED.clear()
+        SERVICE_RUNNING.clear()
+        APP_STATE.clear()
+        APP_UPGRADE_AVAILABLE.clear()
+        APP_IMAGE_UPDATES_AVAILABLE.clear()
+        APP_CUSTOM.clear()
+        APP_MIGRATED.clear()
+        APP_CONTAINER_COUNT.clear()
+        APP_USED_PORT_COUNT.clear()
+        APP_USED_HOST_IP_COUNT.clear()
+        APP_CONTAINER_STATE_COUNT.clear()
+        ALERT_COUNT_BY_LEVEL.clear()
+        ALERT_COUNT_BY_SOURCE.clear()
+        ALERT_COUNT_BY_CLASS.clear()
+        ALERT_COUNT_BY_NODE.clear()
+        ALERT_LAST_OCCURRENCE_TS.clear()
+        JOB_ACTIVE_COUNT_BY_STATE.clear()
+        JOB_ACTIVE_COUNT_BY_METHOD.clear()
+        JOB_OLDEST_ACTIVE_TS.clear()
+        JOB_PROGRESS_PERCENT.clear()
+        UPDATE_STATUS.clear()
+        VM_VMEMORY_IN_USE_BYTES.clear()
+        CERT_DAYS_TO_EXPIRY.clear()
+        DIRECTORYSERVICES_STATUS.clear()
+        DIRECTORYSERVICES_HEALTHY.clear()
+        TASK_ENABLED.clear()
+        TASK_STATE.clear()
+        TASK_LAST_RUN_TS.clear()
+        TASK_COUNT.clear()
+        FAILOVER_DISABLED_REASON.clear()
+        # v3 additions
+        POOL_VDEV_READ_ERRORS.clear()
+        POOL_VDEV_WRITE_ERRORS.clear()
+        POOL_VDEV_CHECKSUM_ERRORS.clear()
+        POOL_SCAN_ERRORS.clear()
+        POOL_SCAN_BYTES_PROCESSED.clear()
+        POOL_SCAN_BYTES_TOTAL.clear()
+        POOL_SCAN_SECONDS_REMAINING.clear()
+        POOL_LAST_SCAN_TS.clear()
+        GPU_INFO.clear()
+        DISK_ROTATIONAL.clear()
+        DISK_SMART_ENABLED.clear()
+        HOST_CPU_MODEL.clear()
+        HOST_SYSTEM_INFO.clear()
+        HW_VIRT_VARIANT.clear()
+        CHASSIS_HARDWARE.clear()
+        METHOD_NUMERIC_VALUE.clear()
+        METHOD_BOOLEAN_VALUE.clear()
+        METHOD_STATUS_VALUE.clear()
+        METHOD_LIST_LENGTH.clear()
+        # v4/v5 label-carrying gauges (prevent stale labels on collector failure)
+        HOST_INFO.clear()
+        SYSTEM_PRODUCT_TYPE.clear()
+        SYSTEM_VERSION.clear()
+        SYSTEM_HOST_ID.clear()
+        DOCKER_STATUS.clear()
+        UPS_STATUS.clear()
+        TN_CONNECT_STATUS.clear()
+        TRUECOMMAND_STATUS.clear()
+        VIRT_GLOBAL_STATE.clear()
+        UPDATE_VERSION_AVAILABLE.clear()
+        UPDATE_PROFILE_INFO.clear()
+        # v5 additions
+        POOL_SCRUB_TASK_ENABLED.clear()
+        POOL_SCRUB_TASK_STATE.clear()
+        POOL_SCRUB_LAST_RUN_TS.clear()
+        CLOUD_BACKUP_TASK_ENABLED.clear()
+        CLOUD_BACKUP_TASK_STATE.clear()
+        CRONJOB_ENABLED.clear()
+        DISK_IN_USE.clear()
+        ALERTSERVICE_ENABLED.clear()
+        SYSTEMDATASET_POOL.clear()
+        SYSTEM_GLOBAL_ID.clear()
+        DIRECTORYSERVICES_SERVICE_TYPE.clear()
+        # API call diagnostics — clear each scrape so methods removed from BASE_METHODS
+        # don't leave zombie label series with their last-seen values.
+        API_CALL_SUCCESS.clear()
+        API_CALL_DURATION.clear()
+
+    def _poll_metrics_are_too_stale(self) -> bool:
+        last_success = self._last_scrape_success_monotonic
+        if last_success is None:
+            return False
+        # Bound stale data retention across repeated pre-auth failures.  The
+        # window is intentionally longer than readiness so dashboards can show
+        # last-known values with truenas_up=0 during short outages.
+        max_age = max(3 * self.config.interval_seconds, 300)
+        return time.monotonic() - last_success > max_age
 
     def _event_is_fresh(self, event: str, now: float | None = None) -> bool:
         updated = self._event_last_monotonic.get(event)
@@ -904,6 +857,46 @@ class TrueNASExporter:
         families = tuple(REGISTRY.collect())
         with self._snapshot_lock:
             self._metric_snapshot = families
+            self._last_metric_snapshot_publish_monotonic = time.monotonic()
+            self._metric_snapshot_publish_timer = None
+
+    def _publish_metric_snapshot_locked(self) -> None:
+        """Timer-fired publish target: must acquire the scrape lock itself.
+
+        Unlike the other publish call sites (scrape tail, event dispatch),
+        which already run inside ``self._lock``, a ``threading.Timer`` fires
+        on its own thread with no lock held. Without acquiring ``self._lock``
+        here, the timer can race a concurrent ``scrape_once`` that has wiped
+        the registry mid-cycle and publish a partial snapshot as "complete".
+        """
+        with self._lock:
+            self._publish_metric_snapshot()
+
+    def _publish_metric_snapshot_throttled(self, minimum_interval_seconds: float = 1.0) -> None:
+        now = time.monotonic()
+        publish_now = False
+        timer: threading.Timer | None = None
+        with self._snapshot_lock:
+            elapsed = now - self._last_metric_snapshot_publish_monotonic
+            if elapsed >= minimum_interval_seconds:
+                if self._metric_snapshot_publish_timer is not None:
+                    self._metric_snapshot_publish_timer.cancel()
+                    self._metric_snapshot_publish_timer = None
+                publish_now = True
+            elif (
+                self._metric_snapshot_publish_timer is None
+                or not self._metric_snapshot_publish_timer.is_alive()
+            ):
+                timer = threading.Timer(
+                    minimum_interval_seconds - elapsed,
+                    self._publish_metric_snapshot_locked,
+                )
+                timer.daemon = True
+                self._metric_snapshot_publish_timer = timer
+        if timer is not None:
+            timer.start()
+        if publish_now:
+            self._publish_metric_snapshot()
 
     def _status_like(self, value: str) -> bool:
         """Return True only for the known-good status string set.
@@ -936,6 +929,43 @@ class TrueNASExporter:
             return get_profile("26.0")
         return get_profile("unknown")
 
+    def _note_profile(self, detected_profile: CompatibilityProfile) -> None:
+        # Profile reads stay lock-free: CPython attribute-reference reads are atomic.
+        # Guard writes with auto-skip clearing so both exporter threads see a coherent update.
+        with self._lock:
+            current_profile = self.compatibility_profile
+            if detected_profile.name == "unknown":
+                if (
+                    self._has_detected_concrete_profile
+                    and current_profile.name in {"25.10", "26.0"}
+                ):
+                    return
+                if current_profile is not detected_profile or current_profile.name != detected_profile.name:
+                    cleared = len(self._auto_skipped_methods)
+                    self._auto_skipped_methods.clear()
+                    self._auto_skipped_at.clear()
+                    LOG.info(
+                        "Cleared %d auto-skipped methods after compatibility profile change: %s -> %s",
+                        cleared,
+                        current_profile.name,
+                        detected_profile.name,
+                    )
+                self.compatibility_profile = detected_profile
+                return
+
+            if current_profile is not detected_profile or current_profile.name != detected_profile.name:
+                cleared = len(self._auto_skipped_methods)
+                self._auto_skipped_methods.clear()
+                self._auto_skipped_at.clear()
+                LOG.info(
+                    "Cleared %d auto-skipped methods after compatibility profile change: %s -> %s",
+                    cleared,
+                    current_profile.name,
+                    detected_profile.name,
+                )
+            self.compatibility_profile = detected_profile
+            self._has_detected_concrete_profile = True
+
     def _bootstrap_connection(self, client: JsonRpcWsClient) -> Any | None:
         """Authenticate and select the compatibility profile before telemetry."""
 
@@ -946,7 +976,7 @@ class TrueNASExporter:
         try:
             version_short = self._call(client, "system.version_short", [])
         except Exception:
-            self.compatibility_profile = get_profile("unknown")
+            self._note_profile(get_profile("unknown"))
             self._collector_error(
                 "version_detection",
                 "system.version_short detection failed; using unknown compatibility profile",
@@ -955,10 +985,10 @@ class TrueNASExporter:
             return None
 
         if isinstance(version_short, str):
-            self.compatibility_profile = self._profile_for_version_short(version_short)
+            self._note_profile(self._profile_for_version_short(version_short))
             return version_short
 
-        self.compatibility_profile = get_profile("unknown")
+        self._note_profile(get_profile("unknown"))
         self._collector_error(
             "version_detection",
             f"system.version_short returned malformed {type(version_short).__name__}; "
@@ -1085,6 +1115,19 @@ class TrueNASExporter:
                 f"{result!r} ({type(result).__name__})"
             )
         return result
+
+    def _count_or_len(
+        self,
+        client: JsonRpcWsClient,
+        method: str,
+        items: list[Any],
+        limit: int,
+        filters: list[Any] | None = None,
+        extra_options: dict[str, Any] | None = None,
+    ) -> int:
+        if len(items) < limit:
+            return len(items)
+        return self._query_count(client, method, filters, extra_options)
 
     def _require_profile_method(self, method: str) -> None:
         if self.compatibility_profile.allows_method(method):
@@ -1248,10 +1291,10 @@ class TrueNASExporter:
             JOB_ACTIVE_COUNT_BY_STATE.labels(state=state).set(count)
 
         JOB_ACTIVE_COUNT.set(total_active)
-        JOB_ABORTABLE_ACTIVE_COUNT.set(0)
-        JOB_TRANSIENT_ACTIVE_COUNT.set(0)
 
         if total_active == 0:
+            JOB_ABORTABLE_ACTIVE_COUNT.set(0)
+            JOB_TRANSIENT_ACTIVE_COUNT.set(0)
             return
 
         detail_limit = max(self.config.query_limit, total_active)
@@ -1328,6 +1371,7 @@ class TrueNASExporter:
         self,
         client: JsonRpcWsClient,
         service_names: tuple[str, ...],
+        cache: dict[str, Any] | None = None,
     ) -> dict[str, bool]:
         ordered_names: list[str] = []
         seen: set[str] = set()
@@ -1339,13 +1383,22 @@ class TrueNASExporter:
         if not ordered_names:
             return {}
 
-        services = self._call(client, "service.query", [[[
-            "service", "in", ordered_names,
-        ]], {
-            "extra": {"include_state": False},
-            "limit": len(ordered_names),
-            "select": ["service", "enable"],
-        }])
+        cached_services = cache.get("service.query") if cache is not None else None
+        if isinstance(cached_services, list):
+            services = [
+                svc
+                for svc in cached_services
+                if isinstance(svc, dict)
+                and (svc.get("service") or svc.get("name")) in seen
+            ]
+        else:
+            services = self._call(client, "service.query", [[[
+                "service", "in", ordered_names,
+            ]], {
+                "extra": {"include_state": False},
+                "limit": len(ordered_names),
+                "select": ["service", "enable"],
+            }])
 
         enabled_by_service: dict[str, bool] = {}
         if isinstance(services, list):
@@ -1430,7 +1483,15 @@ class TrueNASExporter:
 
     def _safe_call_auto(self, client: JsonRpcWsClient, method: str) -> Any | None:
         if method in self._auto_skipped_methods:
-            return None
+            skipped_at = self._auto_skipped_at.get(method)
+            # A missing timestamp is treated as expired (retry now), not as a
+            # permanent skip — the skip-set/timestamp dict are only ever
+            # mutated together, but a defensive "skip forever" default here
+            # would reintroduce the exact permanence T14 removed.
+            if skipped_at is not None and time.monotonic() - skipped_at < 86400:
+                return None
+            self._auto_skipped_methods.discard(method)
+            self._auto_skipped_at.pop(method, None)
 
         params = self._auto_params(method)
         try:
@@ -1438,6 +1499,7 @@ class TrueNASExporter:
         except Exception as exc:
             if self._should_runtime_skip_method(exc):
                 self._auto_skipped_methods.add(method)
+                self._auto_skipped_at[method] = time.monotonic()
                 LOG.info("Auto-skip method after runtime error: %s", method)
                 COLLECTOR_ERRORS_TOTAL.labels(collector="auto_discovery_skipped").inc()
                 return None
@@ -1715,8 +1777,6 @@ class TrueNASExporter:
         ))
         if user_cpu_percent is not None:
             self._collector_event_scalars[metric_name(CPU_USER_PERCENT)] = user_cpu_percent
-        elif total_cpu_percent is not None:
-            self._collector_event_scalars[metric_name(CPU_USER_PERCENT)] = total_cpu_percent
 
         system_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("system"), cpu_section.get("system") if isinstance(cpu_section, dict) else None
@@ -1729,10 +1789,6 @@ class TrueNASExporter:
         ))
         if idle_cpu_percent is not None:
             self._collector_event_scalars[metric_name(CPU_IDLE_PERCENT)] = idle_cpu_percent
-        elif total_cpu_percent is not None:
-            self._collector_event_scalars[metric_name(CPU_IDLE_PERCENT)] = max(
-                0.0, 100.0 - total_cpu_percent
-            )
 
         iowait_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("iowait"), cpu_section.get("iowait") if isinstance(cpu_section, dict) else None
@@ -1858,6 +1914,8 @@ class TrueNASExporter:
                 if value is not None:
                     self._collector_event_scalars[metric_name(gauge)] = value / 100.0
 
+        # TrueNAS 25.10.2 names this realtime disk I/O map "disls"; accept the
+        # older "disks" spelling as a compatibility fallback.
         disks = _first_not_none(payload.get("disls"), payload.get("disks"))
         disk_read_bytes: dict[tuple[str, ...], float] = {}
         disk_write_bytes: dict[tuple[str, ...], float] = {}
@@ -1897,23 +1955,36 @@ class TrueNASExporter:
         interfaces = payload.get("interfaces")
         network_rx: dict[tuple[str, ...], float] = {}
         network_tx: dict[tuple[str, ...], float] = {}
+        interface_speed: dict[tuple[str, ...], float] = {}
+        interface_link_up: dict[tuple[str, ...], float] = {}
         if isinstance(interfaces, dict):
             for iface_name, iface_data in interfaces.items():
                 if not isinstance(iface_data, dict):
                     continue
                 iface = _str_label(iface_name)
-                rx = _as_float(_first_not_none(iface_data.get("received_bytes_rate"), iface_data.get("received_bytes")))
-                tx = _as_float(_first_not_none(iface_data.get("sent_bytes_rate"), iface_data.get("sent_bytes")))
+                rx = _as_float(iface_data.get("received_bytes_rate"))
+                tx = _as_float(iface_data.get("sent_bytes_rate"))
+                speed = _as_float(iface_data.get("speed"))
+                link_up = _link_is_up(iface_data.get("link_state"))
                 if rx is not None:
                     network_rx[(iface,)] = rx
                 if tx is not None:
                     network_tx[(iface,)] = tx
+                if speed is not None:
+                    interface_speed[(iface,)] = speed
+                if link_up is not None:
+                    interface_link_up[(iface,)] = 1.0 if link_up else 0.0
         self._collector_event_series[metric_name(NETWORK_RX_BYTES_RATE)] = network_rx
         self._collector_event_series[metric_name(NETWORK_TX_BYTES_RATE)] = network_tx
+        self._collector_event_series[metric_name(INTERFACE_REALTIME_SPEED_MBITS)] = interface_speed
+        self._collector_event_series[metric_name(INTERFACE_REALTIME_LINK_UP)] = interface_link_up
 
         pools_rt = payload.get("pools")
         pool_read: dict[tuple[str, ...], float] = {}
         pool_write: dict[tuple[str, ...], float] = {}
+        pool_used: dict[tuple[str, ...], float] = {}
+        pool_available: dict[tuple[str, ...], float] = {}
+        pool_total: dict[tuple[str, ...], float] = {}
         if isinstance(pools_rt, dict):
             for pool_name, pool_stats in pools_rt.items():
                 if not isinstance(pool_stats, dict):
@@ -1921,13 +1992,25 @@ class TrueNASExporter:
                 pn = _str_label(pool_name)
                 read_bytes = _as_float(_first_not_none(pool_stats.get("read_bytes"), pool_stats.get("read_bytes_per_second")))
                 write_bytes = _as_float(_first_not_none(pool_stats.get("write_bytes"), pool_stats.get("write_bytes_per_second")))
+                used = _as_float(pool_stats.get("used"))
+                available = _as_float(pool_stats.get("available"))
+                total = _as_float(pool_stats.get("total"))
                 if read_bytes is not None:
                     pool_read[(pn,)] = read_bytes
                 if write_bytes is not None:
                     pool_write[(pn,)] = write_bytes
+                if used is not None:
+                    pool_used[(pn,)] = used
+                if available is not None:
+                    pool_available[(pn,)] = available
+                if total is not None:
+                    pool_total[(pn,)] = total
 
         self._collector_event_series[metric_name(POOL_REALTIME_READ_BYTES)] = pool_read
         self._collector_event_series[metric_name(POOL_REALTIME_WRITE_BYTES)] = pool_write
+        self._collector_event_series[metric_name(POOL_REALTIME_USED_BYTES)] = pool_used
+        self._collector_event_series[metric_name(POOL_REALTIME_AVAILABLE_BYTES)] = pool_available
+        self._collector_event_series[metric_name(POOL_REALTIME_TOTAL_BYTES)] = pool_total
 
     def _dispatch_event(self, collection: str, payload: Any) -> None:
         # v25 virt.instance.metrics and v26 container.metrics are the same source
@@ -1966,6 +2049,7 @@ class TrueNASExporter:
             self._clear_generic_event_metrics(collection)
             if not self._is_collector_mode():
                 self._publish_cached_events_to_default_registry()
+                self._publish_metric_snapshot_throttled()
             return
 
         if collection == "reporting.realtime":
@@ -1981,6 +2065,8 @@ class TrueNASExporter:
             self._publish_cached_events_to_default_registry()
         if self.config.enable_generic_event_metrics and not self._is_collector_mode():
             self._replace_generic_event_metrics(collection, payload)
+        if not self._is_collector_mode():
+            self._publish_metric_snapshot_throttled()
 
     # ------------------------------------------------------------------
     # Event stream
@@ -2043,17 +2129,38 @@ class TrueNASExporter:
                         raise RuntimeError("No event subscriptions succeeded")
 
                     backoff = 2  # reset backoff on successful connection
+                    last_message_monotonic = time.monotonic()
+                    connection_dead = False
 
                     try:
                         while not self._stop_event.is_set():
                             try:
                                 msg = client.recv_json()
                             except WebSocketTimeoutException:
+                                msg = None
+
+                            if isinstance(msg, dict) and msg.get("method") == "collection_update":
+                                # A genuine collection_update proves the connection is
+                                # alive right now; reset before any deadline check.
+                                last_message_monotonic = time.monotonic()
+                            else:
+                                # Evaluate the idle deadline on every recv_json() return
+                                # that isn't a fresh collection_update, not just on socket
+                                # timeout — a connection that keeps delivering other WS
+                                # traffic (server notifications, non-subscription
+                                # messages) would otherwise never trip the dead-connection
+                                # check even with the subscription itself long dead.
+                                idle_seconds = time.monotonic() - last_message_monotonic
+                                if idle_seconds >= self.config.event_read_timeout_seconds:
+                                    connection_dead = True
+                                    raise RuntimeError(
+                                        f"No event stream messages received for "
+                                        f"{idle_seconds:.0f}s; assuming dead connection"
+                                    ) from None
                                 with self._lock:
                                     self._expire_stale_events()
                                 continue
-                            if msg.get("method") != "collection_update":
-                                continue
+
                             params = msg.get("params")
                             if not isinstance(params, dict):
                                 continue
@@ -2074,15 +2181,22 @@ class TrueNASExporter:
                                 self._expire_stale_events()
                                 self._dispatch_event(collection, payload)
                     finally:
-                        self._require_profile_method("core.unsubscribe")
+                        # A connection judged dead by the idle-deadline check is not worth
+                        # unsubscribing from — each core.unsubscribe call would block up to
+                        # the socket timeout on a socket that is not going to answer, adding
+                        # up to N x timeout of delay before reconnect. Still clear local
+                        # state below so metrics reflect the teardown immediately.
+                        if not connection_dead:
+                            self._require_profile_method("core.unsubscribe")
                         for event, subscription_id in list(subscribed_events.items()):
-                            try:
-                                client.call("core.unsubscribe", [subscription_id])
-                            except Exception:
-                                self._collector_error(
-                                    "event_unsubscribe",
-                                    f"Failed unsubscribing from {event}",
-                                )
+                            if not connection_dead:
+                                try:
+                                    client.call("core.unsubscribe", [subscription_id])
+                                except Exception:
+                                    self._collector_error(
+                                        "event_unsubscribe",
+                                        f"Failed unsubscribing from {event}",
+                                    )
                             with self._lock:
                                 self._collector_event_stream_up[event] = 0.0
                                 self._clear_cached_event_metrics(event)
@@ -2102,7 +2216,13 @@ class TrueNASExporter:
                         self._collector_event_stream_up[event] = 0.0
                     if not self._is_collector_mode():
                         self._publish_cached_events_to_default_registry()
-                LOG.warning("Event stream reconnecting in %ds", backoff, exc_info=True)
+                _log_exception_redacted(
+                    LOG,
+                    logging.WARNING,
+                    "Event stream reconnecting in %ds",
+                    self.config.ws_url,
+                    backoff,
+                )
                 if self._stop_event.wait(backoff):
                     break
                 backoff = min(backoff * 2, 120)  # exponential backoff, cap at 2 minutes
@@ -2270,13 +2390,13 @@ class TrueNASExporter:
     # ------------------------------------------------------------------
 
     def _collect_entity_detail_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        vm_query = cache.get("vm.query") or self._safe_call_auto(client, "vm.query")
-        vm_list = vm_query if isinstance(vm_query, list) else []
         try:
             VM_COUNT.set(self._query_count(client, "vm.query"))
         except Exception:
             LOG.debug("vm.query count failed", exc_info=True)
         if self.config.enable_generic_method_metrics:
+            vm_query = cache.get("vm.query") or self._safe_call_auto(client, "vm.query")
+            vm_list = vm_query if isinstance(vm_query, list) else []
             for vm_index, vm in enumerate(vm_list[: self.config.max_entity_calls]):
                 if not isinstance(vm, dict):
                     continue
@@ -2295,7 +2415,9 @@ class TrueNASExporter:
         app_query = cache.get("app.query") or self._safe_call_auto(client, "app.query")
         app_list = app_query if isinstance(app_query, list) else []
         try:
-            APP_COUNT.set(self._query_count(client, "app.query"))
+            APP_COUNT.set(
+                self._count_or_len(client, "app.query", app_list, self.config.query_limit)
+            )
         except Exception:
             LOG.debug("app.query count failed", exc_info=True)
         APP_STATE.clear()
@@ -2522,7 +2644,11 @@ class TrueNASExporter:
             return
 
         try:
-            DATASET_COUNT.set(self._query_count(client, "pool.dataset.query"))
+            DATASET_COUNT.set(
+                self._count_or_len(
+                    client, "pool.dataset.query", datasets, self.config.max_datasets
+                )
+            )
         except Exception:
             LOG.debug("pool.dataset.query count failed", exc_info=True)
         # NOTE: DATASET_* gauges are already cleared at the top of scrape_once()
@@ -2612,6 +2738,10 @@ class TrueNASExporter:
         tasks: list[Any],
         name_field: str,
         enabled_field: str,
+        *,
+        fallback_name_field: str | None = None,
+        outcome_field: str | None = None,
+        outcome_ts_field: str | None = None,
         total_count: int | None = None,
     ) -> None:
         """Export documented task identity and enablement fields."""
@@ -2620,6 +2750,8 @@ class TrueNASExporter:
             if not isinstance(task, dict):
                 continue
             raw_name = task.get(name_field)
+            if not isinstance(raw_name, (str, int)) and fallback_name_field is not None:
+                raw_name = task.get(fallback_name_field)
             if not isinstance(raw_name, (str, int)):
                 continue
             name = str(raw_name)
@@ -2627,6 +2759,49 @@ class TrueNASExporter:
                 TASK_ENABLED.labels(task_type=task_type, name=name),
                 task.get(enabled_field),
             )
+            if outcome_field is None:
+                continue
+            self._export_task_outcome(task_type, name, task.get(outcome_field), outcome_ts_field)
+
+    def _normalize_task_state(self, value: Any) -> str | None:
+        raw = value.get("state") if isinstance(value, dict) else value
+        if raw is None:
+            return None
+        state = _str_label(raw, "").upper()
+        if not state:
+            return None
+        if state in {
+            "PENDING",
+            "RUNNING",
+            "SUCCESS",
+            "FINISHED",
+            "ERROR",
+            "FAILED",
+            "WAITING",
+            "ABORTED",
+            "HOLD",
+            "UNKNOWN",
+        }:
+            return state
+        return "UNKNOWN"
+
+    def _export_task_outcome(
+        self,
+        task_type: str,
+        name: str,
+        outcome: Any,
+        timestamp_field: str | None,
+    ) -> None:
+        if not isinstance(outcome, dict):
+            return
+        state = self._normalize_task_state(outcome)
+        if state is not None:
+            TASK_STATE.labels(task_type=task_type, name=name, state=state).set(1)
+        if timestamp_field is None:
+            return
+        ts = _parse_ts(outcome.get(timestamp_field))
+        if ts is not None:
+            TASK_LAST_RUN_TS.labels(task_type=task_type, name=name).set(ts)
 
     def _collect_task_metrics(self, client: JsonRpcWsClient) -> None:
         if not self.config.enable_task_metrics:
@@ -2639,11 +2814,22 @@ class TrueNASExporter:
         try:
             items = self._call(client, "replication.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "name", "enabled", "state"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "replication.query")
-                self._export_task_list("replication", items, "id", "enabled", total)
+                total = self._count_or_len(
+                    client, "replication.query", items, self.config.query_limit
+                )
+                self._export_task_list(
+                    "replication",
+                    items,
+                    "name",
+                    "enabled",
+                    fallback_name_field="id",
+                    outcome_field="state",
+                    outcome_ts_field="datetime",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("replication.query failed", exc_info=True)
 
@@ -2651,11 +2837,22 @@ class TrueNASExporter:
         try:
             items = self._call(client, "cloudsync.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "description", "enabled", "job"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "cloudsync.query")
-                self._export_task_list("cloudsync", items, "id", "enabled", total)
+                total = self._count_or_len(
+                    client, "cloudsync.query", items, self.config.query_limit
+                )
+                self._export_task_list(
+                    "cloudsync",
+                    items,
+                    "description",
+                    "enabled",
+                    fallback_name_field="id",
+                    outcome_field="job",
+                    outcome_ts_field="time_finished",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("cloudsync.query failed", exc_info=True)
 
@@ -2663,11 +2860,21 @@ class TrueNASExporter:
         try:
             items = self._call(client, "rsynctask.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "enabled", "job"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "rsynctask.query")
-                self._export_task_list("rsynctask", items, "id", "enabled", total)
+                total = self._count_or_len(
+                    client, "rsynctask.query", items, self.config.query_limit
+                )
+                self._export_task_list(
+                    "rsynctask",
+                    items,
+                    "id",
+                    "enabled",
+                    outcome_field="job",
+                    outcome_ts_field="time_finished",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("rsynctask.query failed", exc_info=True)
 
@@ -2675,11 +2882,21 @@ class TrueNASExporter:
         try:
             items = self._call(client, "pool.snapshottask.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "enabled", "state"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "pool.snapshottask.query")
-                self._export_task_list("snapshottask", items, "id", "enabled", total)
+                total = self._count_or_len(
+                    client, "pool.snapshottask.query", items, self.config.query_limit
+                )
+                self._export_task_list(
+                    "snapshottask",
+                    items,
+                    "id",
+                    "enabled",
+                    outcome_field="state",
+                    outcome_ts_field="datetime",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("pool.snapshottask.query failed", exc_info=True)
 
@@ -2857,6 +3074,8 @@ class TrueNASExporter:
         """
         if not self.compatibility_profile.allows_method("smb.status"):
             return
+        # The info_level literals are unverified in the current API docs corpus;
+        # live systems validate these names.
         for info_level, gauge in (
             ("SESSIONS", SMB_SESSION_COUNT),
             ("SHARES", SMB_CONNECTION_COUNT),
@@ -2940,7 +3159,7 @@ class TrueNASExporter:
     # Extended disk info (rotational, SMART) (v3)
     # ------------------------------------------------------------------
 
-    def _collect_disk_extended_metrics(self, client: JsonRpcWsClient) -> None:
+    def _collect_disk_extended_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         """Collect disk rotational flag and SMART status via disk.query.
 
         v25.10.2 field names:
@@ -2949,11 +3168,26 @@ class TrueNASExporter:
           togglesmart   — not present in v25.10.2; SMART enabled status is omitted
         """
         try:
-            disks = self._call_query_with_fallback(
-                client, "disk.query",
-                {"select": ["name", "identifier", "type", "rotationrate", "model", "bus"]},
-                allow_bare_fallback=False,
-            )
+            disks = cache.get("disk.query")
+            if disks is None:
+                disks = self._call_query_with_fallback(
+                    client, "disk.query",
+                    {
+                        "extra": {"pools": True},
+                        "select": [
+                            "name",
+                            "identifier",
+                            "size",
+                            "pool",
+                            "type",
+                            "rotationrate",
+                            "model",
+                            "bus",
+                        ],
+                    },
+                    allow_bare_fallback=False,
+                )
+                cache["disk.query"] = disks
             if not isinstance(disks, list):
                 return
             DISK_INFO.clear()
@@ -2977,13 +3211,6 @@ class TrueNASExporter:
             LOG.debug("disk.query extended failed", exc_info=True)
 
     # ------------------------------------------------------------------
-    # SMART test results (v5)
-    # ------------------------------------------------------------------
-
-    def _collect_smart_test_results(self, client: JsonRpcWsClient) -> None:
-        """Retain legacy SMART metrics without the undocumented v25 RPC."""
-
-    # ------------------------------------------------------------------
     # Share count metrics (NEW)
     # ------------------------------------------------------------------
 
@@ -2999,8 +3226,114 @@ class TrueNASExporter:
             LOG.debug("sharing.smb.query failed", exc_info=True)
 
     # ------------------------------------------------------------------
+    # API key inventory
+    # ------------------------------------------------------------------
+
+    def _collect_api_key_metrics(self, client: JsonRpcWsClient) -> None:
+        """Collect bounded API key inventory without fetching key material."""
+        try:
+            keys = self._call(
+                client,
+                "api_key.query",
+                [
+                    [],
+                    {
+                        "limit": self.config.query_limit,
+                        "select": ["id", "name", "expires_at", "revoked"],
+                    },
+                ],
+            )
+        except Exception:
+            LOG.debug("api_key.query failed", exc_info=True)
+            return
+
+        if not isinstance(keys, list):
+            return
+
+        API_KEY_EXPIRY_TS.clear()
+        try:
+            API_KEY_COUNT.set(
+                self._count_or_len(client, "api_key.query", keys, self.config.query_limit)
+            )
+        except Exception:
+            LOG.debug("api_key.query count failed", exc_info=True)
+
+        for key in keys[: self.config.max_entity_calls]:
+            if not isinstance(key, dict):
+                continue
+            raw_name = key.get("name")
+            if not isinstance(raw_name, str) or not raw_name:
+                continue
+            expires_at = _parse_ts(key.get("expires_at"))
+            if expires_at is not None:
+                API_KEY_EXPIRY_TS.labels(name=raw_name).set(expires_at)
+
+        try:
+            API_KEY_REVOKED_COUNT.set(
+                self._query_count(client, "api_key.query", [["revoked", "=", True]])
+            )
+        except Exception:
+            LOG.debug("api_key.query revoked count failed", exc_info=True)
+
+    # ------------------------------------------------------------------
+    # v26 zpool status details
+    # ------------------------------------------------------------------
+
+    def _collect_zpool_status_metrics(self, client: JsonRpcWsClient) -> None:
+        """Collect v26-only zpool status_code values when the active profile allows it."""
+        if not self.compatibility_profile.allows_method("zpool.query"):
+            return
+        try:
+            zpools = self._call(client, "zpool.query", [{}])
+        except Exception:
+            LOG.debug("zpool.query failed", exc_info=True)
+            return
+
+        if not isinstance(zpools, list):
+            return
+
+        POOL_STATUS_CODE.clear()
+        for pool in zpools[: self.config.max_entity_calls]:
+            if not isinstance(pool, dict):
+                continue
+            raw_pool_name = pool.get("name")
+            raw_status_code = pool.get("status_code")
+            if not isinstance(raw_pool_name, str) or not raw_pool_name:
+                continue
+            if not isinstance(raw_status_code, str) or not raw_status_code:
+                continue
+            POOL_STATUS_CODE.labels(
+                pool=raw_pool_name,
+                status_code=raw_status_code.upper(),
+            ).set(1)
+
+    # ------------------------------------------------------------------
     # System extra metrics (reboot, gateway, identity, HA) (NEW)
     # ------------------------------------------------------------------
+
+    def _collect_failover_reboot_info(self, client: JsonRpcWsClient) -> None:
+        try:
+            reboot_info = self._call(client, "failover.reboot.info", [])
+        except Exception:
+            LOG.debug("failover.reboot.info failed", exc_info=True)
+            return
+
+        if not isinstance(reboot_info, dict):
+            return
+
+        FAILOVER_NODE_REBOOT_REQUIRED.clear()
+        for node_label, field in (
+            ("this_node", "this_node"),
+            ("other_node", "other_node"),
+        ):
+            node_info = reboot_info.get(field)
+            if not isinstance(node_info, dict):
+                continue
+            reasons = node_info.get("reboot_required_reasons")
+            if isinstance(reasons, list):
+                FAILOVER_NODE_REBOOT_REQUIRED.labels(node=node_label).set(
+                    1 if reasons else 0
+                )
 
     def _collect_system_extra_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         # Pending reboot
@@ -3075,6 +3408,8 @@ class TrueNASExporter:
         except Exception:
             LOG.debug("failover.disabled.reasons failed", exc_info=True)
 
+        self._collect_failover_reboot_info(client)
+
     # ------------------------------------------------------------------
     # Main scrape
     # ------------------------------------------------------------------
@@ -3108,146 +3443,24 @@ class TrueNASExporter:
             self._all_methods_discovered = True
 
         except Exception:
-            LOG.warning("Dynamic method discovery failed", exc_info=True)
+            _log_exception_redacted(
+                LOG,
+                logging.WARNING,
+                "Dynamic method discovery failed",
+                self.config.ws_url,
+            )
 
     def scrape_once(self) -> None:
         LAST_SCRAPE_TS.set(time.time())
         self._last_scrape_attempt_monotonic = time.monotonic()
         success = False
+        reset_done = False
         deadline = time.monotonic() + self.config.scrape_budget_seconds
 
         with self._lock:
             # SCRAPE_DURATION is measured strictly inside the lock so it reflects
             # real API time, not any lock-wait from a concurrent caller.
             started = time.time()
-
-            self._reset_poll_metrics()
-
-            # Clear label-carrying gauges INSIDE the lock to prevent a window
-            # where Prometheus scrapes partially-cleared / partially-refilled data.
-            SYSTEM_STATE.clear()
-            SYSTEM_REBOOT_REASON.clear()
-            BOOT_POOL_STATUS.clear()
-            BOOT_POOL_SCAN_STATE.clear()
-            POOL_HEALTHY.clear()
-            POOL_STATUS.clear()
-            POOL_SIZE_BYTES.clear()
-            POOL_ALLOCATED_BYTES.clear()
-            POOL_FREE_BYTES.clear()
-            POOL_SCAN_PERCENT.clear()
-            POOL_FRAGMENTATION.clear()
-            POOL_AUTOTRIM_ENABLED.clear()
-            POOL_DEDUP_RATIO.clear()
-            POOL_EXPAND_SIZE_BYTES.clear()
-            POOL_WARNING.clear()
-            DATASET_USED_BYTES.clear()
-            DATASET_AVAILABLE_BYTES.clear()
-            DATASET_REFERENCED_BYTES.clear()
-            DATASET_QUOTA_BYTES.clear()
-            DATASET_REFQUOTA_BYTES.clear()
-            DATASET_SNAPSHOT_COUNT.clear()
-            DATASET_COMPRESSION_RATIO.clear()
-            DATASET_ENCRYPTED.clear()
-            DATASET_RESERVATION_BYTES.clear()
-            DATASET_REFRESERVATION_BYTES.clear()
-            DATASET_USED_BY_CHILDREN_BYTES.clear()
-            DATASET_USED_BY_DATASET_BYTES.clear()
-            DATASET_USED_BY_SNAPSHOTS_BYTES.clear()
-            DATASET_READONLY.clear()
-            DATASET_ATIME.clear()
-            DATASET_EXEC.clear()
-            DATASET_KEY_LOADED.clear()
-            DATASET_LOCKED.clear()
-            DATASET_QUOTA_WARNING_PERCENT.clear()
-            DATASET_QUOTA_CRITICAL_PERCENT.clear()
-            DATASET_REFQUOTA_WARNING_PERCENT.clear()
-            DATASET_REFQUOTA_CRITICAL_PERCENT.clear()
-            DATASET_CREATION_TS.clear()
-            DISK_SIZE_BYTES.clear()
-            DISK_TEMPERATURE_C.clear()
-            DISK_TEMP_ALERT_COUNT.clear()
-            DISK_TEMP_AGG_C.clear()
-            INTERFACE_LINK_UP.clear()
-            INTERFACE_MTU.clear()
-            INTERFACE_TYPE.clear()
-            SERVICE_ENABLED.clear()
-            SERVICE_RUNNING.clear()
-            APP_STATE.clear()
-            APP_UPGRADE_AVAILABLE.clear()
-            APP_IMAGE_UPDATES_AVAILABLE.clear()
-            APP_CUSTOM.clear()
-            APP_MIGRATED.clear()
-            APP_CONTAINER_COUNT.clear()
-            APP_USED_PORT_COUNT.clear()
-            APP_USED_HOST_IP_COUNT.clear()
-            APP_CONTAINER_STATE_COUNT.clear()
-            ALERT_COUNT_BY_LEVEL.clear()
-            ALERT_COUNT_BY_SOURCE.clear()
-            ALERT_COUNT_BY_CLASS.clear()
-            ALERT_COUNT_BY_NODE.clear()
-            ALERT_LAST_OCCURRENCE_TS.clear()
-            JOB_ACTIVE_COUNT_BY_STATE.clear()
-            JOB_ACTIVE_COUNT_BY_METHOD.clear()
-            JOB_OLDEST_ACTIVE_TS.clear()
-            JOB_PROGRESS_PERCENT.clear()
-            UPDATE_STATUS.clear()
-            VM_VMEMORY_IN_USE_BYTES.clear()
-            CERT_DAYS_TO_EXPIRY.clear()
-            DIRECTORYSERVICES_STATUS.clear()
-            DIRECTORYSERVICES_HEALTHY.clear()
-            TASK_ENABLED.clear()
-            TASK_STATE.clear()
-            TASK_LAST_RUN_TS.clear()
-            TASK_COUNT.clear()
-            FAILOVER_DISABLED_REASON.clear()
-            # v3 additions
-            POOL_VDEV_READ_ERRORS.clear()
-            POOL_VDEV_WRITE_ERRORS.clear()
-            POOL_VDEV_CHECKSUM_ERRORS.clear()
-            POOL_SCAN_ERRORS.clear()
-            POOL_SCAN_BYTES_PROCESSED.clear()
-            POOL_SCAN_BYTES_TOTAL.clear()
-            POOL_SCAN_SECONDS_REMAINING.clear()
-            POOL_LAST_SCAN_TS.clear()
-            GPU_INFO.clear()
-            DISK_ROTATIONAL.clear()
-            DISK_SMART_ENABLED.clear()
-            HOST_CPU_MODEL.clear()
-            HOST_SYSTEM_INFO.clear()
-            HW_VIRT_VARIANT.clear()
-            CHASSIS_HARDWARE.clear()
-            METHOD_NUMERIC_VALUE.clear()
-            METHOD_BOOLEAN_VALUE.clear()
-            METHOD_STATUS_VALUE.clear()
-            METHOD_LIST_LENGTH.clear()
-            # v4/v5 label-carrying gauges (prevent stale labels on collector failure)
-            HOST_INFO.clear()
-            SYSTEM_PRODUCT_TYPE.clear()
-            SYSTEM_VERSION.clear()
-            SYSTEM_HOST_ID.clear()
-            DOCKER_STATUS.clear()
-            UPS_STATUS.clear()
-            TN_CONNECT_STATUS.clear()
-            TRUECOMMAND_STATUS.clear()
-            VIRT_GLOBAL_STATE.clear()
-            UPDATE_VERSION_AVAILABLE.clear()
-            UPDATE_PROFILE_INFO.clear()
-            # v5 additions
-            POOL_SCRUB_TASK_ENABLED.clear()
-            POOL_SCRUB_TASK_STATE.clear()
-            POOL_SCRUB_LAST_RUN_TS.clear()
-            CLOUD_BACKUP_TASK_ENABLED.clear()
-            CLOUD_BACKUP_TASK_STATE.clear()
-            CRONJOB_ENABLED.clear()
-            DISK_IN_USE.clear()
-            ALERTSERVICE_ENABLED.clear()
-            SYSTEMDATASET_POOL.clear()
-            SYSTEM_GLOBAL_ID.clear()
-            DIRECTORYSERVICES_SERVICE_TYPE.clear()
-            # API call diagnostics — clear each scrape so methods removed from BASE_METHODS
-            # don't leave zombie label series with their last-seen values.
-            API_CALL_SUCCESS.clear()
-            API_CALL_DURATION.clear()
 
             try:
                 with JsonRpcWsClient(
@@ -3259,6 +3472,10 @@ class TrueNASExporter:
                 ) as client:
                     # --- Authentication and compatibility profile detection ---
                     version_short = self._bootstrap_connection(client)
+                    if version_short is None:
+                        raise RuntimeError("version detection failed")
+                    self._reset_poll_cycle_metrics()
+                    reset_done = True
 
                     # --- Dynamic Discovery (if enabled) ---
                     if self.config.enable_generic_method_metrics:
@@ -3298,14 +3515,16 @@ class TrueNASExporter:
                     self._collect_directoryservices_metrics(client, result_cache)
                     self._collect_ipmi_metrics(client)
                     self._collect_share_metrics(client)
+                    self._collect_api_key_metrics(client)
                     self._collect_system_extra_metrics(client, result_cache)
                     # v3 additions
                     self._collect_smb_nfs_sessions(client)
                     self._collect_gpu_metrics(client)
                     self._collect_jbof_metrics(client)
                     self._collect_auth_session_metrics(client)
-                    self._collect_disk_extended_metrics(client)
-                    self._collect_smart_test_results(client)
+                    self._collect_disk_extended_metrics(client, result_cache)
+                    # Legacy SMART test-result gauges intentionally remain unavailable:
+                    # 25.10.2 exposes no documented safe RPC for that source.
 
                     # --- System state (use cache if already fetched) ---
                     state_raw = result_cache.get("system.state")
@@ -3433,7 +3652,23 @@ class TrueNASExporter:
                     # cache entry (which may have been fetched with no select).
                     pools = self._call_query_with_fallback(
                         client, "pool.query",
-                        {"select": ["name", "healthy", "warning", "status", "size", "allocated", "free", "scan", "fragmentation", "autotrim", "dedup_table_size", "expand"]},
+                        {
+                            "select": [
+                                "name",
+                                "healthy",
+                                "warning",
+                                "status",
+                                "size",
+                                "allocated",
+                                "free",
+                                "scan",
+                                "fragmentation",
+                                "autotrim",
+                                "dedup_table_size",
+                                "expand",
+                                "topology",
+                            ]
+                        },
                     )
                     pool_list = pools if isinstance(pools, list) else []
                     POOL_COUNT.set(len(pool_list))
@@ -3480,13 +3715,10 @@ class TrueNASExporter:
                                 POOL_AUTOTRIM_ENABLED.labels(pool=pool_name), autotrim
                             )
 
-                        # Compatibility alias: the legacy ratio-named metric has
-                        # always read this byte-valued API field.
                         dedup = _as_float(
                             self._response_field(pool, "dedup_table_size", "dedup_table_quota")
                         )
                         if dedup is not None:
-                            POOL_DEDUP_RATIO.labels(pool=pool_name).set(dedup)
                             POOL_DEDUP_TABLE_SIZE_BYTES.labels(pool=pool_name).set(dedup)
 
                         expand = pool.get("expand")
@@ -3536,16 +3768,33 @@ class TrueNASExporter:
                                 if ts is not None:
                                     POOL_LAST_SCAN_TS.labels(pool=pool_name).set(ts)
 
-                        # Vdev stats fields are opaque in the committed pool.query
-                        # schema. Legacy vdev error metrics remain unavailable.
+                        topology = pool.get("topology")
+                        if isinstance(topology, dict):
+                            self._extract_vdev_errors(pool_name, topology)
+
+                    self._collect_zpool_status_metrics(client)
 
                     # --- Disks ---
-                    # Fresh call with extra fields not included in the generic pass.
-                    disks = self._call_query_with_fallback(
-                        client, "disk.query",
-                        {"extra": {"pools": True}, "select": ["name", "identifier", "size", "pool"]},
-                        allow_bare_fallback=False,
-                    )
+                    disks = result_cache.get("disk.query")
+                    if disks is None:
+                        disks = self._call_query_with_fallback(
+                            client, "disk.query",
+                            {
+                                "extra": {"pools": True},
+                                "select": [
+                                    "name",
+                                    "identifier",
+                                    "size",
+                                    "pool",
+                                    "type",
+                                    "rotationrate",
+                                    "model",
+                                    "bus",
+                                ],
+                            },
+                            allow_bare_fallback=False,
+                        )
+                        result_cache["disk.query"] = disks
                     disk_list = disks if isinstance(disks, list) else []
                     DISK_COUNT.set(len(disk_list))
                     disk_names: list[str] = []
@@ -3567,19 +3816,38 @@ class TrueNASExporter:
                             DISK_SIZE_BYTES.labels(disk=disk_name).set(size)
 
                     if disk_names:
+                        self._collect_disk_temperature_agg(client, disk_names)
                         try:
-                            temp_agg = self._call(client, "disk.temperature_agg", [disk_names, 7])
-                            if isinstance(temp_agg, dict):
-                                for disk_name, agg in temp_agg.items():
-                                    if isinstance(agg, dict):
-                                        for kind in ("min", "max", "avg"):
-                                            val = _as_float(agg.get(kind))
-                                            if val is not None:
-                                                DISK_TEMP_AGG_C.labels(
-                                                    disk=_str_label(disk_name), kind=kind,
-                                                ).set(val)
+                            temp_alerts = self._call(
+                                client, "disk.temperature_alerts", [disk_names]
+                            )
+                            if isinstance(temp_alerts, list):
+                                alert_counts = dict.fromkeys(disk_names, 0)
+                                for alert in temp_alerts:
+                                    if not isinstance(alert, dict):
+                                        continue
+                                    raw_alert_disk = _first_not_none(
+                                        alert.get("disk"),
+                                        alert.get("device"),
+                                        alert.get("name"),
+                                    )
+                                    args = alert.get("args")
+                                    if isinstance(args, dict):
+                                        raw_alert_disk = _first_not_none(
+                                            raw_alert_disk,
+                                            args.get("disk"),
+                                            args.get("device"),
+                                            args.get("name"),
+                                        )
+                                    if (
+                                        isinstance(raw_alert_disk, str)
+                                        and raw_alert_disk in alert_counts
+                                    ):
+                                        alert_counts[raw_alert_disk] += 1
+                                for disk_name, count in alert_counts.items():
+                                    DISK_TEMP_ALERT_COUNT.labels(disk=disk_name).set(count)
                         except Exception:
-                            LOG.debug("disk.temperature_agg failed", exc_info=True)
+                            LOG.debug("disk.temperature_alerts failed", exc_info=True)
 
                     # The method requires the disk list and include-thresholds flag.
                     temps = None
@@ -3634,11 +3902,13 @@ class TrueNASExporter:
                         if iface_type and iface_type != "unknown":
                             INTERFACE_TYPE.labels(interface=name, type=iface_type).set(1)
 
-                    # --- Services (fresh call with rich select/extra params) ---
-                    services = self._call_query_with_fallback(
-                        client, "service.query",
-                        {"extra": {"include_state": True}, "select": ["service", "enable", "state"]},
-                    )
+                    services = result_cache.get("service.query")
+                    if services is None:
+                        services = self._call_query_with_fallback(
+                            client, "service.query",
+                            {"extra": {"include_state": True}, "select": ["service", "enable", "state"]},
+                        )
+                        result_cache["service.query"] = services
                     service_list = services if isinstance(services, list) else []
                     SERVICE_COUNT.set(len(service_list))
                     for svc in service_list:
@@ -3715,8 +3985,8 @@ class TrueNASExporter:
                     # --- App extras (available space, WebDAV shares) ---
                     self._collect_app_extras(client, result_cache)
 
-                    # --- UPS ---
-                    self._collect_ups_metrics(client, result_cache)
+                    # UPS configuration is secret-bearing and 25.10.2 has no documented
+                    # live-status read method; service.query covers enable/running state.
 
                     # --- Catalog ---
                     self._collect_catalog_metrics(client, result_cache)
@@ -3730,11 +4000,8 @@ class TrueNASExporter:
                     # --- v4 additions: Hardware / Chassis ---
                     self._collect_chassis_hardware(client, result_cache)
 
-                    # --- v4 additions: TrueNAS Connect ---
-                    self._collect_tn_connect(client, result_cache)
-
-                    # --- v4 additions: TrueCommand status ---
-                    self._collect_truecommand_status(client, result_cache)
+                    # TrueNAS Connect and TrueCommand config calls include credentials;
+                    # their legacy status gauges intentionally remain unavailable.
 
                     # --- v4 additions: Audit ---
                     self._collect_audit_metrics(client, result_cache)
@@ -3742,13 +4009,13 @@ class TrueNASExporter:
                     # --- IPMI LAN (with correct channel params) ---
                     self._collect_ipmi_lan_metrics(client, result_cache)
 
-                    # ── v5 collectors ──
+                    # --- v5 collectors ---
                     self._collect_scrub_task_metrics(client, result_cache)
                     self._collect_snapshot_metrics(client, result_cache)
                     self._collect_resilver_config(client, result_cache)
                     self._collect_cloud_backup_metrics(client, result_cache)
                     self._collect_cronjob_metrics(client, result_cache)
-                    self._collect_disk_used_metrics(client, result_cache)
+                    # DISK_IN_USE is emitted above from documented disk.query pool data.
                     self._collect_protocol_configs(client, result_cache)
                     self._collect_system_configs(client, result_cache)
                     self._collect_infrastructure_configs(client, result_cache)
@@ -3761,12 +4028,19 @@ class TrueNASExporter:
                     success = True
 
             except Exception:
-                LOG.exception("Scrape failed")
+                _log_exception_redacted(
+                    LOG,
+                    logging.ERROR,
+                    "Scrape failed",
+                    self.config.ws_url,
+                )
                 success = False
 
         if self._is_collector_mode():
             self._publish_cached_events_to_default_registry()
         with self._lock:
+            if not success and not reset_done and self._poll_metrics_are_too_stale():
+                self._reset_poll_cycle_metrics()
             SCRAPE_SUCCESS.set(1 if success else 0)
             SCRAPE_DURATION.set(max(0.0, time.time() - started))
             if success:
@@ -3890,7 +4164,11 @@ class TrueNASExporter:
             return
 
         try:
-            BOOT_ENV_COUNT.set(self._query_count(client, "boot.environment.query"))
+            BOOT_ENV_COUNT.set(
+                self._count_or_len(
+                    client, "boot.environment.query", envs, self.config.query_limit
+                )
+            )
         except Exception:
             BOOT_ENV_COUNT.set(len(envs))
         active_count = 0
@@ -4041,7 +4319,11 @@ class TrueNASExporter:
 
         if isinstance(instances, list):
             try:
-                VIRT_INSTANCE_COUNT.set(self._query_count(client, instance_method))
+                VIRT_INSTANCE_COUNT.set(
+                    self._count_or_len(
+                        client, instance_method, instances, self.config.query_limit
+                    )
+                )
             except Exception:
                 LOG.debug("%s count failed", instance_method, exc_info=True)
             VIRT_INSTANCE_RUNNING.clear()
@@ -4158,6 +4440,65 @@ class TrueNASExporter:
         except Exception:
             LOG.debug("iscsi.global.sessions failed", exc_info=True)
 
+    def _emit_cached_disk_temp_agg(self) -> None:
+        for (disk_name, kind), val in self._disk_temp_agg_cache.items():
+            DISK_TEMP_AGG_C.labels(disk=disk_name, kind=kind).set(val)
+
+    def _collect_disk_temperature_agg(
+        self,
+        client: JsonRpcWsClient,
+        disk_names: list[str],
+    ) -> None:
+        """Collect cached 7-day disk temperature aggregates."""
+        self._disk_temp_agg_cycle += 1
+        current_cycle = self._disk_temp_agg_cycle
+        current_disk_names = tuple(disk_names)
+        disk_list_changed = current_disk_names != self._disk_temp_agg_disk_names
+        if disk_list_changed:
+            self._disk_temp_agg_disk_names = current_disk_names
+            self._disk_temp_agg_cache = {}
+            self._disk_temp_agg_last_success_cycle = None
+            self._disk_temp_agg_last_attempt_cycle = None
+
+        last_success = self._disk_temp_agg_last_success_cycle
+        last_attempt = self._disk_temp_agg_last_attempt_cycle
+        should_refresh = (
+            disk_list_changed
+            or last_attempt is None
+            or current_cycle - last_attempt >= DISK_TEMP_AGG_REFRESH_CYCLES
+        )
+
+        if should_refresh:
+            self._disk_temp_agg_last_attempt_cycle = current_cycle
+            try:
+                temp_agg = self._call(client, "disk.temperature_agg", [disk_names, 7])
+            except Exception:
+                self._collector_error("disks", "disk.temperature_agg failed")
+            else:
+                cache: dict[tuple[str, str], float] = {}
+                if isinstance(temp_agg, dict):
+                    for disk_name, agg in temp_agg.items():
+                        if not isinstance(agg, dict):
+                            continue
+                        disk_label = _str_label(disk_name)
+                        for kind in ("min", "max", "avg"):
+                            val = _as_float(agg.get(kind))
+                            if val is not None:
+                                cache[(disk_label, kind)] = val
+                self._disk_temp_agg_cache = cache
+                self._disk_temp_agg_last_success_cycle = current_cycle
+                last_success = current_cycle
+
+        if (
+            last_success is not None
+            and current_cycle - last_success
+            >= DISK_TEMP_AGG_REFRESH_CYCLES * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        ):
+            self._disk_temp_agg_cache = {}
+            self._disk_temp_agg_last_success_cycle = None
+
+        self._emit_cached_disk_temp_agg()
+
     # ------------------------------------------------------------------
     # Network extras
     # ------------------------------------------------------------------
@@ -4254,18 +4595,6 @@ class TrueNASExporter:
                 LOG.debug("webshare.config failed", exc_info=True)
 
     # ------------------------------------------------------------------
-    # UPS metrics
-    # ------------------------------------------------------------------
-
-    def _collect_ups_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """Do not fetch secret-bearing UPS configuration.
-
-        Operational enable/running state remains available through service.query.
-        Legacy UPS-specific gauges stay NaN because 25.10.2 has no safe live-status
-        read method.
-        """
-
-    # ------------------------------------------------------------------
     # Catalog metrics
     # ------------------------------------------------------------------
 
@@ -4347,20 +4676,6 @@ class TrueNASExporter:
             LOG.debug("truenas.get_chassis_hardware failed", exc_info=True)
 
     # ------------------------------------------------------------------
-    # TrueNAS Connect (v4)
-    # ------------------------------------------------------------------
-
-    def _collect_tn_connect(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """Do not fetch the credential-bearing TrueNAS Connect config."""
-
-    # ------------------------------------------------------------------
-    # TrueCommand full status (v4)
-    # ------------------------------------------------------------------
-
-    def _collect_truecommand_status(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """Do not fetch truecommand.config because it contains an API key."""
-
-    # ------------------------------------------------------------------
     # Audit dataset metrics (v4)
     # ------------------------------------------------------------------
 
@@ -4425,7 +4740,11 @@ class TrueNASExporter:
             return
 
         try:
-            POOL_SCRUB_TASK_COUNT.set(self._query_count(client, "pool.scrub.query"))
+            POOL_SCRUB_TASK_COUNT.set(
+                self._count_or_len(
+                    client, "pool.scrub.query", tasks, self.config.query_limit
+                )
+            )
         except Exception:
             LOG.debug("pool.scrub.query count failed", exc_info=True)
 
@@ -4450,37 +4769,73 @@ class TrueNASExporter:
             # len() them would transfer far more data than a server-side count.
             SNAPSHOT_TOTAL_COUNT.set(self._query_count(client, "pool.snapshot.query"))
         except Exception:
-            COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots").inc()
-            LOG.debug("pool.snapshot.query count failed", exc_info=True)
+            self._collector_error("snapshots", "pool.snapshot.query count failed")
 
-        try:
-            # v26 note: pool.snapshot.query returns empty properties {} unless
-            # extra.properties requests them, so order_by on
-            # properties.creation.parsed would sort None<None and raise EINVAL
-            # server-side. The nested select alias also returns {} on v26, so we
-            # fetch the full object (limit 1) and let
-            # _extract_snapshot_creation_timestamp read properties.creation.parsed.
-            oldest_query = self._call(client, "pool.snapshot.query", [
-                [], {
-                    "limit": 1,
-                    "order_by": ["properties.creation.parsed"],
-                    "extra": {"properties": ["creation"]},
-                }
-            ])
-        except Exception:
-            COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots").inc()
-            LOG.debug("pool.snapshot.query oldest snapshot failed", exc_info=True)
-            return
+        self._collect_snapshot_oldest_metric(client)
 
-        oldest_snapshot: Any = None
-        if isinstance(oldest_query, list):
-            oldest_snapshot = oldest_query[0] if oldest_query else None
-        elif isinstance(oldest_query, dict):
-            oldest_snapshot = oldest_query
+    def _emit_cached_snapshot_oldest(self) -> None:
+        if self._snapshot_oldest_cached_value is not None:
+            SNAPSHOT_OLDEST_TS.set(self._snapshot_oldest_cached_value)
 
-        oldest_ts = self._extract_snapshot_creation_timestamp(oldest_snapshot)
-        if oldest_ts is not None:
-            SNAPSHOT_OLDEST_TS.set(oldest_ts)
+    def _collect_snapshot_oldest_metric(self, client: JsonRpcWsClient) -> None:
+        """Collect cached oldest snapshot timestamp."""
+        self._snapshot_oldest_cycle += 1
+        current_cycle = self._snapshot_oldest_cycle
+        last_success = self._snapshot_oldest_last_success_cycle
+        last_attempt = self._snapshot_oldest_last_attempt_cycle
+        should_refresh = (
+            last_attempt is None
+            or current_cycle - last_attempt >= SNAPSHOT_OLDEST_REFRESH_CYCLES
+        )
+
+        if should_refresh:
+            self._snapshot_oldest_last_attempt_cycle = current_cycle
+            oldest_query: Any = None
+            refresh_succeeded = False
+            try:
+                # v26 note: pool.snapshot.query returns empty properties {} unless
+                # extra.properties requests them, so order_by on
+                # properties.creation.parsed would sort None<None and raise EINVAL
+                # server-side. The nested select alias also returns {} on v26, so we
+                # fetch the full object (limit 1) and let
+                # _extract_snapshot_creation_timestamp read properties.creation.parsed.
+                oldest_query = self._call(client, "pool.snapshot.query", [
+                    [], {
+                        "limit": 1,
+                        "order_by": ["properties.creation.parsed"],
+                        "extra": {"properties": ["creation"]},
+                    }
+                ])
+                refresh_succeeded = True
+            except Exception:
+                self._collector_error("snapshots", "pool.snapshot.query oldest snapshot failed")
+
+            if refresh_succeeded:
+                oldest_snapshot: Any = None
+                if isinstance(oldest_query, list):
+                    oldest_snapshot = oldest_query[0] if oldest_query else None
+                elif isinstance(oldest_query, dict):
+                    oldest_snapshot = oldest_query
+
+                self._snapshot_oldest_cached_value = (
+                    self._extract_snapshot_creation_timestamp(oldest_snapshot)
+                )
+                self._snapshot_oldest_has_cache = True
+                self._snapshot_oldest_last_success_cycle = current_cycle
+                last_success = current_cycle
+
+        if (
+            self._snapshot_oldest_has_cache
+            and last_success is not None
+            and current_cycle - last_success
+            >= SNAPSHOT_OLDEST_REFRESH_CYCLES * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        ):
+            self._snapshot_oldest_cached_value = None
+            self._snapshot_oldest_has_cache = False
+            self._snapshot_oldest_last_success_cycle = None
+
+        if self._snapshot_oldest_has_cache:
+            self._emit_cached_snapshot_oldest()
 
     # ------------------------------------------------------------------
     # v5 collectors: Pool resilver config
@@ -4517,7 +4872,11 @@ class TrueNASExporter:
             return
 
         try:
-            CLOUD_BACKUP_TASK_COUNT.set(self._query_count(client, "cloud_backup.query"))
+            CLOUD_BACKUP_TASK_COUNT.set(
+                self._count_or_len(
+                    client, "cloud_backup.query", tasks, self.config.query_limit
+                )
+            )
         except Exception:
             LOG.debug("cloud_backup.query count failed", exc_info=True)
 
@@ -4549,7 +4908,9 @@ class TrueNASExporter:
             return
 
         try:
-            CRONJOB_COUNT.set(self._query_count(client, "cronjob.query"))
+            CRONJOB_COUNT.set(
+                self._count_or_len(client, "cronjob.query", jobs, self.config.query_limit)
+            )
         except Exception:
             LOG.debug("cronjob.query count failed", exc_info=True)
 
@@ -4560,13 +4921,6 @@ class TrueNASExporter:
             _set_optional_bool_gauge(CRONJOB_ENABLED.labels(name=name), job.get("enabled"))
 
     # ------------------------------------------------------------------
-    # v5 collectors: Disk in-use
-    # ------------------------------------------------------------------
-
-    def _collect_disk_used_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        """disk.query.pool is the documented source used in the main disk pass."""
-
-    # ------------------------------------------------------------------
     # v5 collectors: Protocol configs (SMB, NFS, SSH, FTP, SNMP)
     # ------------------------------------------------------------------
 
@@ -4574,7 +4928,9 @@ class TrueNASExporter:
         """Collect protocol service configuration flags."""
         protocol_services: dict[str, bool] | None = None
         try:
-            protocol_services = self._query_service_enable_map(client, ("ssh", "ftp", "snmp"))
+            protocol_services = self._query_service_enable_map(
+                client, ("ssh", "ftp", "snmp"), cache
+            )
         except Exception:
             COLLECTOR_ERRORS_TOTAL.labels(collector="protocol_services").inc()
             LOG.debug("service.query for protocol services failed", exc_info=True)
@@ -4658,10 +5014,21 @@ class TrueNASExporter:
     # v5 collectors: KMIP / support / systemdataset
     # ------------------------------------------------------------------
 
+    def _collect_kmip_sync_pending(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
+        try:
+            pending = cache.get("kmip.kmip_sync_pending")
+            if pending is None:
+                pending = self._call(client, "kmip.kmip_sync_pending", [])
+            _set_optional_bool_gauge(KMIP_SYNC_PENDING, pending)
+        except Exception:
+            LOG.debug("kmip.kmip_sync_pending failed", exc_info=True)
+
     def _collect_infrastructure_configs(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         """Collect KMIP, support, and system dataset configs."""
         # kmip.config includes endpoint and key-management configuration and
         # cannot be server-side selected. The legacy metric remains NaN.
+
+        self._collect_kmip_sync_pending(client, cache)
 
         # Support
         try:
@@ -4800,14 +5167,14 @@ class TrueNASExporter:
 
         # Reporting service enable state
         try:
-            reporting_services = self._query_service_enable_map(client, ("netdata", "reporting"))
+            reporting_services = self._query_service_enable_map(
+                client, ("netdata", "reporting"), cache
+            )
             if reporting_services:
                 enabled = reporting_services.get("netdata")
                 if enabled is None:
                     enabled = reporting_services.get("reporting")
                 REPORTING_ENABLED.set(1 if enabled else 0)
-            else:
-                REPORTING_ENABLED.set(0)
         except Exception:
             COLLECTOR_ERRORS_TOTAL.labels(collector="reporting_config").inc()
             LOG.debug("service.query for reporting service failed", exc_info=True)
@@ -5021,14 +5388,6 @@ class TrueNASCollector:
         yield from self.exporter.metric_snapshot()
 
 
-# ---------------------------------------------------------------------------
-# HTTP server: /metrics + /healthz on one port
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Configuration loading
-# ---------------------------------------------------------------------------
-
 _load_config = load_config
 
 
@@ -5056,6 +5415,7 @@ def main() -> None:
         registry = CollectorRegistry(auto_describe=True)
         registry.register(TrueNASCollector(exporter))  # type: ignore[arg-type]
         server = _start_http_server(
+            config.exporter_bind_address,
             config.exporter_port,
             exporter._lock,
             registry=registry,
@@ -5068,9 +5428,14 @@ def main() -> None:
         )
         exporter._scrape_thread.start()
     else:
+        registry = CollectorRegistry(auto_describe=True)
+        registry.register(TrueNASCollector(exporter))  # type: ignore[arg-type]
         server = _start_http_server(
+            config.exporter_bind_address,
             config.exporter_port,
             exporter._lock,
+            registry=registry,
+            lock_metrics=False,
             readiness_check=exporter.is_ready,
         )
 
