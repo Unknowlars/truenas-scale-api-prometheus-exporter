@@ -17,7 +17,7 @@ Rules for updating:
 | ID | Task | Area | Size | Depends on | Status | Updated | Notes |
 |----|------|------|------|------------|--------|---------|-------|
 | [T01](tasks/T01-event-stream-dead-connection.md) | Event stream: detect dead connections, reconnect, honest `event_stream_up` | reliability | M | — | done | 2026-07-16 | |
-| [T02](tasks/T02-cpu-user-idle-fabrication.md) | Stop fabricating `cpu_user_percent` / `cpu_idle_percent` | metric value | S | — | todo | | |
+| [T02](tasks/T02-cpu-user-idle-fabrication.md) | Stop fabricating `cpu_user_percent` / `cpu_idle_percent` | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T03](tasks/T03-pool-dedup-ratio.md) | `pool_dedup_ratio` reports bytes under a ratio name | metric value | S | — | todo | | |
 | [T04](tasks/T04-realtime-pool-metrics.md) | Realtime `pools` section: retire dead read/write rates, emit used/available/total bytes | metric value + gap | M | — | todo | | |
 | [T05](tasks/T05-network-rate-fallback.md) | Remove cumulative-bytes fallback in network rx/tx rate gauges | metric value | S | — | todo | | |
@@ -64,3 +64,6 @@ Move a one-line summary here when a task reaches `done`:
   deadline (`EVENT_READ_TIMEOUT_SECONDS`), reports `truenas_event_stream_up=0` while
   disconnected, and `EVENT_STALE_AFTER_SECONDS` config validation now requires `>= 2x`
   the interval — pending commit
+- T02 — 2026-07-16 — CPU user/idle split metrics are no longer fabricated from aggregate
+  realtime usage; usage-only payloads leave them absent/NaN while real split fields still export
+  — pending commit

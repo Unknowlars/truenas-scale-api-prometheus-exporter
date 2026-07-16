@@ -562,10 +562,10 @@ EVENT_LIST_LENGTH = declare_gauge("EVENT_LIST_LENGTH", "truenas_event_list_lengt
 
 # CPU usage (updated every time a reporting.realtime event arrives, ~1s interval)
 CPU_USAGE_PERCENT = declare_gauge("CPU_USAGE_PERCENT", "truenas_cpu_usage_percent", "Total host CPU usage percent (0 to 100, all cores combined)")
-CPU_USER_PERCENT = declare_gauge("CPU_USER_PERCENT", "truenas_cpu_user_percent", "Host CPU user-space usage percent (0 to 100); falls back to total CPU usage when user split is unavailable")
+CPU_USER_PERCENT = declare_gauge("CPU_USER_PERCENT", "truenas_cpu_user_percent", "Host CPU user-space usage percent (0 to 100); absent when the API does not report a user/system split")
 CPU_SYSTEM_PERCENT = declare_gauge("CPU_SYSTEM_PERCENT", "truenas_cpu_system_percent", "Host CPU kernel usage percent (0 to 100)")
 CPU_IOWAIT_PERCENT = declare_gauge("CPU_IOWAIT_PERCENT", "truenas_cpu_iowait_percent", "Host CPU I/O wait percent (0 to 100)")
-CPU_IDLE_PERCENT = declare_gauge("CPU_IDLE_PERCENT", "truenas_cpu_idle_percent", "Host CPU idle percent (0 to 100); inferred as 100-total usage when idle split is unavailable")
+CPU_IDLE_PERCENT = declare_gauge("CPU_IDLE_PERCENT", "truenas_cpu_idle_percent", "Host CPU idle percent (0 to 100); absent when the API does not report a user/system split")
 CPU_INTERRUPT_PERCENT = declare_gauge("CPU_INTERRUPT_PERCENT", "truenas_cpu_interrupt_percent", "Host CPU interrupt/hardware IRQ percent (0 to 100)")
 CPU_CORE_USAGE_PERCENT = declare_gauge("CPU_CORE_USAGE_PERCENT", "truenas_cpu_core_usage_percent", "Per-CPU-core usage percent (0 to 100)", ["core"])
 CPU_TEMPERATURE_C = declare_gauge("CPU_TEMPERATURE_C", "truenas_cpu_temperature_celsius", "Per-CPU-core temperature in Celsius", ["core"])

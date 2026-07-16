@@ -1715,8 +1715,6 @@ class TrueNASExporter:
         ))
         if user_cpu_percent is not None:
             self._collector_event_scalars[metric_name(CPU_USER_PERCENT)] = user_cpu_percent
-        elif total_cpu_percent is not None:
-            self._collector_event_scalars[metric_name(CPU_USER_PERCENT)] = total_cpu_percent
 
         system_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("system"), cpu_section.get("system") if isinstance(cpu_section, dict) else None
@@ -1729,10 +1727,6 @@ class TrueNASExporter:
         ))
         if idle_cpu_percent is not None:
             self._collector_event_scalars[metric_name(CPU_IDLE_PERCENT)] = idle_cpu_percent
-        elif total_cpu_percent is not None:
-            self._collector_event_scalars[metric_name(CPU_IDLE_PERCENT)] = max(
-                0.0, 100.0 - total_cpu_percent
-            )
 
         iowait_cpu_percent = _as_float(_first_not_none(
             cpu_data.get("iowait"), cpu_section.get("iowait") if isinstance(cpu_section, dict) else None

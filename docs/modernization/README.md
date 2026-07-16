@@ -52,6 +52,20 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T02 remediation: stopped fabricating `truenas_cpu_user_percent`
+  from aggregate realtime CPU usage and `truenas_cpu_idle_percent` from
+  `100 - usage` when `reporting.realtime` does not provide split fields.
+  Explicit `cpu.user`/`cpu.idle` values remain exported. Updated HELP text and
+  regenerated the metric contract, API parity docs, and dashboard output.
+  Focused verification passed:
+  `python3 -m pytest tests/test_reliability.py tests/test_phase2_events.py tests/test_phase3_collector_mode.py -q`
+  (`40 passed`). Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `191 passed`, 90.56% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Compose validation, Docker image build, container
+  version smoke `5.2.0`, and `validation_ok`. Optional live smoke was skipped
+  because no read-only live TrueNAS target/key was provided.
+
 - 2026-07-15 startup configuration fix: removed the Compose-level
   `EVENT_SUBSCRIPTIONS` injection so sample deployments do not force the newest
   event list into stale or externally supplied images. `.env.example` now leaves

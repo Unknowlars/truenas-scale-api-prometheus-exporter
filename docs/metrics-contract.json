@@ -618,7 +618,7 @@
       "variable": "CPU_CORE_USAGE_PERCENT"
     },
     {
-      "help": "Host CPU idle percent (0 to 100); inferred as 100-total usage when idle split is unavailable",
+      "help": "Host CPU idle percent (0 to 100); absent when the API does not report a user/system split",
       "labels": [],
       "name": "truenas_cpu_idle_percent",
       "type": "gauge",
@@ -662,7 +662,7 @@
       "variable": "CPU_USAGE_PERCENT"
     },
     {
-      "help": "Host CPU user-space usage percent (0 to 100); falls back to total CPU usage when user split is unavailable",
+      "help": "Host CPU user-space usage percent (0 to 100); absent when the API does not report a user/system split",
       "labels": [],
       "name": "truenas_cpu_user_percent",
       "type": "gauge",

@@ -1,9 +1,13 @@
+import json
 import math
+from pathlib import Path
 
 import pytest
 from conftest import make_config
 
 import truenas_exporter as exporter_module
+
+REALTIME_FIXTURE = Path(__file__).parent / "fixtures" / "realtime" / "reporting_realtime_25_10_shape.json"
 
 
 def _scalar_sample(families, name):
@@ -12,15 +16,41 @@ def _scalar_sample(families, name):
     return family.samples[0].value
 
 
-def test_collector_realtime_zero_replaces_previous_value():
+def test_collector_realtime_usage_only_omits_split_metrics():
     exporter = exporter_module.TrueNASExporter(make_config())
 
     exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 50.0}}})
-    exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 0.0}}})
 
-    assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 0.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 0.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 100.0
+    assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 50.0
+    assert exporter_module.CPU_USER_PERCENT._name not in exporter._collector_event_scalars
+    assert exporter_module.CPU_IDLE_PERCENT._name not in exporter._collector_event_scalars
+
+
+def test_collector_realtime_honors_explicit_cpu_split_values():
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    exporter._dispatch_event(
+        "reporting.realtime",
+        {"cpu": {"cpu": {"usage": 50.0, "user": 12.5, "idle": 81.25}}},
+    )
+
+    assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 50.0
+    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 12.5
+    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 81.25
+
+
+def test_collector_realtime_fixture_outputs_usage_without_fabricated_split():
+    exporter = exporter_module.TrueNASExporter(make_config())
+    payload = json.loads(REALTIME_FIXTURE.read_text(encoding="utf-8"))
+
+    exporter._dispatch_event("reporting.realtime", payload)
+    exporter._publish_cached_events_to_default_registry()
+    exporter._publish_metric_snapshot()
+    families = list(exporter_module.TrueNASCollector(exporter).collect())
+
+    assert _scalar_sample(families, "truenas_cpu_usage_percent") == 25.0
+    assert math.isnan(_scalar_sample(families, "truenas_cpu_user_percent"))
+    assert math.isnan(_scalar_sample(families, "truenas_cpu_idle_percent"))
 
 
 def test_legacy_app_and_vm_zero_values_are_exported():

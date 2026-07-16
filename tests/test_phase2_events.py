@@ -241,8 +241,8 @@ def test_realtime_event_parses_25_10_sibling_cores_and_aggregate_rates():
     exporter._dispatch_event("reporting.realtime", payload)
 
     assert exporter._collector_event_scalars[exporter_module.CPU_USAGE_PERCENT._name] == 25.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_USER_PERCENT._name] == 25.0
-    assert exporter._collector_event_scalars[exporter_module.CPU_IDLE_PERCENT._name] == 75.0
+    assert exporter_module.CPU_USER_PERCENT._name not in exporter._collector_event_scalars
+    assert exporter_module.CPU_IDLE_PERCENT._name not in exporter._collector_event_scalars
     assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "0") == 18.0
     assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "1") == 32.0
     assert labeled_value(exporter_module.CPU_TEMPERATURE_C, "0") == 46.0

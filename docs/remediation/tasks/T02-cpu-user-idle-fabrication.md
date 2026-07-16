@@ -91,4 +91,19 @@ Also check: does the bundled Grafana dashboard reference `truenas_cpu_user_perce
 
 ## Outcome
 
-_(fill in when done)_
+- Removed the `total_cpu_percent` fallback paths for `truenas_cpu_user_percent` and
+  `truenas_cpu_idle_percent`; usage-only `reporting.realtime` payloads now leave those split
+  metrics absent/NaN instead of fabricating total CPU usage and `100 - usage`.
+- Kept real `cpu.user` and `cpu.idle` extraction intact and added regression coverage for explicit
+  split values.
+- Updated CPU user/idle HELP text, regenerated `docs/metrics-contract.json`,
+  `docs/api-exporter-parity.md`, `docs/api-exporter-parity.json`, and the generated Grafana
+  dashboard output. The parity rows for `truenas_cpu_user_percent` and
+  `truenas_cpu_idle_percent` now accurately describe parser keys `cpu.user` and `cpu.idle`.
+- Dashboard JSON check found no references to `truenas_cpu_user_percent` or
+  `truenas_cpu_idle_percent`; no dashboard panel changes were needed.
+- Tests added/updated in `tests/test_reliability.py` and `tests/test_phase2_events.py`.
+  Verification passed:
+  `python3 -m pytest tests/test_reliability.py tests/test_phase2_events.py tests/test_phase3_collector_mode.py -q`
+  (`40 passed`) and `./scripts/validate.sh` (`191 passed`, 90.56% coverage, `validation_ok`).
+  No live smoke was run because no read-only live TrueNAS target/key was available.
