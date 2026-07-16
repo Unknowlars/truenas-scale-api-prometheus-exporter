@@ -212,6 +212,27 @@ def test_snapshot_count_uses_exact_count_query(monkeypatch):
     assert calls[0][1][1] == {"count": True}
 
 
+def test_snapshot_count_failure_routes_through_collector_error(monkeypatch):
+    """R07: pool.snapshot.query count failures must update
+    exporter._collector_errors, not just the Prometheus counter directly."""
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
+
+    def fake_call(client, method, params=None):
+        assert method == "pool.snapshot.query"
+        options = params[1]
+        if options.get("count"):
+            raise exporter_module.JsonRpcError("snapshot count unavailable")
+        return [{"properties": {"creation": {"parsed": 1700000000}}}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_snapshot_metrics(object(), {})
+
+    assert exporter._collector_errors["snapshots"] >= 1
+
+
 def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
     exporter = exporter_module.TrueNASExporter(
         make_config(exporter_mode="legacy", enable_task_metrics=True)
@@ -309,6 +330,9 @@ def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
         exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots")._value.get()
         == before_errors + 1
     )
+    # R07: failure accounting must go through _collector_error, not just the
+    # Prometheus counter, like every sibling collector.
+    assert exporter._collector_errors["snapshots"] >= 1
 
     for _ in range(
         exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 2,
@@ -1973,6 +1997,9 @@ def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypa
         exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="disks")._value.get()
         == before_errors + 1
     )
+    # R07: failure accounting must go through _collector_error, not just the
+    # Prometheus counter, like every sibling collector.
+    assert exporter._collector_errors["disks"] >= 1
 
     for _ in range(
         exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 2,

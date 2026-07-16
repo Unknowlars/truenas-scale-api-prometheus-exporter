@@ -4469,8 +4469,7 @@ class TrueNASExporter:
             try:
                 temp_agg = self._call(client, "disk.temperature_agg", [disk_names, 7])
             except Exception:
-                COLLECTOR_ERRORS_TOTAL.labels(collector="disks").inc()
-                LOG.debug("disk.temperature_agg failed", exc_info=True)
+                self._collector_error("disks", "disk.temperature_agg failed")
             else:
                 cache: dict[tuple[str, str], float] = {}
                 if isinstance(temp_agg, dict):
@@ -4766,8 +4765,7 @@ class TrueNASExporter:
             # len() them would transfer far more data than a server-side count.
             SNAPSHOT_TOTAL_COUNT.set(self._query_count(client, "pool.snapshot.query"))
         except Exception:
-            COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots").inc()
-            LOG.debug("pool.snapshot.query count failed", exc_info=True)
+            self._collector_error("snapshots", "pool.snapshot.query count failed")
 
         self._collect_snapshot_oldest_metric(client)
 
@@ -4806,8 +4804,7 @@ class TrueNASExporter:
                 ])
                 refresh_succeeded = True
             except Exception:
-                COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots").inc()
-                LOG.debug("pool.snapshot.query oldest snapshot failed", exc_info=True)
+                self._collector_error("snapshots", "pool.snapshot.query oldest snapshot failed")
 
             if refresh_succeeded:
                 oldest_snapshot: Any = None
