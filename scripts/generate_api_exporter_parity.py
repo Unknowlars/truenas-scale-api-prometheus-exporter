@@ -1814,8 +1814,18 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "SYSTEMDATASET_POOL": ("pool",),
         "TASK_COUNT": ("count mode result per task query",),
         "TASK_ENABLED": ("id/name", "enabled"),
-        "TASK_LAST_RUN_TS": ("job.time_finished/lastrun/last_run",),
-        "TASK_STATE": ("job.state/state",),
+        "TASK_LAST_RUN_TS": (
+            "replication.state.datetime",
+            "cloudsync.job.time_finished",
+            "rsynctask.job.time_finished",
+            "snapshottask.state.datetime",
+        ),
+        "TASK_STATE": (
+            "replication.state.state",
+            "cloudsync.job.state",
+            "rsynctask.job.state",
+            "snapshottask.state.state",
+        ),
         "TUNABLE_COUNT": ("count mode result",),
         "UI_HTTPS_PORT": ("ui_httpsport",),
         "UPDATE_AUTOCHECK_ENABLED": ("autocheck",),
@@ -2118,8 +2128,6 @@ def build_metric_mappings(
         "MEMORY_SWAP_FREE_BYTES",
         "MEMORY_SWAP_USED_BYTES",
         "SERIALCONSOLE_ENABLED",
-        "TASK_LAST_RUN_TS",
-        "TASK_STATE",
     }
     opportunistic_dedicated = {
         "POOL_REALTIME_READ_BYTES",
@@ -2150,6 +2158,11 @@ def build_metric_mappings(
             notes.append("Issuer label is forced to unknown because the 25.10.2 selected response does not source it.")
         if variable == "DISK_INFO":
             notes.append("Serial label is deliberately redacted; only disk/model/bus are sourced.")
+        if variable in {"TASK_STATE", "TASK_LAST_RUN_TS"}:
+            notes.append(
+                "Task state objects are opaquely typed in the doc corpus but stable in middleware; "
+                "collector selects only id/name/description/enabled/state/job fields."
+            )
         if source_kind == "unavailable/undocumented":
             notes.append("Named source is absent from the pinned method/event leaves or deliberately not called.")
         if status.startswith("unavailable") and not notes:

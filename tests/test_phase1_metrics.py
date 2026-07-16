@@ -143,6 +143,10 @@ def reset_gauges():
         exporter_module.REPORTING_TIER0_RETENTION_DAYS,
         exporter_module.REPORTING_TIER1_RETENTION_DAYS,
         exporter_module.REPORTING_TIER1_UPDATE_INTERVAL_SECONDS,
+        exporter_module.TASK_COUNT,
+        exporter_module.TASK_ENABLED,
+        exporter_module.TASK_STATE,
+        exporter_module.TASK_LAST_RUN_TS,
     ):
         reset_metric(metric)
 
@@ -997,18 +1001,66 @@ def test_cronjob_collector_uses_exact_count_and_excludes_command(monkeypatch):
     assert gauge_value(exporter_module.CRONJOB_COUNT) == 503
 
 
-def test_task_collectors_use_exact_counts_per_type(monkeypatch):
+def task_samples(metric, **labels):
+    family = list(metric.collect())[0]
+    return [
+        sample
+        for sample in family.samples
+        if sample.name == family.name and all(sample.labels.get(key) == value for key, value in labels.items())
+    ]
+
+
+def task_sample_value(metric, **labels):
+    samples = task_samples(metric, **labels)
+    assert len(samples) == 1
+    return samples[0].value
+
+
+def test_task_collectors_emit_outcomes_and_use_safe_selects(monkeypatch):
     config = make_config(exporter_mode="legacy", enable_task_metrics=True)
     exporter = exporter_module.TrueNASExporter(config)
     calls = []
 
     def fake_call(client, method, params=None):
         calls.append((method, params))
-        if method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
-            options = params[1] if params and len(params) > 1 else {}
+        if method == "replication.query":
+            options = params[1]
             if options.get("count"):
-                return 0
-            return []
+                return 1
+            return [{
+                "id": 1,
+                "name": "replicate-nightly",
+                "enabled": True,
+                "state": {"state": "ERROR", "datetime": {"$date": 1750000000000}},
+            }]
+        if method == "cloudsync.query":
+            options = params[1]
+            if options.get("count"):
+                return 1
+            return [{
+                "id": 2,
+                "description": "cloud-nightly",
+                "enabled": False,
+                "job": {
+                    "state": "SUCCESS",
+                    "time_finished": {"$date": 1750000100000},
+                    "progress": {"percent": 100},
+                },
+            }]
+        if method == "rsynctask.query":
+            options = params[1]
+            if options.get("count"):
+                return 1
+            return [{"id": 3, "enabled": True, "job": None}]
+        if method == "pool.snapshottask.query":
+            options = params[1]
+            if options.get("count"):
+                return 1
+            return [{
+                "id": 4,
+                "enabled": True,
+                "state": {"state": "FINISHED", "datetime": {"$date": 1750000200000}},
+            }]
         if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
             return 0
         raise AssertionError(f"Unexpected call: {method}")
@@ -1017,14 +1069,122 @@ def test_task_collectors_use_exact_counts_per_type(monkeypatch):
 
     exporter._collect_task_metrics(object())
 
-    for method in ("replication.query", "cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
-        method_calls = [c for c in calls if c[0] == method]
+    expected_selects = {
+        "replication.query": ["id", "name", "enabled", "state"],
+        "cloudsync.query": ["id", "description", "enabled", "job"],
+        "rsynctask.query": ["id", "enabled", "job"],
+        "pool.snapshottask.query": ["id", "enabled", "state"],
+    }
+    for method, expected_select in expected_selects.items():
+        method_calls = [call for call in calls if call[0] == method]
         assert len(method_calls) == 2
-        assert method_calls[0][1][1]["select"] == ["id", "enabled"]
+        assert method_calls[0][1][1]["select"] == expected_select
         assert method_calls[1][1] == [[], {"count": True}]
 
-    assert not list(exporter_module.TASK_STATE.collect())[0].samples
-    assert not list(exporter_module.TASK_LAST_RUN_TS.collect())[0].samples
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="replication",
+        name="replicate-nightly",
+        state="ERROR",
+    ) == 1
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="cloudsync",
+        name="cloud-nightly",
+        state="SUCCESS",
+    ) == 1
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="snapshottask",
+        name="4",
+        state="FINISHED",
+    ) == 1
+    assert task_sample_value(
+        exporter_module.TASK_LAST_RUN_TS,
+        task_type="replication",
+        name="replicate-nightly",
+    ) == 1750000000.0
+    assert task_sample_value(
+        exporter_module.TASK_LAST_RUN_TS,
+        task_type="cloudsync",
+        name="cloud-nightly",
+    ) == 1750000100.0
+    assert task_sample_value(
+        exporter_module.TASK_LAST_RUN_TS,
+        task_type="snapshottask",
+        name="4",
+    ) == 1750000200.0
+    assert task_sample_value(exporter_module.TASK_ENABLED, task_type="rsynctask", name="3") == 1
+    assert not task_samples(exporter_module.TASK_STATE, task_type="rsynctask", name="3")
+    assert not task_samples(exporter_module.TASK_LAST_RUN_TS, task_type="rsynctask", name="3")
+
+
+def test_task_outcome_unknown_state_maps_to_unknown(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_task_metrics=True))
+
+    def fake_call(client, method, params=None):
+        if method == "replication.query":
+            if params[1].get("count"):
+                return 1
+            return [{
+                "id": 1,
+                "name": "replicate-nightly",
+                "enabled": True,
+                "state": {"state": "WEIRD_NEW_STATE", "datetime": {"$date": 1750000000000}},
+            }]
+        if method in ("cloudsync.query", "rsynctask.query", "pool.snapshottask.query"):
+            return 0 if params[1].get("count") else []
+        if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
+            return 0
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_task_metrics(object())
+
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="replication",
+        name="replicate-nightly",
+        state="UNKNOWN",
+    ) == 1
+
+
+def test_task_query_failure_leaves_that_type_absent(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", enable_task_metrics=True))
+
+    def fake_call(client, method, params=None):
+        if method == "replication.query":
+            raise RuntimeError("replication unavailable")
+        if method == "cloudsync.query":
+            if params[1].get("count"):
+                return 1
+            return [{
+                "id": 2,
+                "description": "cloud-nightly",
+                "enabled": True,
+                "job": {"state": "SUCCESS", "time_finished": {"$date": 1750000100000}},
+            }]
+        if method in ("rsynctask.query", "pool.snapshottask.query"):
+            return 0 if params[1].get("count") else []
+        if method in ("pool.snapshottask.max_count", "pool.snapshottask.max_total_count"):
+            return 0
+        raise AssertionError(f"Unexpected call: {method}")
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_task_metrics(object())
+
+    assert not task_samples(exporter_module.TASK_COUNT, task_type="replication")
+    assert not task_samples(exporter_module.TASK_ENABLED, task_type="replication")
+    assert not task_samples(exporter_module.TASK_STATE, task_type="replication")
+    assert not task_samples(exporter_module.TASK_LAST_RUN_TS, task_type="replication")
+    assert task_sample_value(
+        exporter_module.TASK_STATE,
+        task_type="cloudsync",
+        name="cloud-nightly",
+        state="SUCCESS",
+    ) == 1
 
 
 def test_reporting_graph_discovery_skipped_when_generic_disabled(monkeypatch):

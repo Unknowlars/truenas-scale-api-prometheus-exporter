@@ -52,6 +52,23 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T08 remediation: enabled existing
+  `truenas_task_state{task_type,name,state}` and
+  `truenas_task_last_run_timestamp_seconds{task_type,name}` producers for
+  replication, cloudsync, rsynctask, and snapshottask tasks using only safe
+  selected fields. State labels are allowlisted with unknown values mapped to
+  `UNKNOWN`; null/missing/unparseable task outcome data leaves samples absent.
+  Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_runtime_api_parity.py -q`
+  (`79 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `204 passed`, 90.77% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available.
+
 - 2026-07-16 T07 remediation: enabled
   `truenas_dataset_snapshot_count` by default through the documented read-only
   `pool.dataset.snapshot_count` fallback after confirming the 25.10.2 and v26

@@ -1166,7 +1166,7 @@
         "enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4955"
+        "src/truenas_exporter/runtime.py:5038"
       ],
       "source_kind": "method",
       "variable": "TWOFACTOR_ENABLED"
@@ -1221,7 +1221,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1167",
         "src/truenas_exporter/runtime.py:1217",
-        "src/truenas_exporter/runtime.py:3206"
+        "src/truenas_exporter/runtime.py:3289"
       ],
       "source_kind": "method",
       "variable": "ALERT_COUNT_BY_CLASS"
@@ -1253,7 +1253,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1165",
         "src/truenas_exporter/runtime.py:1213",
-        "src/truenas_exporter/runtime.py:3204"
+        "src/truenas_exporter/runtime.py:3287"
       ],
       "source_kind": "method",
       "variable": "ALERT_COUNT_BY_LEVEL"
@@ -1281,7 +1281,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1168",
         "src/truenas_exporter/runtime.py:1219",
-        "src/truenas_exporter/runtime.py:3207"
+        "src/truenas_exporter/runtime.py:3290"
       ],
       "source_kind": "method",
       "variable": "ALERT_COUNT_BY_NODE"
@@ -1310,7 +1310,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1166",
         "src/truenas_exporter/runtime.py:1215",
-        "src/truenas_exporter/runtime.py:3205"
+        "src/truenas_exporter/runtime.py:3288"
       ],
       "source_kind": "method",
       "variable": "ALERT_COUNT_BY_SOURCE"
@@ -1362,7 +1362,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1169",
         "src/truenas_exporter/runtime.py:1221",
-        "src/truenas_exporter/runtime.py:3208"
+        "src/truenas_exporter/runtime.py:3291"
       ],
       "source_kind": "method",
       "variable": "ALERT_LAST_OCCURRENCE_TS"
@@ -1432,7 +1432,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4964"
+        "src/truenas_exporter/runtime.py:5047"
       ],
       "source_kind": "method",
       "variable": "ALERTSERVICE_COUNT"
@@ -1459,8 +1459,8 @@
         "enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3263",
-        "src/truenas_exporter/runtime.py:4978"
+        "src/truenas_exporter/runtime.py:3346",
+        "src/truenas_exporter/runtime.py:5061"
       ],
       "source_kind": "method",
       "variable": "ALERTSERVICE_ENABLED"
@@ -1491,7 +1491,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1038",
         "src/truenas_exporter/runtime.py:1046",
-        "src/truenas_exporter/runtime.py:3270"
+        "src/truenas_exporter/runtime.py:3353"
       ],
       "source_kind": "internal",
       "variable": "API_CALL_DURATION"
@@ -1549,7 +1549,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1037",
         "src/truenas_exporter/runtime.py:1045",
-        "src/truenas_exporter/runtime.py:3269"
+        "src/truenas_exporter/runtime.py:3352"
       ],
       "source_kind": "internal",
       "variable": "API_CALL_SUCCESS"
@@ -1573,7 +1573,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4214"
+        "src/truenas_exporter/runtime.py:4297"
       ],
       "source_kind": "method",
       "variable": "APP_AVAILABLE_SPACE_BYTES"
@@ -1654,7 +1654,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2326",
         "src/truenas_exporter/runtime.py:2359",
-        "src/truenas_exporter/runtime.py:3200"
+        "src/truenas_exporter/runtime.py:3283"
       ],
       "source_kind": "method",
       "variable": "APP_CONTAINER_COUNT"
@@ -1683,7 +1683,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2329",
         "src/truenas_exporter/runtime.py:2382",
-        "src/truenas_exporter/runtime.py:3203"
+        "src/truenas_exporter/runtime.py:3286"
       ],
       "source_kind": "method",
       "variable": "APP_CONTAINER_STATE_COUNT"
@@ -1764,7 +1764,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2324",
         "src/truenas_exporter/runtime.py:2347",
-        "src/truenas_exporter/runtime.py:3198"
+        "src/truenas_exporter/runtime.py:3281"
       ],
       "source_kind": "method",
       "variable": "APP_CUSTOM"
@@ -1789,7 +1789,7 @@
         "remaining_pull_limit"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4233"
+        "src/truenas_exporter/runtime.py:4316"
       ],
       "source_kind": "method",
       "variable": "APP_DOCKERHUB_PULL_LIMIT_REMAINING"
@@ -1813,7 +1813,7 @@
         "remaining_time_limit_in_secs"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4237"
+        "src/truenas_exporter/runtime.py:4320"
       ],
       "source_kind": "method",
       "variable": "APP_DOCKERHUB_PULL_LIMIT_REMAINING_WINDOW_SECONDS"
@@ -1838,7 +1838,7 @@
         "total_pull_limit"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4231"
+        "src/truenas_exporter/runtime.py:4314"
       ],
       "source_kind": "method",
       "variable": "APP_DOCKERHUB_PULL_LIMIT_TOTAL"
@@ -1860,7 +1860,7 @@
         "total_time_limit_in_secs"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4235"
+        "src/truenas_exporter/runtime.py:4318"
       ],
       "source_kind": "method",
       "variable": "APP_DOCKERHUB_PULL_LIMIT_WINDOW_SECONDS"
@@ -1884,7 +1884,7 @@
         "error"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4247"
+        "src/truenas_exporter/runtime.py:4330"
       ],
       "source_kind": "method",
       "variable": "APP_DOCKERHUB_RATE_LIMIT_ERROR_PRESENT"
@@ -1913,7 +1913,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2323",
         "src/truenas_exporter/runtime.py:2345",
-        "src/truenas_exporter/runtime.py:3197"
+        "src/truenas_exporter/runtime.py:3280"
       ],
       "source_kind": "method",
       "variable": "APP_IMAGE_UPDATES_AVAILABLE"
@@ -1969,7 +1969,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2325",
         "src/truenas_exporter/runtime.py:2348",
-        "src/truenas_exporter/runtime.py:3199"
+        "src/truenas_exporter/runtime.py:3282"
       ],
       "source_kind": "method",
       "variable": "APP_MIGRATED"
@@ -2052,7 +2052,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2321",
         "src/truenas_exporter/runtime.py:2339",
-        "src/truenas_exporter/runtime.py:3195"
+        "src/truenas_exporter/runtime.py:3278"
       ],
       "source_kind": "method",
       "variable": "APP_STATE"
@@ -2081,7 +2081,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2322",
         "src/truenas_exporter/runtime.py:2342",
-        "src/truenas_exporter/runtime.py:3196"
+        "src/truenas_exporter/runtime.py:3279"
       ],
       "source_kind": "method",
       "variable": "APP_UPGRADE_AVAILABLE"
@@ -2109,7 +2109,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2328",
         "src/truenas_exporter/runtime.py:2367",
-        "src/truenas_exporter/runtime.py:3202"
+        "src/truenas_exporter/runtime.py:3285"
       ],
       "source_kind": "method",
       "variable": "APP_USED_HOST_IP_COUNT"
@@ -2137,7 +2137,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2327",
         "src/truenas_exporter/runtime.py:2363",
-        "src/truenas_exporter/runtime.py:3201"
+        "src/truenas_exporter/runtime.py:3284"
       ],
       "source_kind": "method",
       "variable": "APP_USED_PORT_COUNT"
@@ -2161,7 +2161,7 @@
         "space.available"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4402"
+        "src/truenas_exporter/runtime.py:4485"
       ],
       "source_kind": "method",
       "variable": "AUDIT_DATASET_AVAILABLE_BYTES"
@@ -2185,7 +2185,7 @@
         "space.used"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4399"
+        "src/truenas_exporter/runtime.py:4482"
       ],
       "source_kind": "method",
       "variable": "AUDIT_DATASET_USED_BYTES"
@@ -2209,7 +2209,7 @@
         "quota"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4420"
+        "src/truenas_exporter/runtime.py:4503"
       ],
       "source_kind": "method",
       "variable": "AUDIT_QUOTA_BYTES"
@@ -2233,7 +2233,7 @@
         "quota_fill_critical"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4410"
+        "src/truenas_exporter/runtime.py:4493"
       ],
       "source_kind": "method",
       "variable": "AUDIT_QUOTA_FILL_CRITICAL_PERCENT"
@@ -2257,7 +2257,7 @@
         "quota_fill_warning"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4406"
+        "src/truenas_exporter/runtime.py:4489"
       ],
       "source_kind": "method",
       "variable": "AUDIT_QUOTA_FILL_WARNING_PERCENT"
@@ -2281,7 +2281,7 @@
         "remote_logging_enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4424"
+        "src/truenas_exporter/runtime.py:4507"
       ],
       "source_kind": "method",
       "variable": "AUDIT_REMOTE_LOGGING_ENABLED"
@@ -2305,7 +2305,7 @@
         "reservation"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4417"
+        "src/truenas_exporter/runtime.py:4500"
       ],
       "source_kind": "method",
       "variable": "AUDIT_RESERVATION_BYTES"
@@ -2329,7 +2329,7 @@
         "retention"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4414"
+        "src/truenas_exporter/runtime.py:4497"
       ],
       "source_kind": "method",
       "variable": "AUDIT_RETENTION_DAYS"
@@ -2353,7 +2353,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2955"
+        "src/truenas_exporter/runtime.py:3038"
       ],
       "source_kind": "method",
       "variable": "AUTH_SESSIONS_ACTIVE"
@@ -2380,7 +2380,7 @@
         "activated"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3936"
+        "src/truenas_exporter/runtime.py:4019"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_ACTIVATED"
@@ -2404,7 +2404,7 @@
         "activated aggregate"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3945"
+        "src/truenas_exporter/runtime.py:4028"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_ACTIVATED_COUNT"
@@ -2431,8 +2431,8 @@
         "active"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3916",
-        "src/truenas_exporter/runtime.py:3934"
+        "src/truenas_exporter/runtime.py:3999",
+        "src/truenas_exporter/runtime.py:4017"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_ACTIVE"
@@ -2456,7 +2456,7 @@
         "active aggregate"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3944"
+        "src/truenas_exporter/runtime.py:4027"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_ACTIVE_COUNT"
@@ -2480,8 +2480,8 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3910",
-        "src/truenas_exporter/runtime.py:3912"
+        "src/truenas_exporter/runtime.py:3993",
+        "src/truenas_exporter/runtime.py:3995"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_COUNT"
@@ -2507,8 +2507,8 @@
         "keep"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3917",
-        "src/truenas_exporter/runtime.py:3938"
+        "src/truenas_exporter/runtime.py:4000",
+        "src/truenas_exporter/runtime.py:4021"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_KEEP"
@@ -2532,7 +2532,7 @@
         "keep aggregate"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3946"
+        "src/truenas_exporter/runtime.py:4029"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_KEEP_COUNT"
@@ -2556,8 +2556,8 @@
         "used_bytes"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3918",
-        "src/truenas_exporter/runtime.py:3941"
+        "src/truenas_exporter/runtime.py:4001",
+        "src/truenas_exporter/runtime.py:4024"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_SIZE_BYTES"
@@ -2583,7 +2583,7 @@
         "used_bytes"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3942"
+        "src/truenas_exporter/runtime.py:4025"
       ],
       "source_kind": "method",
       "variable": "BOOT_ENV_USED_BYTES"
@@ -2728,7 +2728,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2429",
         "src/truenas_exporter/runtime.py:2431",
-        "src/truenas_exporter/runtime.py:3151"
+        "src/truenas_exporter/runtime.py:3234"
       ],
       "source_kind": "method",
       "variable": "BOOT_POOL_SCAN_STATE"
@@ -2779,7 +2779,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2413",
         "src/truenas_exporter/runtime.py:2415",
-        "src/truenas_exporter/runtime.py:3150"
+        "src/truenas_exporter/runtime.py:3233"
       ],
       "source_kind": "method",
       "variable": "BOOT_POOL_STATUS"
@@ -2803,8 +2803,8 @@
         "response presence"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4303",
-        "src/truenas_exporter/runtime.py:4310"
+        "src/truenas_exporter/runtime.py:4386",
+        "src/truenas_exporter/runtime.py:4393"
       ],
       "source_kind": "method",
       "variable": "CATALOG_CONFIG_PRESENT"
@@ -2828,8 +2828,8 @@
         "preferred_trains length"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4306",
-        "src/truenas_exporter/runtime.py:4308"
+        "src/truenas_exporter/runtime.py:4389",
+        "src/truenas_exporter/runtime.py:4391"
       ],
       "source_kind": "method",
       "variable": "CATALOG_PREFERRED_TRAIN_COUNT"
@@ -2853,7 +2853,7 @@
         "row/key count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4294"
+        "src/truenas_exporter/runtime.py:4377"
       ],
       "source_kind": "method",
       "variable": "CATALOG_TRAIN_COUNT"
@@ -2904,7 +2904,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2462",
         "src/truenas_exporter/runtime.py:2472",
-        "src/truenas_exporter/runtime.py:3215"
+        "src/truenas_exporter/runtime.py:3298"
       ],
       "source_kind": "method",
       "variable": "CERT_DAYS_TO_EXPIRY"
@@ -2954,8 +2954,8 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3238",
-        "src/truenas_exporter/runtime.py:4362"
+        "src/truenas_exporter/runtime.py:3321",
+        "src/truenas_exporter/runtime.py:4445"
       ],
       "source_kind": "method",
       "variable": "CHASSIS_HARDWARE"
@@ -2979,7 +2979,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4537"
+        "src/truenas_exporter/runtime.py:4620"
       ],
       "source_kind": "method",
       "variable": "CLOUD_BACKUP_TASK_COUNT"
@@ -3004,8 +3004,8 @@
         "enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3259",
-        "src/truenas_exporter/runtime.py:4546"
+        "src/truenas_exporter/runtime.py:3342",
+        "src/truenas_exporter/runtime.py:4629"
       ],
       "source_kind": "method",
       "variable": "CLOUD_BACKUP_TASK_ENABLED"
@@ -3031,7 +3031,7 @@
         "job.state"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3260"
+        "src/truenas_exporter/runtime.py:3343"
       ],
       "source_kind": "composed/internal",
       "variable": "CLOUD_BACKUP_TASK_STATE"
@@ -3061,7 +3061,7 @@
         "src/truenas_exporter/runtime.py:927",
         "src/truenas_exporter/runtime.py:1445",
         "src/truenas_exporter/runtime.py:1447",
-        "src/truenas_exporter/runtime.py:4437"
+        "src/truenas_exporter/runtime.py:4520"
       ],
       "source_kind": "internal",
       "variable": "COLLECTOR_ERRORS_TOTAL"
@@ -3293,7 +3293,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4569"
+        "src/truenas_exporter/runtime.py:4652"
       ],
       "source_kind": "method",
       "variable": "CRONJOB_COUNT"
@@ -3318,8 +3318,8 @@
         "enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3261",
-        "src/truenas_exporter/runtime.py:4577"
+        "src/truenas_exporter/runtime.py:3344",
+        "src/truenas_exporter/runtime.py:4660"
       ],
       "source_kind": "method",
       "variable": "CRONJOB_ENABLED"
@@ -3346,7 +3346,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2599",
-        "src/truenas_exporter/runtime.py:3177"
+        "src/truenas_exporter/runtime.py:3260"
       ],
       "source_kind": "method",
       "variable": "DATASET_ATIME"
@@ -3375,7 +3375,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2562",
-        "src/truenas_exporter/runtime.py:3164"
+        "src/truenas_exporter/runtime.py:3247"
       ],
       "source_kind": "method",
       "variable": "DATASET_AVAILABLE_BYTES"
@@ -3403,7 +3403,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2595",
-        "src/truenas_exporter/runtime.py:3169"
+        "src/truenas_exporter/runtime.py:3252"
       ],
       "source_kind": "method",
       "variable": "DATASET_COMPRESSION_RATIO"
@@ -3454,7 +3454,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2623",
-        "src/truenas_exporter/runtime.py:3185"
+        "src/truenas_exporter/runtime.py:3268"
       ],
       "source_kind": "method",
       "variable": "DATASET_CREATION_TS"
@@ -3481,7 +3481,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2619",
-        "src/truenas_exporter/runtime.py:3170"
+        "src/truenas_exporter/runtime.py:3253"
       ],
       "source_kind": "method",
       "variable": "DATASET_ENCRYPTED"
@@ -3508,7 +3508,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2600",
-        "src/truenas_exporter/runtime.py:3178"
+        "src/truenas_exporter/runtime.py:3261"
       ],
       "source_kind": "method",
       "variable": "DATASET_EXEC"
@@ -3535,7 +3535,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2601",
-        "src/truenas_exporter/runtime.py:3179"
+        "src/truenas_exporter/runtime.py:3262"
       ],
       "source_kind": "method",
       "variable": "DATASET_KEY_LOADED"
@@ -3562,7 +3562,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2602",
-        "src/truenas_exporter/runtime.py:3180"
+        "src/truenas_exporter/runtime.py:3263"
       ],
       "source_kind": "method",
       "variable": "DATASET_LOCKED"
@@ -3589,7 +3589,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2575",
-        "src/truenas_exporter/runtime.py:3166"
+        "src/truenas_exporter/runtime.py:3249"
       ],
       "source_kind": "method",
       "variable": "DATASET_QUOTA_BYTES"
@@ -3616,7 +3616,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2609",
-        "src/truenas_exporter/runtime.py:3182"
+        "src/truenas_exporter/runtime.py:3265"
       ],
       "source_kind": "method",
       "variable": "DATASET_QUOTA_CRITICAL_PERCENT"
@@ -3643,7 +3643,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2608",
-        "src/truenas_exporter/runtime.py:3181"
+        "src/truenas_exporter/runtime.py:3264"
       ],
       "source_kind": "method",
       "variable": "DATASET_QUOTA_WARNING_PERCENT"
@@ -3670,7 +3670,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2598",
-        "src/truenas_exporter/runtime.py:3176"
+        "src/truenas_exporter/runtime.py:3259"
       ],
       "source_kind": "method",
       "variable": "DATASET_READONLY"
@@ -3694,7 +3694,7 @@
         "referenced.parsed (not documented in 25.10.2 result)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3165"
+        "src/truenas_exporter/runtime.py:3248"
       ],
       "source_kind": "method",
       "variable": "DATASET_REFERENCED_BYTES"
@@ -3721,7 +3721,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2576",
-        "src/truenas_exporter/runtime.py:3167"
+        "src/truenas_exporter/runtime.py:3250"
       ],
       "source_kind": "method",
       "variable": "DATASET_REFQUOTA_BYTES"
@@ -3748,7 +3748,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2611",
-        "src/truenas_exporter/runtime.py:3184"
+        "src/truenas_exporter/runtime.py:3267"
       ],
       "source_kind": "method",
       "variable": "DATASET_REFQUOTA_CRITICAL_PERCENT"
@@ -3775,7 +3775,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2610",
-        "src/truenas_exporter/runtime.py:3183"
+        "src/truenas_exporter/runtime.py:3266"
       ],
       "source_kind": "method",
       "variable": "DATASET_REFQUOTA_WARNING_PERCENT"
@@ -3802,7 +3802,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2564",
-        "src/truenas_exporter/runtime.py:3172"
+        "src/truenas_exporter/runtime.py:3255"
       ],
       "source_kind": "method",
       "variable": "DATASET_REFRESERVATION_BYTES"
@@ -3830,7 +3830,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2563",
-        "src/truenas_exporter/runtime.py:3171"
+        "src/truenas_exporter/runtime.py:3254"
       ],
       "source_kind": "method",
       "variable": "DATASET_RESERVATION_BYTES"
@@ -3858,7 +3858,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2590",
-        "src/truenas_exporter/runtime.py:3168"
+        "src/truenas_exporter/runtime.py:3251"
       ],
       "source_kind": "method",
       "variable": "DATASET_SNAPSHOT_COUNT"
@@ -3885,7 +3885,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2565",
-        "src/truenas_exporter/runtime.py:3173"
+        "src/truenas_exporter/runtime.py:3256"
       ],
       "source_kind": "method",
       "variable": "DATASET_USED_BY_CHILDREN_BYTES"
@@ -3912,7 +3912,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2566",
-        "src/truenas_exporter/runtime.py:3174"
+        "src/truenas_exporter/runtime.py:3257"
       ],
       "source_kind": "method",
       "variable": "DATASET_USED_BY_DATASET_BYTES"
@@ -3940,7 +3940,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2567",
-        "src/truenas_exporter/runtime.py:3175"
+        "src/truenas_exporter/runtime.py:3258"
       ],
       "source_kind": "method",
       "variable": "DATASET_USED_BY_SNAPSHOTS_BYTES"
@@ -3970,7 +3970,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2561",
-        "src/truenas_exporter/runtime.py:3163"
+        "src/truenas_exporter/runtime.py:3246"
       ],
       "source_kind": "method",
       "variable": "DATASET_USED_BYTES"
@@ -4014,7 +4014,7 @@
         "type"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2753"
+        "src/truenas_exporter/runtime.py:2836"
       ],
       "source_kind": "method",
       "variable": "DIRECTORYSERVICES_CONFIG_ENABLED"
@@ -4060,7 +4060,7 @@
         "status"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2752"
+        "src/truenas_exporter/runtime.py:2835"
       ],
       "source_kind": "method",
       "variable": "DIRECTORYSERVICES_FAULT_PRESENT"
@@ -4085,8 +4085,8 @@
         "status/message"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2737",
-        "src/truenas_exporter/runtime.py:2761"
+        "src/truenas_exporter/runtime.py:2820",
+        "src/truenas_exporter/runtime.py:2844"
       ],
       "source_kind": "method",
       "variable": "DIRECTORYSERVICES_FAULT_REASON"
@@ -4112,9 +4112,9 @@
         "status"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2736",
-        "src/truenas_exporter/runtime.py:2751",
-        "src/truenas_exporter/runtime.py:3217"
+        "src/truenas_exporter/runtime.py:2819",
+        "src/truenas_exporter/runtime.py:2834",
+        "src/truenas_exporter/runtime.py:3300"
       ],
       "source_kind": "method",
       "variable": "DIRECTORYSERVICES_HEALTHY"
@@ -4158,8 +4158,8 @@
         "type"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2755",
-        "src/truenas_exporter/runtime.py:3266"
+        "src/truenas_exporter/runtime.py:2838",
+        "src/truenas_exporter/runtime.py:3349"
       ],
       "source_kind": "method",
       "variable": "DIRECTORYSERVICES_SERVICE_TYPE"
@@ -4184,9 +4184,9 @@
         "type/status"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2735",
-        "src/truenas_exporter/runtime.py:2750",
-        "src/truenas_exporter/runtime.py:3216"
+        "src/truenas_exporter/runtime.py:2818",
+        "src/truenas_exporter/runtime.py:2833",
+        "src/truenas_exporter/runtime.py:3299"
       ],
       "source_kind": "method",
       "variable": "DIRECTORYSERVICES_STATUS"
@@ -4259,7 +4259,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3567"
+        "src/truenas_exporter/runtime.py:3650"
       ],
       "source_kind": "method",
       "variable": "DISK_COUNT"
@@ -4285,8 +4285,8 @@
         "pool"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3262",
-        "src/truenas_exporter/runtime.py:3579"
+        "src/truenas_exporter/runtime.py:3345",
+        "src/truenas_exporter/runtime.py:3662"
       ],
       "source_kind": "method",
       "variable": "DISK_IN_USE"
@@ -4313,8 +4313,8 @@
         "name/model/bus; serial deliberately redacted"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2979",
-        "src/truenas_exporter/runtime.py:2995"
+        "src/truenas_exporter/runtime.py:3062",
+        "src/truenas_exporter/runtime.py:3078"
       ],
       "source_kind": "method",
       "variable": "DISK_INFO"
@@ -4394,10 +4394,10 @@
         "rotationrate/type"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2987",
-        "src/truenas_exporter/runtime.py:2989",
-        "src/truenas_exporter/runtime.py:2991",
-        "src/truenas_exporter/runtime.py:3233"
+        "src/truenas_exporter/runtime.py:3070",
+        "src/truenas_exporter/runtime.py:3072",
+        "src/truenas_exporter/runtime.py:3074",
+        "src/truenas_exporter/runtime.py:3316"
       ],
       "source_kind": "method",
       "variable": "DISK_ROTATIONAL"
@@ -4425,8 +4425,8 @@
         "size"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3186",
-        "src/truenas_exporter/runtime.py:3584"
+        "src/truenas_exporter/runtime.py:3269",
+        "src/truenas_exporter/runtime.py:3667"
       ],
       "source_kind": "method",
       "variable": "DISK_SIZE_BYTES"
@@ -4450,7 +4450,7 @@
         "smartoptions (no documented enabled field)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3234"
+        "src/truenas_exporter/runtime.py:3317"
       ],
       "source_kind": "method",
       "variable": "DISK_SMART_ENABLED"
@@ -4475,8 +4475,8 @@
         "result[disk].min/max/avg"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3189",
-        "src/truenas_exporter/runtime.py:3595"
+        "src/truenas_exporter/runtime.py:3272",
+        "src/truenas_exporter/runtime.py:3678"
       ],
       "source_kind": "method",
       "variable": "DISK_TEMP_AGG_C"
@@ -4500,7 +4500,7 @@
         "alert row count by disk"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3188"
+        "src/truenas_exporter/runtime.py:3271"
       ],
       "source_kind": "method",
       "variable": "DISK_TEMP_ALERT_COUNT"
@@ -4529,8 +4529,8 @@
         "result[disk]"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3187",
-        "src/truenas_exporter/runtime.py:3612"
+        "src/truenas_exporter/runtime.py:3270",
+        "src/truenas_exporter/runtime.py:3695"
       ],
       "source_kind": "method",
       "variable": "DISK_TEMPERATURE_C"
@@ -4608,7 +4608,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4832"
+        "src/truenas_exporter/runtime.py:4915"
       ],
       "source_kind": "method",
       "variable": "DNS_RESOLVER_COUNT"
@@ -4632,7 +4632,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4793"
+        "src/truenas_exporter/runtime.py:4876"
       ],
       "source_kind": "method",
       "variable": "DOCKER_IMAGE_COUNT"
@@ -4656,7 +4656,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3395"
+        "src/truenas_exporter/runtime.py:3478"
       ],
       "source_kind": "method",
       "variable": "DOCKER_NETWORK_COUNT"
@@ -4680,7 +4680,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3392"
+        "src/truenas_exporter/runtime.py:3475"
       ],
       "source_kind": "method",
       "variable": "DOCKER_NVIDIA_PRESENT"
@@ -4706,9 +4706,9 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3248",
-        "src/truenas_exporter/runtime.py:3409",
-        "src/truenas_exporter/runtime.py:3410"
+        "src/truenas_exporter/runtime.py:3331",
+        "src/truenas_exporter/runtime.py:3492",
+        "src/truenas_exporter/runtime.py:3493"
       ],
       "source_kind": "method",
       "variable": "DOCKER_STATUS"
@@ -5387,9 +5387,9 @@
         "result items"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3089",
-        "src/truenas_exporter/runtime.py:3094",
-        "src/truenas_exporter/runtime.py:3222"
+        "src/truenas_exporter/runtime.py:3172",
+        "src/truenas_exporter/runtime.py:3177",
+        "src/truenas_exporter/runtime.py:3305"
       ],
       "source_kind": "method",
       "variable": "FAILOVER_DISABLED_REASON"
@@ -5413,7 +5413,7 @@
         "result length"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3091"
+        "src/truenas_exporter/runtime.py:3174"
       ],
       "source_kind": "method",
       "variable": "FAILOVER_DISABLED_REASON_COUNT"
@@ -5437,7 +5437,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4106"
+        "src/truenas_exporter/runtime.py:4189"
       ],
       "source_kind": "method",
       "variable": "FC_HOST_COUNT"
@@ -5461,7 +5461,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4112"
+        "src/truenas_exporter/runtime.py:4195"
       ],
       "source_kind": "method",
       "variable": "FC_PORT_COUNT"
@@ -5531,8 +5531,8 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4342",
-        "src/truenas_exporter/runtime.py:4346"
+        "src/truenas_exporter/runtime.py:4425",
+        "src/truenas_exporter/runtime.py:4429"
       ],
       "source_kind": "method",
       "variable": "FEATURE_ENABLED"
@@ -5578,7 +5578,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4324"
+        "src/truenas_exporter/runtime.py:4407"
       ],
       "source_kind": "method",
       "variable": "FIPS_AVAILABLE"
@@ -5602,7 +5602,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4332"
+        "src/truenas_exporter/runtime.py:4415"
       ],
       "source_kind": "method",
       "variable": "FIPS_ENABLED"
@@ -5627,7 +5627,7 @@
         "enable"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4638"
+        "src/truenas_exporter/runtime.py:4721"
       ],
       "source_kind": "method",
       "variable": "FTP_ENABLED"
@@ -5653,7 +5653,7 @@
         "available_to_host"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2924"
+        "src/truenas_exporter/runtime.py:3007"
       ],
       "source_kind": "method",
       "variable": "GPU_AVAILABLE_TO_HOST"
@@ -5677,7 +5677,7 @@
         "GPU row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2903"
+        "src/truenas_exporter/runtime.py:2986"
       ],
       "source_kind": "method",
       "variable": "GPU_COUNT"
@@ -5706,9 +5706,9 @@
         "devices[].pci_id"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2904",
-        "src/truenas_exporter/runtime.py:2916",
-        "src/truenas_exporter/runtime.py:3232"
+        "src/truenas_exporter/runtime.py:2987",
+        "src/truenas_exporter/runtime.py:2999",
+        "src/truenas_exporter/runtime.py:3315"
       ],
       "source_kind": "method",
       "variable": "GPU_INFO"
@@ -5734,7 +5734,7 @@
         "uses_system_critical_devices"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2931"
+        "src/truenas_exporter/runtime.py:3014"
       ],
       "source_kind": "method",
       "variable": "GPU_USES_CRITICAL_DEVICES"
@@ -5784,7 +5784,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2186",
-        "src/truenas_exporter/runtime.py:3235"
+        "src/truenas_exporter/runtime.py:3318"
       ],
       "source_kind": "method",
       "variable": "HOST_CPU_MODEL"
@@ -5839,7 +5839,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2152",
-        "src/truenas_exporter/runtime.py:3244"
+        "src/truenas_exporter/runtime.py:3327"
       ],
       "source_kind": "method",
       "variable": "HOST_INFO"
@@ -5940,7 +5940,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:2196",
-        "src/truenas_exporter/runtime.py:3236"
+        "src/truenas_exporter/runtime.py:3319"
       ],
       "source_kind": "method",
       "variable": "HOST_SYSTEM_INFO"
@@ -5988,8 +5988,8 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3237",
-        "src/truenas_exporter/runtime.py:3979"
+        "src/truenas_exporter/runtime.py:3320",
+        "src/truenas_exporter/runtime.py:4062"
       ],
       "source_kind": "method",
       "variable": "HW_VIRT_VARIANT"
@@ -6013,7 +6013,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4733"
+        "src/truenas_exporter/runtime.py:4816"
       ],
       "source_kind": "method",
       "variable": "INITSHUTDOWNSCRIPT_COUNT"
@@ -6037,7 +6037,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4198"
+        "src/truenas_exporter/runtime.py:4281"
       ],
       "source_kind": "method",
       "variable": "INTERFACE_CHECKIN_WAITING_SECONDS"
@@ -6061,7 +6061,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3620"
+        "src/truenas_exporter/runtime.py:3703"
       ],
       "source_kind": "method",
       "variable": "INTERFACE_COUNT"
@@ -6085,7 +6085,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4188"
+        "src/truenas_exporter/runtime.py:4271"
       ],
       "source_kind": "method",
       "variable": "INTERFACE_HAS_PENDING_CHANGES"
@@ -6112,8 +6112,8 @@
         "state.link_state"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3190",
-        "src/truenas_exporter/runtime.py:3638"
+        "src/truenas_exporter/runtime.py:3273",
+        "src/truenas_exporter/runtime.py:3721"
       ],
       "source_kind": "method",
       "variable": "INTERFACE_LINK_UP"
@@ -6139,8 +6139,8 @@
         "state.mtu/mtu"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3191",
-        "src/truenas_exporter/runtime.py:3647"
+        "src/truenas_exporter/runtime.py:3274",
+        "src/truenas_exporter/runtime.py:3730"
       ],
       "source_kind": "method",
       "variable": "INTERFACE_MTU"
@@ -6165,8 +6165,8 @@
         "type"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3192",
-        "src/truenas_exporter/runtime.py:3652"
+        "src/truenas_exporter/runtime.py:3275",
+        "src/truenas_exporter/runtime.py:3735"
       ],
       "source_kind": "method",
       "variable": "INTERFACE_TYPE"
@@ -6190,7 +6190,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4944"
+        "src/truenas_exporter/runtime.py:5027"
       ],
       "source_kind": "method",
       "variable": "IOMMU_ENABLED"
@@ -6214,7 +6214,7 @@
         "drive_fault"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2809"
+        "src/truenas_exporter/runtime.py:2892"
       ],
       "source_kind": "method",
       "variable": "IPMI_CHASSIS_DRIVE_FAULT"
@@ -6238,7 +6238,7 @@
         "cooling/fan_fault"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2813"
+        "src/truenas_exporter/runtime.py:2896"
       ],
       "source_kind": "method",
       "variable": "IPMI_CHASSIS_FAN_FAULT"
@@ -6262,7 +6262,7 @@
         "chassis_intrusion"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2805"
+        "src/truenas_exporter/runtime.py:2888"
       ],
       "source_kind": "method",
       "variable": "IPMI_CHASSIS_INTRUSION"
@@ -6286,7 +6286,7 @@
         "system_power"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2796"
+        "src/truenas_exporter/runtime.py:2879"
       ],
       "source_kind": "method",
       "variable": "IPMI_CHASSIS_POWER_ON"
@@ -6310,7 +6310,7 @@
         "power_overload"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2801"
+        "src/truenas_exporter/runtime.py:2884"
       ],
       "source_kind": "method",
       "variable": "IPMI_CHASSIS_POWER_OVERLOAD"
@@ -6334,7 +6334,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2786"
+        "src/truenas_exporter/runtime.py:2869"
       ],
       "source_kind": "method",
       "variable": "IPMI_LOADED"
@@ -6358,7 +6358,7 @@
         "number_of_log_entries"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2826"
+        "src/truenas_exporter/runtime.py:2909"
       ],
       "source_kind": "method",
       "variable": "IPMI_SEL_ENTRY_COUNT"
@@ -6382,7 +6382,7 @@
         "free_space_remaining"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2829"
+        "src/truenas_exporter/runtime.py:2912"
       ],
       "source_kind": "method",
       "variable": "IPMI_SEL_FREE_SPACE_BYTES"
@@ -6406,7 +6406,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3080"
+        "src/truenas_exporter/runtime.py:3163"
       ],
       "source_kind": "method",
       "variable": "TRUENAS_IS_IX_HARDWARE"
@@ -6430,7 +6430,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3071"
+        "src/truenas_exporter/runtime.py:3154"
       ],
       "source_kind": "method",
       "variable": "TRUENAS_IS_PRODUCTION"
@@ -6454,7 +6454,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4150"
+        "src/truenas_exporter/runtime.py:4233"
       ],
       "source_kind": "method",
       "variable": "ISCSI_ALUA_ENABLED"
@@ -6479,7 +6479,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3447"
+        "src/truenas_exporter/runtime.py:3530"
       ],
       "source_kind": "method",
       "variable": "ISCSI_CLIENT_COUNT"
@@ -6503,7 +6503,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4754"
+        "src/truenas_exporter/runtime.py:4837"
       ],
       "source_kind": "method",
       "variable": "ISCSI_EXTENT_COUNT"
@@ -6527,7 +6527,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4755"
+        "src/truenas_exporter/runtime.py:4838"
       ],
       "source_kind": "method",
       "variable": "ISCSI_INITIATOR_COUNT"
@@ -6551,7 +6551,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4158"
+        "src/truenas_exporter/runtime.py:4241"
       ],
       "source_kind": "method",
       "variable": "ISCSI_ISER_ENABLED"
@@ -6575,7 +6575,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4753"
+        "src/truenas_exporter/runtime.py:4836"
       ],
       "source_kind": "method",
       "variable": "ISCSI_PORTAL_COUNT"
@@ -6599,7 +6599,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4163"
+        "src/truenas_exporter/runtime.py:4246"
       ],
       "source_kind": "method",
       "variable": "ISCSI_SESSION_COUNT"
@@ -6623,7 +6623,7 @@
         "count mode with filter immediate_data = true"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4170"
+        "src/truenas_exporter/runtime.py:4253"
       ],
       "source_kind": "method",
       "variable": "ISCSI_SESSION_IMMEDIATE_DATA_COUNT"
@@ -6647,7 +6647,7 @@
         "count mode with filter iser = true"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4164"
+        "src/truenas_exporter/runtime.py:4247"
       ],
       "source_kind": "method",
       "variable": "ISCSI_SESSION_ISER_COUNT"
@@ -6671,7 +6671,7 @@
         "count mode with filter offload = true"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4167"
+        "src/truenas_exporter/runtime.py:4250"
       ],
       "source_kind": "method",
       "variable": "ISCSI_SESSION_OFFLOAD_COUNT"
@@ -6695,7 +6695,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4752"
+        "src/truenas_exporter/runtime.py:4835"
       ],
       "source_kind": "method",
       "variable": "ISCSI_TARGET_COUNT"
@@ -6719,7 +6719,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2944"
+        "src/truenas_exporter/runtime.py:3027"
       ],
       "source_kind": "method",
       "variable": "JBOF_COUNT"
@@ -6798,7 +6798,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1232",
         "src/truenas_exporter/runtime.py:1321",
-        "src/truenas_exporter/runtime.py:3210"
+        "src/truenas_exporter/runtime.py:3293"
       ],
       "source_kind": "method",
       "variable": "JOB_ACTIVE_COUNT_BY_METHOD"
@@ -6826,7 +6826,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1231",
         "src/truenas_exporter/runtime.py:1251",
-        "src/truenas_exporter/runtime.py:3209"
+        "src/truenas_exporter/runtime.py:3292"
       ],
       "source_kind": "method",
       "variable": "JOB_ACTIVE_COUNT_BY_STATE"
@@ -6854,7 +6854,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1233",
         "src/truenas_exporter/runtime.py:1323",
-        "src/truenas_exporter/runtime.py:3211"
+        "src/truenas_exporter/runtime.py:3294"
       ],
       "source_kind": "method",
       "variable": "JOB_OLDEST_ACTIVE_TS"
@@ -6883,7 +6883,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1234",
         "src/truenas_exporter/runtime.py:1325",
-        "src/truenas_exporter/runtime.py:3212"
+        "src/truenas_exporter/runtime.py:3295"
       ],
       "source_kind": "method",
       "variable": "JOB_PROGRESS_PERCENT"
@@ -6932,7 +6932,7 @@
         "count mode result; no credential fields fetched"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4734"
+        "src/truenas_exporter/runtime.py:4817"
       ],
       "source_kind": "method",
       "variable": "KEYCHAIN_CREDENTIAL_COUNT"
@@ -6976,7 +6976,7 @@
         "exporter-owned state"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3134"
+        "src/truenas_exporter/runtime.py:3217"
       ],
       "source_kind": "internal",
       "variable": "LAST_SCRAPE_TS"
@@ -7000,7 +7000,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4729"
+        "src/truenas_exporter/runtime.py:4812"
       ],
       "source_kind": "method",
       "variable": "LOCAL_GROUP_COUNT"
@@ -7024,7 +7024,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4728"
+        "src/truenas_exporter/runtime.py:4811"
       ],
       "source_kind": "method",
       "variable": "LOCAL_USER_COUNT"
@@ -7066,7 +7066,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3848"
+        "src/truenas_exporter/runtime.py:3931"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_MANAGED_BY_TRUECOMMAND"
@@ -7688,7 +7688,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1484",
-        "src/truenas_exporter/runtime.py:3240"
+        "src/truenas_exporter/runtime.py:3323"
       ],
       "source_kind": "generic method",
       "variable": "METHOD_BOOLEAN_VALUE"
@@ -8111,7 +8111,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1503",
-        "src/truenas_exporter/runtime.py:3242"
+        "src/truenas_exporter/runtime.py:3325"
       ],
       "source_kind": "generic method",
       "variable": "METHOD_LIST_LENGTH"
@@ -8535,7 +8535,7 @@
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1489",
         "src/truenas_exporter/runtime.py:1495",
-        "src/truenas_exporter/runtime.py:3239"
+        "src/truenas_exporter/runtime.py:3322"
       ],
       "source_kind": "generic method",
       "variable": "METHOD_NUMERIC_VALUE"
@@ -8959,7 +8959,7 @@
       ],
       "runtime_evidence": [
         "src/truenas_exporter/runtime.py:1499",
-        "src/truenas_exporter/runtime.py:3241"
+        "src/truenas_exporter/runtime.py:3324"
       ],
       "source_kind": "generic method",
       "variable": "METHOD_STATUS_VALUE"
@@ -8983,7 +8983,7 @@
         "network matches a default-route sentinel"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3061"
+        "src/truenas_exporter/runtime.py:3144"
       ],
       "source_kind": "method",
       "variable": "NETWORK_DEFAULT_GATEWAY_CONFIGURED"
@@ -9007,7 +9007,7 @@
         "default_routes length"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3382"
+        "src/truenas_exporter/runtime.py:3465"
       ],
       "source_kind": "method",
       "variable": "NETWORK_DEFAULT_ROUTES"
@@ -9029,7 +9029,7 @@
         "network matches a default-route sentinel (configuration only)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3060"
+        "src/truenas_exporter/runtime.py:3143"
       ],
       "source_kind": "method",
       "variable": "NETWORK_GATEWAY_REACHABLE"
@@ -9073,7 +9073,7 @@
         "nameservers length"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3385"
+        "src/truenas_exporter/runtime.py:3468"
       ],
       "source_kind": "method",
       "variable": "NETWORK_NAMESERVERS"
@@ -9150,7 +9150,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3421"
+        "src/truenas_exporter/runtime.py:3504"
       ],
       "source_kind": "method",
       "variable": "NFS_CLIENT_COUNT"
@@ -9174,7 +9174,7 @@
         "rdma"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4621"
+        "src/truenas_exporter/runtime.py:4704"
       ],
       "source_kind": "method",
       "variable": "NFS_RDMA_ENABLED"
@@ -9218,7 +9218,7 @@
         "servers"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4624"
+        "src/truenas_exporter/runtime.py:4707"
       ],
       "source_kind": "method",
       "variable": "NFS_SERVERS"
@@ -9242,7 +9242,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3012"
+        "src/truenas_exporter/runtime.py:3095"
       ],
       "source_kind": "method",
       "variable": "NFS_SHARE_COUNT"
@@ -9266,7 +9266,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3427"
+        "src/truenas_exporter/runtime.py:3510"
       ],
       "source_kind": "method",
       "variable": "NFS_V3_CLIENT_COUNT"
@@ -9290,7 +9290,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3434"
+        "src/truenas_exporter/runtime.py:3517"
       ],
       "source_kind": "method",
       "variable": "NFS_V4_CLIENT_COUNT"
@@ -9314,7 +9314,7 @@
         "protocols contains NFSV4"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4620"
+        "src/truenas_exporter/runtime.py:4703"
       ],
       "source_kind": "method",
       "variable": "NFS_V4_ENABLED"
@@ -9358,7 +9358,7 @@
         "burst"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4902"
+        "src/truenas_exporter/runtime.py:4985"
       ],
       "source_kind": "method",
       "variable": "NTP_SERVER_BURST_COUNT"
@@ -9382,7 +9382,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4860"
+        "src/truenas_exporter/runtime.py:4943"
       ],
       "source_kind": "method",
       "variable": "NTP_SERVER_COUNT"
@@ -9406,7 +9406,7 @@
         "iburst"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4903"
+        "src/truenas_exporter/runtime.py:4986"
       ],
       "source_kind": "method",
       "variable": "NTP_SERVER_IBURST_COUNT"
@@ -9430,7 +9430,7 @@
         "maxpoll exponent; 2**maxpoll / 60"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4907"
+        "src/truenas_exporter/runtime.py:4990"
       ],
       "source_kind": "method",
       "variable": "NTP_SERVER_MAX_POLL_MINUTES"
@@ -9454,7 +9454,7 @@
         "minpoll exponent; 2**minpoll / 60"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4905"
+        "src/truenas_exporter/runtime.py:4988"
       ],
       "source_kind": "method",
       "variable": "NTP_SERVER_MIN_POLL_MINUTES"
@@ -9476,7 +9476,7 @@
         "prefer"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4901"
+        "src/truenas_exporter/runtime.py:4984"
       ],
       "source_kind": "method",
       "variable": "NTP_SERVER_PREFER_COUNT"
@@ -9520,7 +9520,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4773"
+        "src/truenas_exporter/runtime.py:4856"
       ],
       "source_kind": "method",
       "variable": "NVMET_HOST_COUNT"
@@ -9544,7 +9544,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4774"
+        "src/truenas_exporter/runtime.py:4857"
       ],
       "source_kind": "method",
       "variable": "NVMET_NAMESPACE_COUNT"
@@ -9568,7 +9568,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4136"
+        "src/truenas_exporter/runtime.py:4219"
       ],
       "source_kind": "method",
       "variable": "NVMET_PORT_COUNT"
@@ -9594,7 +9594,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4124"
+        "src/truenas_exporter/runtime.py:4207"
       ],
       "source_kind": "method",
       "variable": "NVMET_SESSION_COUNT"
@@ -9618,7 +9618,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4130"
+        "src/truenas_exporter/runtime.py:4213"
       ],
       "source_kind": "method",
       "variable": "NVMET_SUBSYS_COUNT"
@@ -9647,8 +9647,8 @@
         "allocated"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3155",
-        "src/truenas_exporter/runtime.py:3480"
+        "src/truenas_exporter/runtime.py:3238",
+        "src/truenas_exporter/runtime.py:3563"
       ],
       "source_kind": "method",
       "variable": "POOL_ALLOCATED_BYTES"
@@ -9674,9 +9674,9 @@
         "autotrim.value"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3159",
-        "src/truenas_exporter/runtime.py:3495",
-        "src/truenas_exporter/runtime.py:3500"
+        "src/truenas_exporter/runtime.py:3242",
+        "src/truenas_exporter/runtime.py:3578",
+        "src/truenas_exporter/runtime.py:3583"
       ],
       "source_kind": "method",
       "variable": "POOL_AUTOTRIM_ENABLED"
@@ -9701,7 +9701,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3459"
+        "src/truenas_exporter/runtime.py:3542"
       ],
       "source_kind": "method",
       "variable": "POOL_COUNT"
@@ -9723,7 +9723,7 @@
       "prometheus_metric": "truenas_pool_dedup_ratio",
       "response_field": [],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3160"
+        "src/truenas_exporter/runtime.py:3243"
       ],
       "source_kind": "method",
       "variable": "POOL_DEDUP_RATIO"
@@ -9749,7 +9749,7 @@
         "dedup_table_size"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3507"
+        "src/truenas_exporter/runtime.py:3590"
       ],
       "source_kind": "method",
       "variable": "POOL_DEDUP_TABLE_SIZE_BYTES"
@@ -9775,7 +9775,7 @@
         "expand.percentage"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3524"
+        "src/truenas_exporter/runtime.py:3607"
       ],
       "source_kind": "method",
       "variable": "POOL_EXPAND_PERCENT"
@@ -9801,7 +9801,7 @@
         "expand.bytes_reflowed"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3519"
+        "src/truenas_exporter/runtime.py:3602"
       ],
       "source_kind": "method",
       "variable": "POOL_EXPAND_REFLOWED_BYTES"
@@ -9825,8 +9825,8 @@
         "expand.bytes_to_reflow"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3161",
-        "src/truenas_exporter/runtime.py:3522"
+        "src/truenas_exporter/runtime.py:3244",
+        "src/truenas_exporter/runtime.py:3605"
       ],
       "source_kind": "method",
       "variable": "POOL_EXPAND_SIZE_BYTES"
@@ -9852,7 +9852,7 @@
         "expand.bytes_to_reflow"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3521"
+        "src/truenas_exporter/runtime.py:3604"
       ],
       "source_kind": "method",
       "variable": "POOL_EXPAND_TO_REFLOW_BYTES"
@@ -9879,8 +9879,8 @@
         "fragmentation"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3158",
-        "src/truenas_exporter/runtime.py:3489"
+        "src/truenas_exporter/runtime.py:3241",
+        "src/truenas_exporter/runtime.py:3572"
       ],
       "source_kind": "method",
       "variable": "POOL_FRAGMENTATION"
@@ -9908,8 +9908,8 @@
         "free"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3156",
-        "src/truenas_exporter/runtime.py:3481"
+        "src/truenas_exporter/runtime.py:3239",
+        "src/truenas_exporter/runtime.py:3564"
       ],
       "source_kind": "method",
       "variable": "POOL_FREE_BYTES"
@@ -9936,8 +9936,8 @@
         "healthy"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3152",
-        "src/truenas_exporter/runtime.py:3468"
+        "src/truenas_exporter/runtime.py:3235",
+        "src/truenas_exporter/runtime.py:3551"
       ],
       "source_kind": "method",
       "variable": "POOL_HEALTHY"
@@ -9961,8 +9961,8 @@
         "scan.end_time"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3231",
-        "src/truenas_exporter/runtime.py:3554"
+        "src/truenas_exporter/runtime.py:3314",
+        "src/truenas_exporter/runtime.py:3637"
       ],
       "source_kind": "method",
       "variable": "POOL_LAST_SCAN_TS"
@@ -10110,7 +10110,7 @@
         "enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4516"
+        "src/truenas_exporter/runtime.py:4599"
       ],
       "source_kind": "method",
       "variable": "POOL_RESILVER_ENABLED"
@@ -10134,8 +10134,8 @@
         "scan.bytes_processed"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3228",
-        "src/truenas_exporter/runtime.py:3539"
+        "src/truenas_exporter/runtime.py:3311",
+        "src/truenas_exporter/runtime.py:3622"
       ],
       "source_kind": "method",
       "variable": "POOL_SCAN_BYTES_PROCESSED"
@@ -10159,8 +10159,8 @@
         "scan.bytes_to_process"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3229",
-        "src/truenas_exporter/runtime.py:3544"
+        "src/truenas_exporter/runtime.py:3312",
+        "src/truenas_exporter/runtime.py:3627"
       ],
       "source_kind": "method",
       "variable": "POOL_SCAN_BYTES_TOTAL"
@@ -10184,8 +10184,8 @@
         "scan.errors"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3227",
-        "src/truenas_exporter/runtime.py:3534"
+        "src/truenas_exporter/runtime.py:3310",
+        "src/truenas_exporter/runtime.py:3617"
       ],
       "source_kind": "method",
       "variable": "POOL_SCAN_ERRORS"
@@ -10211,8 +10211,8 @@
         "scan.percentage"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3157",
-        "src/truenas_exporter/runtime.py:3530"
+        "src/truenas_exporter/runtime.py:3240",
+        "src/truenas_exporter/runtime.py:3613"
       ],
       "source_kind": "method",
       "variable": "POOL_SCAN_PERCENT"
@@ -10236,8 +10236,8 @@
         "scan.total_secs_left"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3230",
-        "src/truenas_exporter/runtime.py:3549"
+        "src/truenas_exporter/runtime.py:3313",
+        "src/truenas_exporter/runtime.py:3632"
       ],
       "source_kind": "method",
       "variable": "POOL_SCAN_SECONDS_REMAINING"
@@ -10261,7 +10261,7 @@
         "no documented last-run result field"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3258"
+        "src/truenas_exporter/runtime.py:3341"
       ],
       "source_kind": "method",
       "variable": "POOL_SCRUB_LAST_RUN_TS"
@@ -10285,7 +10285,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4445"
+        "src/truenas_exporter/runtime.py:4528"
       ],
       "source_kind": "method",
       "variable": "POOL_SCRUB_TASK_COUNT"
@@ -10310,8 +10310,8 @@
         "enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3256",
-        "src/truenas_exporter/runtime.py:4456"
+        "src/truenas_exporter/runtime.py:3339",
+        "src/truenas_exporter/runtime.py:4539"
       ],
       "source_kind": "method",
       "variable": "POOL_SCRUB_TASK_ENABLED"
@@ -10336,7 +10336,7 @@
         "no documented task-state result field"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3257"
+        "src/truenas_exporter/runtime.py:3340"
       ],
       "source_kind": "method",
       "variable": "POOL_SCRUB_TASK_STATE"
@@ -10366,8 +10366,8 @@
         "size"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3154",
-        "src/truenas_exporter/runtime.py:3479"
+        "src/truenas_exporter/runtime.py:3237",
+        "src/truenas_exporter/runtime.py:3562"
       ],
       "source_kind": "method",
       "variable": "POOL_SIZE_BYTES"
@@ -10392,8 +10392,8 @@
         "status"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3153",
-        "src/truenas_exporter/runtime.py:3475"
+        "src/truenas_exporter/runtime.py:3236",
+        "src/truenas_exporter/runtime.py:3558"
       ],
       "source_kind": "method",
       "variable": "POOL_STATUS"
@@ -10418,8 +10418,8 @@
         "topology.stats.checksum_errors (schema opaque)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2858",
-        "src/truenas_exporter/runtime.py:3226"
+        "src/truenas_exporter/runtime.py:2941",
+        "src/truenas_exporter/runtime.py:3309"
       ],
       "source_kind": "method",
       "variable": "POOL_VDEV_CHECKSUM_ERRORS"
@@ -10444,8 +10444,8 @@
         "topology.stats.read_errors (schema opaque)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2856",
-        "src/truenas_exporter/runtime.py:3224"
+        "src/truenas_exporter/runtime.py:2939",
+        "src/truenas_exporter/runtime.py:3307"
       ],
       "source_kind": "method",
       "variable": "POOL_VDEV_READ_ERRORS"
@@ -10470,8 +10470,8 @@
         "topology.stats.write_errors (schema opaque)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2857",
-        "src/truenas_exporter/runtime.py:3225"
+        "src/truenas_exporter/runtime.py:2940",
+        "src/truenas_exporter/runtime.py:3308"
       ],
       "source_kind": "method",
       "variable": "POOL_VDEV_WRITE_ERRORS"
@@ -10495,8 +10495,8 @@
         "warning"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3162",
-        "src/truenas_exporter/runtime.py:3471"
+        "src/truenas_exporter/runtime.py:3245",
+        "src/truenas_exporter/runtime.py:3554"
       ],
       "source_kind": "method",
       "variable": "POOL_WARNING"
@@ -10520,7 +10520,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4732"
+        "src/truenas_exporter/runtime.py:4815"
       ],
       "source_kind": "method",
       "variable": "PRIVILEGE_COUNT"
@@ -10544,7 +10544,7 @@
         "max_parallel_replication_tasks"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4806"
+        "src/truenas_exporter/runtime.py:4889"
       ],
       "source_kind": "method",
       "variable": "REPLICATION_MAX_PARALLEL"
@@ -10569,7 +10569,7 @@
         "enable"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4825"
+        "src/truenas_exporter/runtime.py:4908"
       ],
       "source_kind": "method",
       "variable": "REPORTING_ENABLED"
@@ -10593,7 +10593,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4813"
+        "src/truenas_exporter/runtime.py:4896"
       ],
       "source_kind": "method",
       "variable": "REPORTING_EXPORTER_COUNT"
@@ -10617,7 +10617,7 @@
         "tier0_days/retention_tier0_days"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4850"
+        "src/truenas_exporter/runtime.py:4933"
       ],
       "source_kind": "method",
       "variable": "REPORTING_TIER0_RETENTION_DAYS"
@@ -10641,7 +10641,7 @@
         "tier1_days/retention_tier1_days"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4852"
+        "src/truenas_exporter/runtime.py:4935"
       ],
       "source_kind": "method",
       "variable": "REPORTING_TIER1_RETENTION_DAYS"
@@ -10665,7 +10665,7 @@
         "tier1_update_interval/tier1_update_interval_seconds"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4854"
+        "src/truenas_exporter/runtime.py:4937"
       ],
       "source_kind": "method",
       "variable": "REPORTING_TIER1_UPDATE_INTERVAL_SECONDS"
@@ -10690,7 +10690,7 @@
         "exporter-owned state"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3788"
+        "src/truenas_exporter/runtime.py:3871"
       ],
       "source_kind": "internal",
       "variable": "SCRAPE_DURATION"
@@ -10734,7 +10734,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3660"
+        "src/truenas_exporter/runtime.py:3743"
       ],
       "source_kind": "method",
       "variable": "SERVICE_COUNT"
@@ -10760,8 +10760,8 @@
         "enable"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3193",
-        "src/truenas_exporter/runtime.py:3669"
+        "src/truenas_exporter/runtime.py:3276",
+        "src/truenas_exporter/runtime.py:3752"
       ],
       "source_kind": "method",
       "variable": "SERVICE_ENABLED"
@@ -10790,8 +10790,8 @@
         "state.running/state"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3194",
-        "src/truenas_exporter/runtime.py:3673"
+        "src/truenas_exporter/runtime.py:3277",
+        "src/truenas_exporter/runtime.py:3756"
       ],
       "source_kind": "method",
       "variable": "SERVICE_RUNNING"
@@ -10859,7 +10859,7 @@
         "enable_smb1"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4604"
+        "src/truenas_exporter/runtime.py:4687"
       ],
       "source_kind": "method",
       "variable": "SMB1_ENABLED"
@@ -10883,7 +10883,7 @@
         "smb.status method absent from 25.10.2"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2882"
+        "src/truenas_exporter/runtime.py:2965"
       ],
       "source_kind": "unavailable/undocumented",
       "variable": "SMB_CONNECTION_COUNT"
@@ -10909,7 +10909,7 @@
         "encryption"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4608"
+        "src/truenas_exporter/runtime.py:4691"
       ],
       "source_kind": "method",
       "variable": "SMB_ENCRYPTION_MODE"
@@ -10933,7 +10933,7 @@
         "multichannel"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4603"
+        "src/truenas_exporter/runtime.py:4686"
       ],
       "source_kind": "method",
       "variable": "SMB_MULTICHANNEL_ENABLED"
@@ -10957,7 +10957,7 @@
         "ntlmv1_auth"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4605"
+        "src/truenas_exporter/runtime.py:4688"
       ],
       "source_kind": "method",
       "variable": "SMB_NTLMV1_AUTH_ENABLED"
@@ -10981,7 +10981,7 @@
         "smb.status method absent from 25.10.2"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2883"
+        "src/truenas_exporter/runtime.py:2966"
       ],
       "source_kind": "unavailable/undocumented",
       "variable": "SMB_OPEN_FILE_COUNT"
@@ -11005,7 +11005,7 @@
         "smb.status method absent from 25.10.2"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2881"
+        "src/truenas_exporter/runtime.py:2964"
       ],
       "source_kind": "unavailable/undocumented",
       "variable": "SMB_SESSION_COUNT"
@@ -11029,7 +11029,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3017"
+        "src/truenas_exporter/runtime.py:3100"
       ],
       "source_kind": "method",
       "variable": "SMB_SHARE_COUNT"
@@ -11053,7 +11053,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4468"
+        "src/truenas_exporter/runtime.py:4551"
       ],
       "source_kind": "method",
       "variable": "SNAPSHOT_TOTAL_COUNT"
@@ -11077,7 +11077,7 @@
         "properties.creation.parsed selected as creation_parsed"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4500"
+        "src/truenas_exporter/runtime.py:4583"
       ],
       "source_kind": "method",
       "variable": "SNAPSHOT_OLDEST_TS"
@@ -11099,7 +11099,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2711"
+        "src/truenas_exporter/runtime.py:2794"
       ],
       "source_kind": "method",
       "variable": "SNAPSHOT_TASK_MAX_COUNT"
@@ -11121,7 +11121,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2719"
+        "src/truenas_exporter/runtime.py:2802"
       ],
       "source_kind": "method",
       "variable": "SNAPSHOT_TASK_MAX_TOTAL_COUNT"
@@ -11146,7 +11146,7 @@
         "enable"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4642"
+        "src/truenas_exporter/runtime.py:4725"
       ],
       "source_kind": "method",
       "variable": "SNMP_ENABLED"
@@ -11171,7 +11171,7 @@
         "enable"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4631"
+        "src/truenas_exporter/runtime.py:4714"
       ],
       "source_kind": "method",
       "variable": "SSH_ENABLED"
@@ -11215,7 +11215,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4730"
+        "src/truenas_exporter/runtime.py:4813"
       ],
       "source_kind": "method",
       "variable": "STATIC_ROUTE_COUNT"
@@ -11237,7 +11237,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4686"
+        "src/truenas_exporter/runtime.py:4769"
       ],
       "source_kind": "method",
       "variable": "SUPPORT_AVAILABLE"
@@ -11261,7 +11261,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4697"
+        "src/truenas_exporter/runtime.py:4780"
       ],
       "source_kind": "method",
       "variable": "SUPPORT_AVAILABLE_AND_ENABLED"
@@ -11303,7 +11303,7 @@
         "result change detection"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3837"
+        "src/truenas_exporter/runtime.py:3920"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_BOOT_CHANGES_TOTAL"
@@ -11327,8 +11327,8 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3265",
-        "src/truenas_exporter/runtime.py:4669"
+        "src/truenas_exporter/runtime.py:3348",
+        "src/truenas_exporter/runtime.py:4752"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_GLOBAL_ID"
@@ -11352,9 +11352,9 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3247",
-        "src/truenas_exporter/runtime.py:3825",
-        "src/truenas_exporter/runtime.py:3826"
+        "src/truenas_exporter/runtime.py:3330",
+        "src/truenas_exporter/runtime.py:3908",
+        "src/truenas_exporter/runtime.py:3909"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_HOST_ID"
@@ -11378,9 +11378,9 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3245",
-        "src/truenas_exporter/runtime.py:3803",
-        "src/truenas_exporter/runtime.py:3804"
+        "src/truenas_exporter/runtime.py:3328",
+        "src/truenas_exporter/runtime.py:3886",
+        "src/truenas_exporter/runtime.py:3887"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_PRODUCT_TYPE"
@@ -11404,7 +11404,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3339"
+        "src/truenas_exporter/runtime.py:3422"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_READY"
@@ -11428,9 +11428,9 @@
         "reboot_required_reasons[].code"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3031",
-        "src/truenas_exporter/runtime.py:3045",
-        "src/truenas_exporter/runtime.py:3149"
+        "src/truenas_exporter/runtime.py:3114",
+        "src/truenas_exporter/runtime.py:3128",
+        "src/truenas_exporter/runtime.py:3232"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_REBOOT_REASON"
@@ -11454,8 +11454,8 @@
         "reboot_required_reasons"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3041",
-        "src/truenas_exporter/runtime.py:3043"
+        "src/truenas_exporter/runtime.py:3124",
+        "src/truenas_exporter/runtime.py:3126"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_REBOOT_REQUIRED"
@@ -11479,7 +11479,7 @@
         "enable_fips"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4923"
+        "src/truenas_exporter/runtime.py:5006"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_SECURITY_FIPS_CONFIGURED"
@@ -11503,7 +11503,7 @@
         "enable_gpos_stig"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4926"
+        "src/truenas_exporter/runtime.py:5009"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_SECURITY_GPOS_STIG"
@@ -11527,7 +11527,7 @@
         "password_history_length"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4933"
+        "src/truenas_exporter/runtime.py:5016"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_SECURITY_PASSWORD_HISTORY_COUNT"
@@ -11551,7 +11551,7 @@
         "max_password_age"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4932"
+        "src/truenas_exporter/runtime.py:5015"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_SECURITY_PASSWORD_MAX_AGE_DAYS"
@@ -11573,7 +11573,7 @@
         "min_password_age"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4931"
+        "src/truenas_exporter/runtime.py:5014"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_SECURITY_PASSWORD_MIN_AGE_DAYS"
@@ -11597,7 +11597,7 @@
         "min_password_length"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4930"
+        "src/truenas_exporter/runtime.py:5013"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_SECURITY_PASSWORD_MIN_LENGTH"
@@ -11641,8 +11641,8 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3148",
-        "src/truenas_exporter/runtime.py:3335"
+        "src/truenas_exporter/runtime.py:3231",
+        "src/truenas_exporter/runtime.py:3418"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_STATE"
@@ -11666,9 +11666,9 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3246",
-        "src/truenas_exporter/runtime.py:3816",
-        "src/truenas_exporter/runtime.py:3817"
+        "src/truenas_exporter/runtime.py:3329",
+        "src/truenas_exporter/runtime.py:3899",
+        "src/truenas_exporter/runtime.py:3900"
       ],
       "source_kind": "method",
       "variable": "SYSTEM_VERSION"
@@ -11692,8 +11692,8 @@
         "pool"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3264",
-        "src/truenas_exporter/runtime.py:4711"
+        "src/truenas_exporter/runtime.py:3347",
+        "src/truenas_exporter/runtime.py:4794"
       ],
       "source_kind": "method",
       "variable": "SYSTEMDATASET_POOL"
@@ -11724,8 +11724,8 @@
         "count mode result per task query"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2638",
-        "src/truenas_exporter/runtime.py:3221"
+        "src/truenas_exporter/runtime.py:2642",
+        "src/truenas_exporter/runtime.py:3304"
       ],
       "source_kind": "method",
       "variable": "TASK_COUNT"
@@ -11757,8 +11757,8 @@
         "enabled"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:2647",
-        "src/truenas_exporter/runtime.py:3218"
+        "src/truenas_exporter/runtime.py:2653",
+        "src/truenas_exporter/runtime.py:3301"
       ],
       "source_kind": "method",
       "variable": "TASK_ENABLED"
@@ -11772,21 +11772,25 @@
       ],
       "dashboard_usage": [],
       "documented_type_unit": "replication.query: array of object; cloudsync.query: array of object; rsynctask.query: array of object; pool.snapshottask.query: array of object; Prometheus unit: Unix seconds",
-      "fixture_test": "No API fixture by design; compatibility declaration is covered by metric-contract generation",
-      "implementation_status": "unavailable: no reachable 25.10.2 producer",
+      "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
+      "implementation_status": "active dedicated",
       "labels": [
         "task_type",
         "name"
       ],
       "metric_type": "gauge",
-      "notes": "Declared contract retained; source field is absent/opaque, sensitive, or producer is unreachable.",
-      "parser_conversion": "No producer; gauge intentionally remains absent/NaN for compatibility",
+      "notes": "Task state objects are opaquely typed in the doc corpus but stable in middleware; collector selects only id/name/description/enabled/state/job fields.",
+      "parser_conversion": "_parse_ts accepts numeric seconds, ISO-8601, {$date: milliseconds}, and wrapper objects",
       "prometheus_metric": "truenas_task_last_run_timestamp_seconds",
       "response_field": [
-        "job.time_finished/lastrun/last_run"
+        "replication.state.datetime",
+        "cloudsync.job.time_finished",
+        "rsynctask.job.time_finished",
+        "snapshottask.state.datetime"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3220"
+        "src/truenas_exporter/runtime.py:2698",
+        "src/truenas_exporter/runtime.py:3303"
       ],
       "source_kind": "method",
       "variable": "TASK_LAST_RUN_TS"
@@ -11800,22 +11804,26 @@
       ],
       "dashboard_usage": [],
       "documented_type_unit": "replication.query: object/string; cloudsync.query: array of object; rsynctask.query: array of object; pool.snapshottask.query: object; Prometheus unit: dimensionless gauge",
-      "fixture_test": "No API fixture by design; compatibility declaration is covered by metric-contract generation",
-      "implementation_status": "unavailable: no reachable 25.10.2 producer",
+      "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
+      "implementation_status": "active dedicated",
       "labels": [
         "task_type",
         "name",
         "state"
       ],
       "metric_type": "gauge",
-      "notes": "Declared contract retained; source field is absent/opaque, sensitive, or producer is unreachable.",
-      "parser_conversion": "No producer; gauge intentionally remains absent/NaN for compatibility",
+      "notes": "Task state objects are opaquely typed in the doc corpus but stable in middleware; collector selects only id/name/description/enabled/state/job fields.",
+      "parser_conversion": "Documented scalar normalized by owned collector; null/missing values omit the sample",
       "prometheus_metric": "truenas_task_state",
       "response_field": [
-        "job.state/state"
+        "replication.state.state",
+        "cloudsync.job.state",
+        "rsynctask.job.state",
+        "snapshottask.state.state"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3219"
+        "src/truenas_exporter/runtime.py:2693",
+        "src/truenas_exporter/runtime.py:3302"
       ],
       "source_kind": "method",
       "variable": "TASK_STATE"
@@ -11859,7 +11867,7 @@
         "status (integration config is not fetched)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3250"
+        "src/truenas_exporter/runtime.py:3333"
       ],
       "source_kind": "method",
       "variable": "TN_CONNECT_STATUS"
@@ -11883,7 +11891,7 @@
         "status (integration config is not fetched)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3251"
+        "src/truenas_exporter/runtime.py:3334"
       ],
       "source_kind": "method",
       "variable": "TRUECOMMAND_STATUS"
@@ -11907,7 +11915,7 @@
         "count mode result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4731"
+        "src/truenas_exporter/runtime.py:4814"
       ],
       "source_kind": "method",
       "variable": "TUNABLE_COUNT"
@@ -11931,7 +11939,7 @@
         "ui_httpsport"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4660"
+        "src/truenas_exporter/runtime.py:4743"
       ],
       "source_kind": "method",
       "variable": "UI_HTTPS_PORT"
@@ -11958,7 +11966,7 @@
         "exporter-owned state"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3787"
+        "src/truenas_exporter/runtime.py:3870"
       ],
       "source_kind": "internal",
       "variable": "SCRAPE_SUCCESS"
@@ -11982,7 +11990,7 @@
         "autocheck"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3884"
+        "src/truenas_exporter/runtime.py:3967"
       ],
       "source_kind": "method",
       "variable": "UPDATE_AUTOCHECK_ENABLED"
@@ -12006,7 +12014,7 @@
         "status.new_version"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3696"
+        "src/truenas_exporter/runtime.py:3779"
       ],
       "source_kind": "method",
       "variable": "UPDATE_AVAILABLE"
@@ -12030,7 +12038,7 @@
         "update_download_progress.percent"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3703"
+        "src/truenas_exporter/runtime.py:3786"
       ],
       "source_kind": "method",
       "variable": "UPDATE_DOWNLOAD_PROGRESS_PERCENT"
@@ -12056,9 +12064,9 @@
         "profile/update_profile/train"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3254",
-        "src/truenas_exporter/runtime.py:3887",
-        "src/truenas_exporter/runtime.py:3888"
+        "src/truenas_exporter/runtime.py:3337",
+        "src/truenas_exporter/runtime.py:3970",
+        "src/truenas_exporter/runtime.py:3971"
       ],
       "source_kind": "method",
       "variable": "UPDATE_PROFILE_INFO"
@@ -12082,8 +12090,8 @@
         "code"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3213",
-        "src/truenas_exporter/runtime.py:3689"
+        "src/truenas_exporter/runtime.py:3296",
+        "src/truenas_exporter/runtime.py:3772"
       ],
       "source_kind": "method",
       "variable": "UPDATE_STATUS"
@@ -12107,9 +12115,9 @@
         "result version items"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3253",
-        "src/truenas_exporter/runtime.py:3864",
-        "src/truenas_exporter/runtime.py:3877"
+        "src/truenas_exporter/runtime.py:3336",
+        "src/truenas_exporter/runtime.py:3947",
+        "src/truenas_exporter/runtime.py:3960"
       ],
       "source_kind": "method",
       "variable": "UPDATE_VERSION_AVAILABLE"
@@ -12153,7 +12161,7 @@
         "no documented live-status read field"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3249"
+        "src/truenas_exporter/runtime.py:3332"
       ],
       "source_kind": "method",
       "variable": "UPS_STATUS"
@@ -12178,7 +12186,7 @@
         "no operational state field in virt.global.config"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3252"
+        "src/truenas_exporter/runtime.py:3335"
       ],
       "source_kind": "method",
       "variable": "VIRT_GLOBAL_STATE"
@@ -12202,7 +12210,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4061"
+        "src/truenas_exporter/runtime.py:4144"
       ],
       "source_kind": "method",
       "variable": "VIRT_INSTANCE_COUNT"
@@ -12279,8 +12287,8 @@
         "status"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4064",
-        "src/truenas_exporter/runtime.py:4076"
+        "src/truenas_exporter/runtime.py:4147",
+        "src/truenas_exporter/runtime.py:4159"
       ],
       "source_kind": "method",
       "variable": "VIRT_INSTANCE_RUNNING"
@@ -12304,7 +12312,7 @@
         "row count"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4093"
+        "src/truenas_exporter/runtime.py:4176"
       ],
       "source_kind": "method",
       "variable": "VIRT_VOLUME_COUNT"
@@ -12353,7 +12361,7 @@
         "result (documented MiB)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3359"
+        "src/truenas_exporter/runtime.py:3442"
       ],
       "source_kind": "method",
       "variable": "VM_AVAILABLE_MEMORY_BYTES"
@@ -12399,7 +12407,7 @@
         "amd_asids"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3996"
+        "src/truenas_exporter/runtime.py:4079"
       ],
       "source_kind": "method",
       "variable": "VM_FLAG_AMD_ASIDS"
@@ -12423,7 +12431,7 @@
         "amd_asids"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3997"
+        "src/truenas_exporter/runtime.py:4080"
       ],
       "source_kind": "method",
       "variable": "VM_FLAG_AMD_ASIDS_SUPPORTED"
@@ -12447,7 +12455,7 @@
         "amd_rvi"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3990"
+        "src/truenas_exporter/runtime.py:4073"
       ],
       "source_kind": "method",
       "variable": "VM_FLAG_AMD_RVI"
@@ -12471,7 +12479,7 @@
         "intel_vmx"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3989"
+        "src/truenas_exporter/runtime.py:4072"
       ],
       "source_kind": "method",
       "variable": "VM_FLAG_INTEL_VMX"
@@ -12495,7 +12503,7 @@
         "unrestricted_guest"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3992"
+        "src/truenas_exporter/runtime.py:4075"
       ],
       "source_kind": "method",
       "variable": "VM_FLAG_UNRESTRICTED_GUEST"
@@ -12519,7 +12527,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3968"
+        "src/truenas_exporter/runtime.py:4051"
       ],
       "source_kind": "method",
       "variable": "VM_MAX_VCPUS"
@@ -12543,7 +12551,7 @@
         "result"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3958"
+        "src/truenas_exporter/runtime.py:4041"
       ],
       "source_kind": "method",
       "variable": "VM_SUPPORTS_VIRTUALIZATION"
@@ -12567,7 +12575,7 @@
         "error"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4026"
+        "src/truenas_exporter/runtime.py:4109"
       ],
       "source_kind": "method",
       "variable": "VM_VIRTUALIZATION_DETAILS_ERROR_PRESENT"
@@ -12591,7 +12599,7 @@
         "supported"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4016"
+        "src/truenas_exporter/runtime.py:4099"
       ],
       "source_kind": "method",
       "variable": "VM_VIRTUALIZATION_DETAILS_SUPPORTED"
@@ -12618,8 +12626,8 @@
         "RNP/PRD/RPRD values (documented MiB)"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:3214",
-        "src/truenas_exporter/runtime.py:3371"
+        "src/truenas_exporter/runtime.py:3297",
+        "src/truenas_exporter/runtime.py:3454"
       ],
       "source_kind": "method",
       "variable": "VM_VMEMORY_IN_USE_BYTES"
@@ -12643,7 +12651,7 @@
         "sharing.webshare.query method absent from 25.10.2"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4255"
+        "src/truenas_exporter/runtime.py:4338"
       ],
       "source_kind": "unavailable/undocumented",
       "variable": "APP_WEBDAV_SHARE_COUNT"
@@ -12668,7 +12676,7 @@
         "entire scalar response or owned aggregate"
       ],
       "runtime_evidence": [
-        "src/truenas_exporter/runtime.py:4267"
+        "src/truenas_exporter/runtime.py:4350"
       ],
       "source_kind": "method",
       "variable": "WEBSHARE_ENABLED"
@@ -23632,7 +23640,7 @@
       "Dedicated metrics": "truenas_alert_count, truenas_alert_count_by_class, truenas_alert_count_by_level, truenas_alert_count_by_node, truenas_alert_count_by_source, truenas_alert_dismissed_count, truenas_alert_last_occurrence_timestamp_seconds, truenas_alert_oldest_timestamp_seconds, truenas_alert_one_shot_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/alert/list.md) List all types of alerts including active/dismissed currently in the system. roles: ALERT_LIST_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3676, src/truenas_exporter/runtime.py:3678",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3759, src/truenas_exporter/runtime.py:3761",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "alert.list",
       "Namespace": "alert",
@@ -23758,7 +23766,7 @@
       "Dedicated metrics": "truenas_alertservice_count, truenas_alertservice_enabled",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/alertservice/query.md) No prose summary; schema and operation name are the evidence. roles: ALERT_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4964, src/truenas_exporter/runtime.py:4966",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:5047, src/truenas_exporter/runtime.py:5049",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "alertservice.query",
       "Namespace": "alertservice",
@@ -23898,7 +23906,7 @@
       "Dedicated metrics": "truenas_app_available_space_bytes, truenas_webshare_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/app/available_space.md) Returns space available in bytes in the configured apps pool which apps can consume roles: CATALOG_READ return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4209, src/truenas_exporter/runtime.py:4211",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4292, src/truenas_exporter/runtime.py:4294",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "app.available_space",
       "Namespace": "app",
@@ -24066,7 +24074,7 @@
       "Dedicated metrics": "truenas_app_dockerhub_pull_limit_remaining, truenas_app_dockerhub_pull_limit_remaining_window_seconds, truenas_app_dockerhub_pull_limit_total, truenas_app_dockerhub_pull_limit_window_seconds, truenas_app_dockerhub_rate_limit_error_present, truenas_webshare_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/app/image/dockerhub_rate_limit.md) Returns the current rate limit information for Docker Hub registry. Please refer to https://docs.docker.com/docker-hub/download-rate-limit/ for more information. roles: APPS_READ return: ContainerImagesDockerhubRateLimitResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4219, src/truenas_exporter/runtime.py:4221",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4302, src/truenas_exporter/runtime.py:4304",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "app.image.dockerhub_rate_limit",
       "Namespace": "app.image",
@@ -24108,7 +24116,7 @@
       "Dedicated metrics": "truenas_docker_image_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/app/image/query.md) Query all docker images with `query-filters` and `query-options`. `query-options.extra.parse_tags` is a boolean which when set will have normalized tags to be retrieved. roles: APPS_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4793",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4876",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "app.image.query",
       "Namespace": "app.image",
@@ -24444,7 +24452,7 @@
       "Dedicated metrics": "truenas_audit_dataset_available_bytes, truenas_audit_dataset_used_bytes, truenas_audit_quota_bytes, truenas_audit_quota_fill_critical_percent, truenas_audit_quota_fill_warning_percent, truenas_audit_remote_logging_enabled, truenas_audit_reservation_bytes, truenas_audit_retention_days",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/audit/config.md) No prose summary; schema and operation name are the evidence. roles: SYSTEM_AUDIT_READ return: AuditEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4387",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4470",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "audit.config",
       "Namespace": "audit",
@@ -24654,7 +24662,7 @@
       "Dedicated metrics": "truenas_auth_sessions_active",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/auth/sessions.md) Returns list of active auth sessions. Example of return value: [ { \"id\": \"NyhB1J5vjPjIV82yZ6caU12HLA1boDJcZNWuVQM4hQWuiyUWMGZTz2ElDp7Yk87d\", \"origin\": \"192.168.0.3:40392\", \"credentials\": \"LOGIN_PASSWORD\", \"credentials_data\": {\"username\": \"root\"}, \"current\": True, \"internal\": False, \"created_at\": {\"$date\": 1545842426070} } ] `credentials` can be\u2026 roles: AUTH_SESSIONS_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2955",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3038",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "auth.sessions",
       "Namespace": "auth",
@@ -24710,7 +24718,7 @@
       "Dedicated metrics": "truenas_2fa_enabled",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/auth/twofactor/config.md) No prose summary; schema and operation name are the evidence. roles: SYSTEM_SECURITY_READ return: TwoFactorAuthEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4951",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:5034",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "auth.twofactor.config",
       "Namespace": "auth.twofactor",
@@ -24822,7 +24830,7 @@
       "Dedicated metrics": "truenas_boot_env_activated, truenas_boot_env_activated_count, truenas_boot_env_active, truenas_boot_env_active_count, truenas_boot_env_count, truenas_boot_env_keep, truenas_boot_env_keep_count, truenas_boot_env_size_bytes, truenas_boot_environment_used_bytes",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/boot/environment/query.md) No prose summary; schema and operation name are the evidence. roles: BOOT_ENV_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3899, src/truenas_exporter/runtime.py:3910",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3982, src/truenas_exporter/runtime.py:3993",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "boot.environment.query",
       "Namespace": "boot.environment",
@@ -24920,7 +24928,7 @@
       "Dedicated metrics": "truenas_catalog_config_present, truenas_catalog_preferred_train_count",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/catalog/config.md) No prose summary; schema and operation name are the evidence. roles: CATALOG_READ return: CatalogEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4299, src/truenas_exporter/runtime.py:4301",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4382, src/truenas_exporter/runtime.py:4384",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "catalog.config",
       "Namespace": "catalog",
@@ -24962,7 +24970,7 @@
       "Dedicated metrics": "truenas_catalog_train_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/catalog/trains.md) Retrieve available trains. roles: CATALOG_READ return: Result / array of string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4292",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4375",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "catalog.trains",
       "Namespace": "catalog",
@@ -25214,7 +25222,7 @@
       "Dedicated metrics": "truenas_cloud_backup_task_count, truenas_cloud_backup_task_enabled",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/cloud_backup/query.md) No prose summary; schema and operation name are the evidence. roles: CLOUD_BACKUP_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4525, src/truenas_exporter/runtime.py:4537",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4608, src/truenas_exporter/runtime.py:4620",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "cloud_backup.query",
       "Namespace": "cloud_backup",
@@ -25491,16 +25499,16 @@
     {
       "Dashboard usage": "truenas_task_count, truenas_task_enabled",
       "Decision": "exported through dedicated metric",
-      "Dedicated metrics": "truenas_task_count, truenas_task_enabled",
+      "Dedicated metrics": "truenas_task_count, truenas_task_enabled, truenas_task_last_run_timestamp_seconds, truenas_task_state",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/cloudsync/query.md) No prose summary; schema and operation name are the evidence. roles: CLOUD_SYNC_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2672, src/truenas_exporter/runtime.py:2677",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2730, src/truenas_exporter/runtime.py:2735",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "cloudsync.query",
       "Namespace": "cloudsync",
-      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'enabled']}]; wire [[], {count: true}] via _query_count",
+      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'description', 'enabled', 'job']}]; wire [[], {count: true}] via _query_count",
       "Read-only classification": "documented read-only",
-      "Response fields used": "count mode result per task query, enabled, id/name"
+      "Response fields used": "cloudsync.job.state, cloudsync.job.time_finished, count mode result per task query, enabled, id/name, replication.state.datetime, replication.state.state, rsynctask.job.state, rsynctask.job.time_finished, snapshottask.state.datetime, snapshottask.state.state"
     },
     {
       "Dashboard usage": "none",
@@ -25676,7 +25684,7 @@
       "Dedicated metrics": "none",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/core/get_methods.md) Return methods metadata of every available service. roles: none documented return: Result / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:1453, src/truenas_exporter/runtime.py:3108",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:1453, src/truenas_exporter/runtime.py:3191",
       "Generic coverage": "none; not in the generic base plan",
       "Method": "core.get_methods",
       "Namespace": "core",
@@ -25872,7 +25880,7 @@
       "Dedicated metrics": "truenas_cronjob_count, truenas_cronjob_enabled",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/cronjob/query.md) No prose summary; schema and operation name are the evidence. roles: SYSTEM_CRON_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4557, src/truenas_exporter/runtime.py:4569",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4640, src/truenas_exporter/runtime.py:4652",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "cronjob.query",
       "Namespace": "cronjob",
@@ -25914,7 +25922,7 @@
       "Dedicated metrics": "truenas_gpu_available_to_host, truenas_gpu_count, truenas_gpu_info, truenas_gpu_uses_system_critical_devices",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/device/get_info.md) Get info for `type` device. roles: READONLY_ADMIN return: Result / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2900",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2983",
       "Generic coverage": "candidate catalog only; guarded discovery or owned collector parameters required",
       "Method": "device.get_info",
       "Namespace": "device",
@@ -25984,7 +25992,7 @@
       "Dedicated metrics": "truenas_directoryservices_config_enabled, truenas_directoryservices_fault_present, truenas_directoryservices_fault_reason, truenas_directoryservices_healthy, truenas_directoryservices_service_type, truenas_directoryservices_status",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/directoryservices/status.md) Provide the type and status of the currently-enabled directory service roles: none documented return: DirectoryServicesStatusResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2730",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2813",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "directoryservices.status",
       "Namespace": "directoryservices",
@@ -26068,7 +26076,7 @@
       "Dedicated metrics": "truenas_disk_count, truenas_disk_in_use, truenas_disk_info, truenas_disk_rotational, truenas_disk_size_bytes",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/disk/query.md) Query disks. The following extra options are supported: `include_expired` (bool): Also include expired disks (default: false). `passwords` (bool): Don't hide KMIP password for the disks (default: false). `pools` (bool): Join pool name for each disk (default: false). roles: DISK_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2972, src/truenas_exporter/runtime.py:3561",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3055, src/truenas_exporter/runtime.py:3644",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "disk.query",
       "Namespace": "disk",
@@ -26082,7 +26090,7 @@
       "Dedicated metrics": "truenas_disk_temperature_agg_celsius",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/disk/temperature_agg.md) Returns min/max/avg temperature for `names` disks for the last `days` days roles: REPORTING_READ return: Result / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3588",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3671",
       "Generic coverage": "candidate catalog only; guarded discovery or owned collector parameters required",
       "Method": "disk.temperature_agg",
       "Namespace": "disk",
@@ -26110,7 +26118,7 @@
       "Dedicated metrics": "truenas_disk_temperature_celsius",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/disk/temperatures.md) Returns disk temperatures for disks in degrees celsius. NOTE: Disk temperatures are not retrieved more than once every 5 minutes. roles: REPORTING_READ return: Result / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3605",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3688",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "disk.temperatures",
       "Namespace": "disk",
@@ -26152,7 +26160,7 @@
       "Dedicated metrics": "truenas_dns_resolver_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/dns/query.md) Query Name Servers with `query-filters` and `query-options`. roles: NETWORK_INTERFACE_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4832",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4915",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "dns.query",
       "Namespace": "dns",
@@ -26250,7 +26258,7 @@
       "Dedicated metrics": "truenas_docker_network_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/docker/network/query.md) Query all docker networks roles: DOCKER_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3396",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3479",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "docker.network.query",
       "Namespace": "docker.network",
@@ -26264,7 +26272,7 @@
       "Dedicated metrics": "truenas_docker_nvidia_present",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/docker/nvidia_present.md) No prose summary; schema and operation name are the evidence. roles: DOCKER_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3388, src/truenas_exporter/runtime.py:3390",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3471, src/truenas_exporter/runtime.py:3473",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "docker.nvidia_present",
       "Namespace": "docker",
@@ -26292,7 +26300,7 @@
       "Dedicated metrics": "truenas_docker_status",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/docker/status.md) Returns the status of the docker service. roles: DOCKER_READ return: StatusResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3403, src/truenas_exporter/runtime.py:3405",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3486, src/truenas_exporter/runtime.py:3488",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "docker.status",
       "Namespace": "docker",
@@ -26334,7 +26342,7 @@
       "Dedicated metrics": "truenas_failover_disabled_reason, truenas_failover_disabled_reason_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/failover/disabled/reasons.md) Returns a list of reasons why failover is not enabled/functional. See `DisabledReasonsEnum` for the reasons and their explanation. roles: FAILOVER_READ return: Result / array of string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3086, src/truenas_exporter/runtime.py:3088",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3169, src/truenas_exporter/runtime.py:3171",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "failover.disabled.reasons",
       "Namespace": "failover.disabled",
@@ -26418,7 +26426,7 @@
       "Dedicated metrics": "truenas_fc_host_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/fc/fc_host/query.md) No prose summary; schema and operation name are the evidence. roles: SHARING_ISCSI_TARGET_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4106",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4189",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "fc.fc_host.query",
       "Namespace": "fc.fc_host",
@@ -26516,7 +26524,7 @@
       "Dedicated metrics": "truenas_fc_port_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/fcport/status.md) No prose summary; schema and operation name are the evidence. roles: SHARING_ISCSI_TARGET_READ return: Result / array",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4112",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4195",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "fcport.status",
       "Namespace": "fcport",
@@ -26936,7 +26944,7 @@
       "Dedicated metrics": "truenas_hw_virt_variant",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/hardware/virtualization/variant.md) Report the virtualization variation of TrueNAS system roles: SYSTEM_GENERAL_READ return: Result / string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3974, src/truenas_exporter/runtime.py:3976",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4057, src/truenas_exporter/runtime.py:4059",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "hardware.virtualization.variant",
       "Namespace": "hardware.virtualization",
@@ -27076,7 +27084,7 @@
       "Dedicated metrics": "truenas_interface_checkin_waiting_seconds",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/interface/checkin_waiting.md) Returns whether we are waiting for the user to check in the applied network changes before they are rolled back. roles: NETWORK_INTERFACE_WRITE return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4193, src/truenas_exporter/runtime.py:4195",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4276, src/truenas_exporter/runtime.py:4278",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "interface.checkin_waiting",
       "Namespace": "interface",
@@ -27160,7 +27168,7 @@
       "Dedicated metrics": "truenas_interface_has_pending_changes",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/interface/has_pending_changes.md) Return whether there are pending interfaces changes to be applied or not. roles: NETWORK_INTERFACE_WRITE return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4185, src/truenas_exporter/runtime.py:4187",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4268, src/truenas_exporter/runtime.py:4270",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "interface.has_pending_changes",
       "Namespace": "interface",
@@ -27230,7 +27238,7 @@
       "Dedicated metrics": "truenas_interface_count, truenas_interface_link_up, truenas_interface_mtu, truenas_interface_type",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/interface/query.md) Query Interfaces with `query-filters` and `query-options` `options.extra.retrieve_names_only` (bool): Only return interface names. roles: NETWORK_INTERFACE_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3615",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3698",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "interface.query",
       "Namespace": "interface",
@@ -27370,7 +27378,7 @@
       "Dedicated metrics": "truenas_ipmi_chassis_drive_fault, truenas_ipmi_chassis_fan_fault, truenas_ipmi_chassis_intrusion, truenas_ipmi_chassis_power_on, truenas_ipmi_chassis_power_overload",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/ipmi/chassis/info.md) Return IPMI chassis info. `query-remote`: [optional] if True on HA system, then return info from remote controller. roles: IPMI_READ return: Result / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2792, src/truenas_exporter/runtime.py:2816",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2875, src/truenas_exporter/runtime.py:2899",
       "Generic coverage": "candidate catalog only; guarded discovery or owned collector parameters required",
       "Method": "ipmi.chassis.info",
       "Namespace": "ipmi.chassis",
@@ -27384,7 +27392,7 @@
       "Dedicated metrics": "truenas_ipmi_loaded",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/ipmi/is_loaded.md) Returns a boolean value indicating if /dev/ipmi0 is loaded. roles: READONLY_ADMIN return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2778",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2861",
       "Generic coverage": "candidate catalog only; guarded discovery or owned collector parameters required",
       "Method": "ipmi.is_loaded",
       "Namespace": "ipmi",
@@ -27398,7 +27406,7 @@
       "Dedicated metrics": "none",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/ipmi/lan/channels.md) Return a list of available IPMI channels. roles: IPMI_READ return: Result / array of integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4992",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:5075",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "ipmi.lan.channels",
       "Namespace": "ipmi.lan",
@@ -27412,7 +27420,7 @@
       "Dedicated metrics": "none",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/ipmi/lan/query.md) Query available IPMI Channels with `query-filters` and `query-options`. roles: IPMI_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:5006, src/truenas_exporter/runtime.py:5012",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:5089, src/truenas_exporter/runtime.py:5095",
       "Generic coverage": "opt-in bounded manual generic extraction; entity/path/query limits and safety guards apply",
       "Method": "ipmi.lan.query",
       "Namespace": "ipmi.lan",
@@ -27468,7 +27476,7 @@
       "Dedicated metrics": "truenas_ipmi_sel_entry_count, truenas_ipmi_sel_free_space_bytes",
       "Documented operation/type": "read-only job/query",
       "Evidence/notes": "[docs](truenas-api/methods/ipmi/sel/info.md) Query General information about the IPMI System Event Log This method is a job. roles: IPMI_READ return: Result / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2822",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2905",
       "Generic coverage": "candidate catalog only; guarded discovery or owned collector parameters required",
       "Method": "ipmi.sel.info",
       "Namespace": "ipmi.sel",
@@ -27636,7 +27644,7 @@
       "Dedicated metrics": "truenas_iscsi_alua_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/iscsi/global/alua_enabled.md) Returns whether iSCSI ALUA is enabled or not. roles: SHARING_ISCSI_GLOBAL_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4147, src/truenas_exporter/runtime.py:4149",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4230, src/truenas_exporter/runtime.py:4232",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "iscsi.global.alua_enabled",
       "Namespace": "iscsi.global",
@@ -27650,7 +27658,7 @@
       "Dedicated metrics": "truenas_iscsi_client_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/iscsi/global/client_count.md) Return currently connected clients count. roles: SHARING_ISCSI_GLOBAL_READ return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3442, src/truenas_exporter/runtime.py:3444",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3525, src/truenas_exporter/runtime.py:3527",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "iscsi.global.client_count",
       "Namespace": "iscsi.global",
@@ -27678,7 +27686,7 @@
       "Dedicated metrics": "truenas_iscsi_iser_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/iscsi/global/iser_enabled.md) Returns whether iSER is enabled or not. roles: SHARING_ISCSI_GLOBAL_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4155, src/truenas_exporter/runtime.py:4157",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4238, src/truenas_exporter/runtime.py:4240",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "iscsi.global.iser_enabled",
       "Namespace": "iscsi.global",
@@ -27692,7 +27700,7 @@
       "Dedicated metrics": "truenas_iscsi_session_count, truenas_iscsi_session_immediate_data_count, truenas_iscsi_session_iser_count, truenas_iscsi_session_offload_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/iscsi/global/sessions.md) Get a list of currently running iSCSI sessions. This includes initiator and target names and the unique connection IDs. roles: SHARING_ISCSI_GLOBAL_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4163, src/truenas_exporter/runtime.py:4165, src/truenas_exporter/runtime.py:4168, src/truenas_exporter/runtime.py:4171",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4246, src/truenas_exporter/runtime.py:4248, src/truenas_exporter/runtime.py:4251, src/truenas_exporter/runtime.py:4254",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "iscsi.global.sessions",
       "Namespace": "iscsi.global",
@@ -28084,7 +28092,7 @@
       "Dedicated metrics": "truenas_jbof_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/jbof/query.md) No prose summary; schema and operation name are the evidence. roles: JBOF_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2944",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3027",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "jbof.query",
       "Namespace": "jbof",
@@ -28602,7 +28610,7 @@
       "Dedicated metrics": "truenas_network_default_routes, truenas_network_nameservers",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/network/general/summary.md) Retrieve general information for current Network. Returns a dictionary. For example: roles: NETWORK_GENERAL_READ return: NetworkGeneralSummaryResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3376, src/truenas_exporter/runtime.py:3378",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3459, src/truenas_exporter/runtime.py:3461",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "network.general.summary",
       "Namespace": "network.general",
@@ -28630,7 +28638,7 @@
       "Dedicated metrics": "truenas_nfs_client_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/nfs/client_count.md) Return currently connected clients count. Count may not be accurate if NFSv3 protocol is in use due to potentially stale rmtab entries. roles: SHARING_NFS_READ return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3416, src/truenas_exporter/runtime.py:3418",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3499, src/truenas_exporter/runtime.py:3501",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "nfs.client_count",
       "Namespace": "nfs",
@@ -28644,7 +28652,7 @@
       "Dedicated metrics": "truenas_nfs_rdma_enabled, truenas_nfs_servers, truenas_nfs_v4_enabled",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/nfs/config.md) No prose summary; schema and operation name are the evidence. roles: SHARING_NFS_READ return: NfsEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4615",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4698",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "nfs.config",
       "Namespace": "nfs",
@@ -28658,7 +28666,7 @@
       "Dedicated metrics": "truenas_nfs_v3_client_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/nfs/get_nfs3_clients.md) Read contents of rmtab. This information may not be accurate due to stale entries. This is ultimately a limitation of the NFSv3 protocol. roles: READONLY_ADMIN | SHARING_NFS_WRITE return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3428",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3511",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "nfs.get_nfs3_clients",
       "Namespace": "nfs",
@@ -28672,7 +28680,7 @@
       "Dedicated metrics": "truenas_nfs_v4_client_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/nfs/get_nfs4_clients.md) Read information about NFSv4 clients from /proc/fs/nfsd/clients Sample output: [{ \"id\": \"4\", \"info\": { \"clientid\": 6273260596088110000, \"address\": \"192.168.40.247:790\", \"status\": \"confirmed\", \"seconds from last renew\": 45, \"name\": \"Linux NFSv4.2 debian12-hv\", \"minor version\": 2, \"Implementation domain\": \"kernel.org\", \"Implementation name\": \"Linux\u2026 roles: READONLY_ADMIN | SHARING_NFS_WRITE return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3435",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3518",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "nfs.get_nfs4_clients",
       "Namespace": "nfs",
@@ -28714,7 +28722,7 @@
       "Dedicated metrics": "truenas_nvmet_session_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/nvmet/global/sessions.md) No prose summary; schema and operation name are the evidence. roles: SHARING_NVME_TARGET_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4124",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4207",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "nvmet.global.sessions",
       "Namespace": "nvmet.global",
@@ -29036,7 +29044,7 @@
       "Dedicated metrics": "truenas_nvmet_port_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/nvmet/port/query.md) No prose summary; schema and operation name are the evidence. roles: SHARING_NVME_TARGET_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4136",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4219",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "nvmet.port.query",
       "Namespace": "nvmet.port",
@@ -29190,7 +29198,7 @@
       "Dedicated metrics": "truenas_nvmet_subsys_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/nvmet/subsys/query.md) No prose summary; schema and operation name are the evidence. roles: SHARING_NVME_TARGET_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4130",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4213",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "nvmet.subsys.query",
       "Namespace": "nvmet.subsys",
@@ -29834,7 +29842,7 @@
       "Dedicated metrics": "truenas_pool_allocated_bytes, truenas_pool_autotrim_enabled, truenas_pool_count, truenas_pool_dedup_ratio, truenas_pool_dedup_table_size_bytes, truenas_pool_expand_percent, truenas_pool_expand_reflowed_bytes, truenas_pool_expand_size_bytes, truenas_pool_expand_to_reflow_bytes, truenas_pool_fragmentation_percent, truenas_pool_free_bytes, truenas_pool_healthy, truenas_pool_last_scan_timestamp_seconds, truenas_pool_scan_bytes_processed, truenas_pool_scan_bytes_total, truenas_pool_scan_errors, truenas_pool_scan_percent, truenas_pool_scan_seconds_remaining, truenas_pool_size_bytes, truenas_pool_status, truenas_pool_warning",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/pool/query.md) No prose summary; schema and operation name are the evidence. roles: POOL_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3454",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3537",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "pool.query",
       "Namespace": "pool",
@@ -29876,7 +29884,7 @@
       "Dedicated metrics": "truenas_pool_resilver_enabled",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/pool/resilver/config.md) No prose summary; schema and operation name are the evidence. roles: POOL_READ return: PoolResilverEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4509",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4592",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "pool.resilver.config",
       "Namespace": "pool.resilver",
@@ -29946,7 +29954,7 @@
       "Dedicated metrics": "truenas_pool_scrub_task_count, truenas_pool_scrub_task_enabled",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/pool/scrub/query.md) No prose summary; schema and operation name are the evidence. roles: POOL_SCRUB_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4433, src/truenas_exporter/runtime.py:4445",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4516, src/truenas_exporter/runtime.py:4528",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "pool.scrub.query",
       "Namespace": "pool.scrub",
@@ -30072,7 +30080,7 @@
       "Dedicated metrics": "truenas_snapshot_count, truenas_snapshot_oldest_timestamp_seconds",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/pool/snapshot/query.md) Query all ZFS Snapshots with `query-filters` and `query-options`. `query-options.extra.holds` *(bool)* Include hold tags for snapshots in the query result (false by default). `query-options.extra.min_txg` *(int)* Limit snapshot retrieval based on minimum transaction group. `query-options.extra.max_txg` *(int)* Limit snapshot retrieval based on maximum\u2026 roles: SNAPSHOT_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4468, src/truenas_exporter/runtime.py:4480",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4551, src/truenas_exporter/runtime.py:4563",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "pool.snapshot.query",
       "Namespace": "pool.snapshot",
@@ -30198,7 +30206,7 @@
       "Dedicated metrics": "truenas_snapshot_task_max_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/pool/snapshottask/max_count.md) Returns a maximum amount of snapshots (per-dataset) the system can sustain. roles: SNAPSHOT_TASK_READ return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2708",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2791",
       "Generic coverage": "none; not in the generic base plan",
       "Method": "pool.snapshottask.max_count",
       "Namespace": "pool.snapshottask",
@@ -30212,7 +30220,7 @@
       "Dedicated metrics": "truenas_snapshot_task_max_total_count",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/pool/snapshottask/max_total_count.md) Returns a maximum amount of snapshots (total) the system can sustain. roles: SNAPSHOT_TASK_READ return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2716",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2799",
       "Generic coverage": "none; not in the generic base plan",
       "Method": "pool.snapshottask.max_total_count",
       "Namespace": "pool.snapshottask",
@@ -30223,16 +30231,16 @@
     {
       "Dashboard usage": "truenas_task_count, truenas_task_enabled",
       "Decision": "exported through dedicated metric",
-      "Dedicated metrics": "truenas_task_count, truenas_task_enabled",
+      "Dedicated metrics": "truenas_task_count, truenas_task_enabled, truenas_task_last_run_timestamp_seconds, truenas_task_state",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/pool/snapshottask/query.md) No prose summary; schema and operation name are the evidence. roles: SNAPSHOT_TASK_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2696, src/truenas_exporter/runtime.py:2701",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2771, src/truenas_exporter/runtime.py:2776",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "pool.snapshottask.query",
       "Namespace": "pool.snapshottask",
-      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'enabled']}]; wire [[], {count: true}] via _query_count",
+      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'enabled', 'state']}]; wire [[], {count: true}] via _query_count",
       "Read-only classification": "documented read-only",
-      "Response fields used": "count mode result per task query, enabled, id/name"
+      "Response fields used": "cloudsync.job.state, cloudsync.job.time_finished, count mode result per task query, enabled, id/name, replication.state.datetime, replication.state.state, rsynctask.job.state, rsynctask.job.time_finished, snapshottask.state.datetime, snapshottask.state.state"
     },
     {
       "Dashboard usage": "none",
@@ -30408,7 +30416,7 @@
       "Dedicated metrics": "truenas_replication_max_parallel",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/replication/config/config.md) No prose summary; schema and operation name are the evidence. roles: REPLICATION_TASK_CONFIG_READ return: ReplicationConfigEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4800",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4883",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "replication.config.config",
       "Namespace": "replication.config",
@@ -30531,16 +30539,16 @@
     {
       "Dashboard usage": "truenas_task_count, truenas_task_enabled",
       "Decision": "exported through dedicated metric",
-      "Dedicated metrics": "truenas_task_count, truenas_task_enabled",
+      "Dedicated metrics": "truenas_task_count, truenas_task_enabled, truenas_task_last_run_timestamp_seconds, truenas_task_state",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/replication/query.md) No prose summary; schema and operation name are the evidence. roles: REPLICATION_TASK_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2660, src/truenas_exporter/runtime.py:2665",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2709, src/truenas_exporter/runtime.py:2714",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "replication.query",
       "Namespace": "replication",
-      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'enabled']}]; wire [[], {count: true}] via _query_count",
+      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'name', 'enabled', 'state']}]; wire [[], {count: true}] via _query_count",
       "Read-only classification": "documented read-only",
-      "Response fields used": "count mode result per task query, enabled, id/name"
+      "Response fields used": "cloudsync.job.state, cloudsync.job.time_finished, count mode result per task query, enabled, id/name, replication.state.datetime, replication.state.state, rsynctask.job.state, rsynctask.job.time_finished, snapshottask.state.datetime, snapshottask.state.state"
     },
     {
       "Dashboard usage": "none",
@@ -30618,7 +30626,7 @@
       "Dedicated metrics": "truenas_reporting_tier0_retention_days, truenas_reporting_tier1_retention_days, truenas_reporting_tier1_update_interval_seconds",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/reporting/config.md) No prose summary; schema and operation name are the evidence. roles: REPORTING_READ return: ReportingEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4839, src/truenas_exporter/runtime.py:4841",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4922, src/truenas_exporter/runtime.py:4924",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "reporting.config",
       "Namespace": "reporting",
@@ -30688,7 +30696,7 @@
       "Dedicated metrics": "truenas_reporting_exporter_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/reporting/exporters/query.md) No prose summary; schema and operation name are the evidence. roles: REPORTING_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4813",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4896",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "reporting.exporters.query",
       "Namespace": "reporting.exporters",
@@ -30828,7 +30836,7 @@
       "Dedicated metrics": "truenas_network_default_gateway_configured, truenas_network_gateway_reachable",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/route/system_routes.md) Get current/applied network routes. roles: NETWORK_INTERFACE_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3052",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3135",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "route.system_routes",
       "Namespace": "route",
@@ -30881,16 +30889,16 @@
     {
       "Dashboard usage": "truenas_task_count, truenas_task_enabled",
       "Decision": "exported through dedicated metric",
-      "Dedicated metrics": "truenas_task_count, truenas_task_enabled",
+      "Dedicated metrics": "truenas_task_count, truenas_task_enabled, truenas_task_last_run_timestamp_seconds, truenas_task_state",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/rsynctask/query.md) No prose summary; schema and operation name are the evidence. roles: SNAPSHOT_TASK_READ return: Result / array of object Full response is sensitive; count mode or a strict non-sensitive select is mandatory.",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2684, src/truenas_exporter/runtime.py:2689",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:2751, src/truenas_exporter/runtime.py:2756",
       "Generic coverage": "blocked: full response is sensitive; owned count/select calls only",
       "Method": "rsynctask.query",
       "Namespace": "rsynctask",
-      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'enabled']}]; wire [[], {count: true}] via _query_count",
+      "Parameters verified": "documented [1:filters, 2:options]; source call shape(s): wire [[], {'limit': self.config.query_limit, 'select': ['id', 'enabled', 'job']}]; wire [[], {count: true}] via _query_count",
       "Read-only classification": "documented read-only",
-      "Response fields used": "count mode result per task query, enabled, id/name"
+      "Response fields used": "cloudsync.job.state, cloudsync.job.time_finished, count mode result per task query, enabled, id/name, replication.state.datetime, replication.state.state, rsynctask.job.state, rsynctask.job.time_finished, snapshottask.state.datetime, snapshottask.state.state"
     },
     {
       "Dashboard usage": "none",
@@ -30954,7 +30962,7 @@
       "Dedicated metrics": "truenas_ftp_enabled, truenas_reporting_enabled, truenas_service_count, truenas_service_enabled, truenas_service_running, truenas_snmp_enabled, truenas_ssh_enabled",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/service/query.md) Query all system services with `query-filters` and `query-options`. Supports the following extra options: `include_state` - performance optimization to avoid getting service state. defaults to True. roles: SERVICE_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:1345, src/truenas_exporter/runtime.py:3655",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:1345, src/truenas_exporter/runtime.py:3738",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "service.query",
       "Namespace": "service",
@@ -31108,7 +31116,7 @@
       "Dedicated metrics": "truenas_nfs_share_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/sharing/nfs/query.md) No prose summary; schema and operation name are the evidence. roles: SHARING_NFS_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3012",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3095",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "sharing.nfs.query",
       "Namespace": "sharing.nfs",
@@ -31206,7 +31214,7 @@
       "Dedicated metrics": "truenas_smb_share_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/sharing/smb/query.md) No prose summary; schema and operation name are the evidence. roles: SHARING_SMB_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3017",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3100",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "sharing.smb.query",
       "Namespace": "sharing.smb",
@@ -31276,7 +31284,7 @@
       "Dedicated metrics": "truenas_smb1_enabled, truenas_smb_encryption_mode, truenas_smb_multichannel_enabled, truenas_smb_ntlmv1_auth_enabled",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/smb/config.md) No prose summary; schema and operation name are the evidence. roles: SHARING_SMB_READ return: SmbServiceEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4601",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4684",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "smb.config",
       "Namespace": "smb",
@@ -31514,7 +31522,7 @@
       "Dedicated metrics": "truenas_support_available",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/support/is_available.md) Returns whether Proactive Support is available for this product type and current license. roles: SUPPORT_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4685",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4768",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "support.is_available",
       "Namespace": "support",
@@ -31528,7 +31536,7 @@
       "Dedicated metrics": "truenas_support_available_and_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/support/is_available_and_enabled.md) Returns whether Proactive Support is available and enabled. roles: SUPPORT_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4692, src/truenas_exporter/runtime.py:4694",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4775, src/truenas_exporter/runtime.py:4777",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "support.is_available_and_enabled",
       "Namespace": "support",
@@ -31724,7 +31732,7 @@
       "Dedicated metrics": "truenas_system_boot_changes_total",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/boot_id.md) Returns a unique boot identifier. It is supposed to be unique every system boot. roles: none documented return: Result / string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3834",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3917",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.boot_id",
       "Namespace": "system",
@@ -31752,7 +31760,7 @@
       "Dedicated metrics": "truenas_feature_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/feature_enabled.md) Returns whether the `feature` is enabled or not roles: SYSTEM_PRODUCT_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4345",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4428",
       "Generic coverage": "candidate catalog only; guarded discovery or owned collector parameters required",
       "Method": "system.feature_enabled",
       "Namespace": "system",
@@ -31794,7 +31802,7 @@
       "Dedicated metrics": "truenas_ui_https_port",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/system/general/config.md) No prose summary; schema and operation name are the evidence. roles: SYSTEM_GENERAL_READ return: SystemGeneralEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4656",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4739",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "system.general.config",
       "Namespace": "system.general",
@@ -31948,7 +31956,7 @@
       "Dedicated metrics": "truenas_system_global_id",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/global/id.md) Retrieve a 128 bit hexadecimal UUID value unique for each TrueNAS system. roles: READONLY_ADMIN return: Result / string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4667",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4750",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.global.id",
       "Namespace": "system.global",
@@ -31962,7 +31970,7 @@
       "Dedicated metrics": "truenas_system_host_id",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/host_id.md) Retrieve a hex string that is generated based on the contents of the `/etc/hostid` file. This is a permanent value that persists across reboots/upgrades and can be used as a unique identifier for the machine. roles: READONLY_ADMIN return: Result / string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3823",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3906",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.host_id",
       "Namespace": "system",
@@ -31976,7 +31984,7 @@
       "Dedicated metrics": "truenas_host_cpu_cores, truenas_host_cpu_info, truenas_host_ecc_memory, truenas_host_info, truenas_host_load_average, truenas_host_physical_cpu_cores, truenas_host_physical_memory_bytes, truenas_host_system_info, truenas_host_uptime_seconds",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/info.md) Returns basic system information. roles: READONLY_ADMIN return: SystemInfoResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3342, src/truenas_exporter/runtime.py:3344",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3425, src/truenas_exporter/runtime.py:3427",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "system.info",
       "Namespace": "system",
@@ -32046,7 +32054,7 @@
       "Dedicated metrics": "truenas_ntp_server_burst_count, truenas_ntp_server_count, truenas_ntp_server_iburst_count, truenas_ntp_server_max_poll_minutes, truenas_ntp_server_min_poll_minutes, truenas_ntp_server_prefer_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/system/ntpserver/query.md) No prose summary; schema and operation name are the evidence. roles: NETWORK_GENERAL_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4860, src/truenas_exporter/runtime.py:4861",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4943, src/truenas_exporter/runtime.py:4944",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.ntpserver.query",
       "Namespace": "system.ntpserver",
@@ -32074,7 +32082,7 @@
       "Dedicated metrics": "truenas_host_info, truenas_system_product_type",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/product_type.md) Returns the type of the product roles: SYSTEM_PRODUCT_READ return: Result / enum (of string)",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3345, src/truenas_exporter/runtime.py:3347, src/truenas_exporter/runtime.py:3801",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3428, src/truenas_exporter/runtime.py:3430, src/truenas_exporter/runtime.py:3884",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.product_type",
       "Namespace": "system",
@@ -32088,7 +32096,7 @@
       "Dedicated metrics": "truenas_system_ready",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/ready.md) Returns whether the system completed boot and is ready to use roles: SYSTEM_GENERAL_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3336, src/truenas_exporter/runtime.py:3338",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3419, src/truenas_exporter/runtime.py:3421",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.ready",
       "Namespace": "system",
@@ -32102,7 +32110,7 @@
       "Dedicated metrics": "truenas_system_reboot_reason, truenas_system_reboot_required",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/reboot/info.md) No prose summary; schema and operation name are the evidence. roles: SYSTEM_GENERAL_READ return: RebootInfo / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3028",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3111",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.reboot.info",
       "Namespace": "system.reboot",
@@ -32130,7 +32138,7 @@
       "Dedicated metrics": "truenas_system_security_fips_configured, truenas_system_security_gpos_stig, truenas_system_security_password_history_count, truenas_system_security_password_max_age_days, truenas_system_security_password_min_age_days, truenas_system_security_password_min_length",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/system/security/config.md) No prose summary; schema and operation name are the evidence. roles: SYSTEM_SECURITY_READ return: SystemSecurityEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4918, src/truenas_exporter/runtime.py:4920",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:5001, src/truenas_exporter/runtime.py:5003",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.security.config",
       "Namespace": "system.security",
@@ -32144,7 +32152,7 @@
       "Dedicated metrics": "truenas_fips_available",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/security/info/fips_available.md) Returns a boolean identifying whether FIPS mode may be toggled on this system roles: SYSTEM_SECURITY_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4321, src/truenas_exporter/runtime.py:4323",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4404, src/truenas_exporter/runtime.py:4406",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.security.info.fips_available",
       "Namespace": "system.security.info",
@@ -32158,7 +32166,7 @@
       "Dedicated metrics": "truenas_fips_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/security/info/fips_enabled.md) Returns a boolean identifying whether FIPS mode has been enabled on this system roles: SYSTEM_SECURITY_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4329, src/truenas_exporter/runtime.py:4331",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4412, src/truenas_exporter/runtime.py:4414",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.security.info.fips_enabled",
       "Namespace": "system.security.info",
@@ -32200,7 +32208,7 @@
       "Dedicated metrics": "truenas_system_state",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/state.md) Returns system state: \"BOOTING\" - System is booting \"READY\" - System completed boot and is ready to use \"SHUTTING_DOWN\" - System is shutting down roles: SYSTEM_GENERAL_READ return: Result / enum (of string)",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3331, src/truenas_exporter/runtime.py:3333",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3414, src/truenas_exporter/runtime.py:3416",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.state",
       "Namespace": "system",
@@ -32228,7 +32236,7 @@
       "Dedicated metrics": "truenas_system_version",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/system/version_short.md) Returns the short name of the software version of the system. roles: none documented return: Result / string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3813, src/truenas_exporter/runtime.py:950",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3896, src/truenas_exporter/runtime.py:950",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "system.version_short",
       "Namespace": "system",
@@ -32242,7 +32250,7 @@
       "Dedicated metrics": "truenas_systemdataset_pool",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/systemdataset/config.md) No prose summary; schema and operation name are the evidence. roles: DATASET_READ return: SystemDatasetEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4707",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4790",
       "Generic coverage": "blocked: full response is raw, opaque, identity-bearing, or configuration-heavy",
       "Method": "systemdataset.config",
       "Namespace": "systemdataset",
@@ -32396,7 +32404,7 @@
       "Dedicated metrics": "truenas_chassis_hardware",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/truenas/get_chassis_hardware.md) Returns what type of hardware this is, detected from dmidecode. roles: READONLY_ADMIN return: Result / string",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4357, src/truenas_exporter/runtime.py:4359",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4440, src/truenas_exporter/runtime.py:4442",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "truenas.get_chassis_hardware",
       "Namespace": "truenas",
@@ -32438,7 +32446,7 @@
       "Dedicated metrics": "truenas_is_ix_hardware",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/truenas/is_ix_hardware.md) Return a boolean value on whether this is hardware that iXsystems sells. roles: READONLY_ADMIN return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3076, src/truenas_exporter/runtime.py:3078",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3159, src/truenas_exporter/runtime.py:3161",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "truenas.is_ix_hardware",
       "Namespace": "truenas",
@@ -32452,7 +32460,7 @@
       "Dedicated metrics": "truenas_is_production",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/truenas/is_production.md) Returns if system is marked as production. roles: READONLY_ADMIN return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3067, src/truenas_exporter/runtime.py:3069",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3150, src/truenas_exporter/runtime.py:3152",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "truenas.is_production",
       "Namespace": "truenas",
@@ -32466,7 +32474,7 @@
       "Dedicated metrics": "truenas_managed_by_truecommand",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/truenas/managed_by_truecommand.md) Returns whether TrueNAS is being managed by TrueCommand roles: none documented return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3845, src/truenas_exporter/runtime.py:3847",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3928, src/truenas_exporter/runtime.py:3930",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "truenas.managed_by_truecommand",
       "Namespace": "truenas",
@@ -32578,7 +32586,7 @@
       "Dedicated metrics": "truenas_update_version_available",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/update/available_versions.md) TrueNAS versions available for update. roles: SYSTEM_UPDATE_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3860",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3943",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "update.available_versions",
       "Namespace": "update",
@@ -32592,7 +32600,7 @@
       "Dedicated metrics": "truenas_update_autocheck_enabled, truenas_update_profile_info",
       "Documented operation/type": "singleton configuration read",
       "Evidence/notes": "[docs](truenas-api/methods/update/config.md) No prose summary; schema and operation name are the evidence. roles: SYSTEM_UPDATE_READ return: UpdateEntry / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3880, src/truenas_exporter/runtime.py:3882",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3963, src/truenas_exporter/runtime.py:3965",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "update.config",
       "Namespace": "update",
@@ -32676,7 +32684,7 @@
       "Dedicated metrics": "truenas_update_available, truenas_update_download_progress_percent, truenas_update_status",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/update/status.md) Update status. roles: SYSTEM_UPDATE_READ return: UpdateStatus / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3682, src/truenas_exporter/runtime.py:3684",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3765, src/truenas_exporter/runtime.py:3767",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "update.status",
       "Namespace": "update",
@@ -33376,7 +33384,7 @@
       "Dedicated metrics": "truenas_virt_volume_count",
       "Documented operation/type": "CRUD read/query",
       "Evidence/notes": "[docs](truenas-api/methods/virt/volume/query.md) No prose summary; schema and operation name are the evidence. roles: VIRT_IMAGE_READ return: Result / array of object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4088",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4171",
       "Generic coverage": "candidate catalog only; guarded discovery or owned collector parameters required",
       "Method": "virt.volume.query",
       "Namespace": "virt.volume",
@@ -33572,7 +33580,7 @@
       "Dedicated metrics": "truenas_iommu_enabled",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/vm/device/iommu_enabled.md) Returns \"true\" if iommu is enabled, \"false\" otherwise roles: VM_DEVICE_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4943",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:5026",
       "Generic coverage": "none; not in the generic base plan",
       "Method": "vm.device.iommu_enabled",
       "Namespace": "vm.device",
@@ -33754,7 +33762,7 @@
       "Dedicated metrics": "truenas_vm_flag_amd_asids, truenas_vm_flag_amd_asids_supported, truenas_vm_flag_amd_rvi, truenas_vm_flag_intel_vmx, truenas_vm_flag_unrestricted_guest",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/vm/flags.md) Returns a dictionary with CPU flags for the hypervisor. roles: VM_READ return: VMFlagsResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3985, src/truenas_exporter/runtime.py:3987",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4068, src/truenas_exporter/runtime.py:4070",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "vm.flags",
       "Namespace": "vm",
@@ -33768,7 +33776,7 @@
       "Dedicated metrics": "truenas_vm_available_memory_bytes",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/vm/get_available_memory.md) Get the current maximum amount of available memory to be allocated for VMs. In case of `overcommit` being `true`, calculations are done in the following manner: 1. If a VM has requested 10G but is only consuming 5G, only 5G will be counted 2. System will consider shrinkable ZFS ARC as free memory ( shrinkable ZFS ARC is current ZFS ARC minus ZFS ARC minimum\u2026 roles: VM_READ return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3352, src/truenas_exporter/runtime.py:3354, src/truenas_exporter/runtime.py:3355",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3435, src/truenas_exporter/runtime.py:3437, src/truenas_exporter/runtime.py:3438",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "vm.get_available_memory",
       "Namespace": "vm",
@@ -33866,7 +33874,7 @@
       "Dedicated metrics": "truenas_vm_vmemory_in_use_bytes",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/vm/get_vmemory_in_use.md) The total amount of virtual memory in MB used by guests Returns a dict with the following information: RNP - Running but not provisioned PRD - Provisioned but not running RPRD - Running and provisioned roles: VM_READ return: VMGetVmemoryInUseResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3361, src/truenas_exporter/runtime.py:3363, src/truenas_exporter/runtime.py:3367",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3444, src/truenas_exporter/runtime.py:3446, src/truenas_exporter/runtime.py:3450",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "vm.get_vmemory_in_use",
       "Namespace": "vm",
@@ -33936,7 +33944,7 @@
       "Dedicated metrics": "truenas_vm_maximum_supported_vcpus",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/vm/maximum_supported_vcpus.md) Returns maximum supported VCPU's roles: VM_READ return: Result / integer",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3963, src/truenas_exporter/runtime.py:3965",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4046, src/truenas_exporter/runtime.py:4048",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "vm.maximum_supported_vcpus",
       "Namespace": "vm",
@@ -34090,7 +34098,7 @@
       "Dedicated metrics": "truenas_vm_supports_virtualization",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/vm/supports_virtualization.md) Returns \"true\" if system supports virtualization, \"false\" otherwise roles: VM_READ return: Result / boolean",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:3955, src/truenas_exporter/runtime.py:3957",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4038, src/truenas_exporter/runtime.py:4040",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "vm.supports_virtualization",
       "Namespace": "vm",
@@ -34132,7 +34140,7 @@
       "Dedicated metrics": "truenas_vm_virtualization_details_error_present, truenas_vm_virtualization_details_supported",
       "Documented operation/type": "read/status/inventory",
       "Evidence/notes": "[docs](truenas-api/methods/vm/virtualization_details.md) Retrieve details if virtualization is supported on the system and in case why it's not supported if it isn't. roles: VM_READ return: VMVirtualizationDetailsResult / object",
-      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4003, src/truenas_exporter/runtime.py:4005",
+      "Exporter usage": "runtime call(s): src/truenas_exporter/runtime.py:4086, src/truenas_exporter/runtime.py:4088",
       "Generic coverage": "opt-in generic method extraction via BASE_METHODS; safety/entity/sensitivity guards apply",
       "Method": "vm.virtualization_details",
       "Namespace": "vm",
@@ -34268,12 +34276,12 @@
     }
   ],
   "metric_disposition_partition": {
-    "active dedicated": 332,
+    "active dedicated": 334,
     "deprecated compatibility": 7,
     "generic extraction": 8,
     "internal/config/transport": 12,
     "opportunistic dedicated": 2,
-    "unavailable: no reachable 25.10.2 producer": 48
+    "unavailable: no reachable 25.10.2 producer": 46
   },
   "namespaces": [
     {

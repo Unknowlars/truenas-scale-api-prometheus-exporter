@@ -23,7 +23,7 @@ Rules for updating:
 | [T05](tasks/T05-network-rate-fallback.md) | Remove cumulative-bytes fallback in network rx/tx rate gauges | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T06](tasks/T06-fabricated-zeros.md) | Eliminate fabricated zeros on partial failure (job flags, reporting_enabled) | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T07](tasks/T07-dataset-snapshot-count.md) | Make `dataset_snapshot_count` actually emit | metric gap | S | — | done | 2026-07-16 | minor-version-worthy |
-| [T08](tasks/T08-task-outcome-metrics.md) | Emit replication/cloudsync/rsync/snapshottask outcome state + last-run | metric gap | L | — | todo | | Biggest operational blind spot |
+| [T08](tasks/T08-task-outcome-metrics.md) | Emit replication/cloudsync/rsync/snapshottask outcome state + last-run | metric gap | L | — | done | 2026-07-16 | minor-version-worthy |
 
 ## P2 — Hardening + high-value gaps
 
@@ -56,6 +56,9 @@ file:line and one sentence. Do not fix them.
 - T05 optional follow-up: `reporting.realtime` interface `received_bytes`/`sent_bytes`
   cumulative or interval byte fields are not exported under honest non-rate metric names;
   consider a T21 metric if operators need them.
+- T08 dashboard follow-up: consider adding a bundled dashboard panel for recent task
+  failures now that `truenas_task_state{state="ERROR|FAILED"}` emits for replication,
+  cloudsync, rsynctask, and snapshottask tasks.
 
 ## Completed log
 
@@ -82,3 +85,6 @@ Move a one-line summary here when a task reaches `done`:
   local commit; patch-worthy
 - T07 — 2026-07-16 — dataset snapshot counts now emit by default through the documented
   bounded `pool.dataset.snapshot_count` fallback — local commit; minor-version-worthy
+- T08 — 2026-07-16 — replication, cloudsync, rsynctask, and snapshottask outcome
+  state/last-run metrics now emit from safe selected fields — local commit;
+  minor-version-worthy

@@ -2632,6 +2632,10 @@ class TrueNASExporter:
         tasks: list[Any],
         name_field: str,
         enabled_field: str,
+        *,
+        fallback_name_field: str | None = None,
+        outcome_field: str | None = None,
+        outcome_ts_field: str | None = None,
         total_count: int | None = None,
     ) -> None:
         """Export documented task identity and enablement fields."""
@@ -2640,6 +2644,8 @@ class TrueNASExporter:
             if not isinstance(task, dict):
                 continue
             raw_name = task.get(name_field)
+            if not isinstance(raw_name, (str, int)) and fallback_name_field is not None:
+                raw_name = task.get(fallback_name_field)
             if not isinstance(raw_name, (str, int)):
                 continue
             name = str(raw_name)
@@ -2647,6 +2653,49 @@ class TrueNASExporter:
                 TASK_ENABLED.labels(task_type=task_type, name=name),
                 task.get(enabled_field),
             )
+            if outcome_field is None:
+                continue
+            self._export_task_outcome(task_type, name, task.get(outcome_field), outcome_ts_field)
+
+    def _normalize_task_state(self, value: Any) -> str | None:
+        raw = value.get("state") if isinstance(value, dict) else value
+        if raw is None:
+            return None
+        state = _str_label(raw, "").upper()
+        if not state:
+            return None
+        if state in {
+            "PENDING",
+            "RUNNING",
+            "SUCCESS",
+            "FINISHED",
+            "ERROR",
+            "FAILED",
+            "WAITING",
+            "ABORTED",
+            "HOLD",
+            "UNKNOWN",
+        }:
+            return state
+        return "UNKNOWN"
+
+    def _export_task_outcome(
+        self,
+        task_type: str,
+        name: str,
+        outcome: Any,
+        timestamp_field: str | None,
+    ) -> None:
+        if not isinstance(outcome, dict):
+            return
+        state = self._normalize_task_state(outcome)
+        if state is not None:
+            TASK_STATE.labels(task_type=task_type, name=name, state=state).set(1)
+        if timestamp_field is None:
+            return
+        ts = _parse_ts(outcome.get(timestamp_field))
+        if ts is not None:
+            TASK_LAST_RUN_TS.labels(task_type=task_type, name=name).set(ts)
 
     def _collect_task_metrics(self, client: JsonRpcWsClient) -> None:
         if not self.config.enable_task_metrics:
@@ -2659,11 +2708,20 @@ class TrueNASExporter:
         try:
             items = self._call(client, "replication.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "name", "enabled", "state"]}
             ])
             if isinstance(items, list):
                 total = self._query_count(client, "replication.query")
-                self._export_task_list("replication", items, "id", "enabled", total)
+                self._export_task_list(
+                    "replication",
+                    items,
+                    "name",
+                    "enabled",
+                    fallback_name_field="id",
+                    outcome_field="state",
+                    outcome_ts_field="datetime",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("replication.query failed", exc_info=True)
 
@@ -2671,11 +2729,20 @@ class TrueNASExporter:
         try:
             items = self._call(client, "cloudsync.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "description", "enabled", "job"]}
             ])
             if isinstance(items, list):
                 total = self._query_count(client, "cloudsync.query")
-                self._export_task_list("cloudsync", items, "id", "enabled", total)
+                self._export_task_list(
+                    "cloudsync",
+                    items,
+                    "description",
+                    "enabled",
+                    fallback_name_field="id",
+                    outcome_field="job",
+                    outcome_ts_field="time_finished",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("cloudsync.query failed", exc_info=True)
 
@@ -2683,11 +2750,19 @@ class TrueNASExporter:
         try:
             items = self._call(client, "rsynctask.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "enabled", "job"]}
             ])
             if isinstance(items, list):
                 total = self._query_count(client, "rsynctask.query")
-                self._export_task_list("rsynctask", items, "id", "enabled", total)
+                self._export_task_list(
+                    "rsynctask",
+                    items,
+                    "id",
+                    "enabled",
+                    outcome_field="job",
+                    outcome_ts_field="time_finished",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("rsynctask.query failed", exc_info=True)
 
@@ -2695,11 +2770,19 @@ class TrueNASExporter:
         try:
             items = self._call(client, "pool.snapshottask.query", [
                 [], {"limit": self.config.query_limit,
-                     "select": ["id", "enabled"]}
+                     "select": ["id", "enabled", "state"]}
             ])
             if isinstance(items, list):
                 total = self._query_count(client, "pool.snapshottask.query")
-                self._export_task_list("snapshottask", items, "id", "enabled", total)
+                self._export_task_list(
+                    "snapshottask",
+                    items,
+                    "id",
+                    "enabled",
+                    outcome_field="state",
+                    outcome_ts_field="datetime",
+                    total_count=total,
+                )
         except Exception:
             LOG.debug("pool.snapshottask.query failed", exc_info=True)
 

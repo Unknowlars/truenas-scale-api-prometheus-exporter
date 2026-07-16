@@ -108,4 +108,32 @@ python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_expo
 
 ## Outcome
 
-_(fill in when done)_
+- Implemented task outcome export for replication, cloudsync, rsynctask, and
+  snapshottask rows through the existing `truenas_task_state{task_type,name,state}`
+  and `truenas_task_last_run_timestamp_seconds{task_type,name}` gauges.
+- Extended task query `select` lists exactly to:
+  replication `["id", "name", "enabled", "state"]`, cloudsync
+  `["id", "description", "enabled", "job"]`, rsynctask
+  `["id", "enabled", "job"]`, and snapshottask
+  `["id", "enabled", "state"]`.
+- State labels are normalized to the T08 allowlist, unknown values map to
+  `UNKNOWN`, and null/missing/unparseable `state`/`job` or timestamp data leaves
+  outcome samples absent instead of fabricating zeroes.
+- Preserved existing task count/enabled behavior and the `max_entity_calls`
+  truncation boundary by exporting outcome samples inside the existing bounded
+  task loop.
+- Updated parity generator mappings so `TASK_STATE` and `TASK_LAST_RUN_TS` are
+  active dedicated metrics with per-task response fields and notes about opaque
+  task-state docs plus safe select fields.
+- Added focused fixture-style tests for all four task types, `job=None`
+  absence, unknown-state normalization, failed-query isolation, and exact wire
+  `select` lists.
+- Considered a bundled dashboard task-failures panel; not implemented in T08.
+  Logged as a discovered follow-up in `TASKS.md`.
+- Verification:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_runtime_api_parity.py -q`
+  passed (`79 passed`); generators passed
+  (`python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`);
+  `./scripts/validate.sh` exited 0 with ruff, mypy, `204 passed`, 90.77%
+  coverage, dashboard validation, generated checks, `public_release_audit_ok`,
+  Docker image build, container version smoke `5.2.0`, and `validation_ok`.
