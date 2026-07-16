@@ -104,3 +104,89 @@ def test_message_arrival_resets_idle_deadline(monkeypatch):
     assert client.recv_count == 6
     assert exporter._event_message_counts["reporting.realtime"] == 1
     assert exporter._collector_event_stream_up["reporting.realtime"] == 0.0
+
+
+def test_non_collection_update_traffic_does_not_mask_dead_connection(monkeypatch):
+    """R03: steady non-collection_update WS traffic must not suppress the idle
+    deadline. Before the fix, the deadline was only evaluated inside the
+    WebSocketTimeoutException handler, so a connection that kept returning
+    real-but-irrelevant messages (server notifications, etc.) from recv_json()
+    never timed out even though no event message ever arrived.
+    """
+    now = {"value": 0.0}
+    monkeypatch.setattr(runtime.time, "monotonic", lambda: now["value"])
+    exporter = exporter_module.TrueNASExporter(
+        make_config(
+            enable_event_streams=True,
+            event_subscriptions=["reporting.realtime"],
+            event_read_timeout_seconds=60,
+            event_stale_after_seconds=30,
+        )
+    )
+    noise = {"method": "notify.something", "params": {}}
+    # recv_json() never raises WebSocketTimeoutException; it keeps returning
+    # real traffic that is not a collection_update for the subscription.
+    outcomes = [noise] * 10
+    client = _LivenessClient(now, tick_seconds=25, outcomes=outcomes)
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: client)
+    monkeypatch.setattr(exporter._stop_event, "wait", lambda _seconds: True)
+
+    exporter._event_stream_loop()
+
+    # Idle deadline (60s) crosses on the 3rd read (75s of silence for the
+    # subscription) even though every recv_json() call returned real traffic.
+    assert client.recv_count == 3
+    assert exporter._collector_event_stream_up["reporting.realtime"] == 0.0
+
+
+def test_dead_connection_teardown_skips_unsubscribe(monkeypatch):
+    """R04: teardown after a dead-connection detection must not block on
+    core.unsubscribe over the socket just judged dead.
+    """
+    now = {"value": 0.0}
+    monkeypatch.setattr(runtime.time, "monotonic", lambda: now["value"])
+    exporter = exporter_module.TrueNASExporter(
+        make_config(
+            enable_event_streams=True,
+            event_subscriptions=["reporting.realtime"],
+            event_read_timeout_seconds=60,
+            event_stale_after_seconds=30,
+        )
+    )
+    client = _LivenessClient(now, tick_seconds=25, outcomes=[])
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: client)
+    monkeypatch.setattr(exporter._stop_event, "wait", lambda _seconds: True)
+
+    exporter._event_stream_loop()
+
+    assert not any(call[0] == "core.unsubscribe" for call in client.calls)
+    assert exporter._collector_event_stream_up["reporting.realtime"] == 0.0
+
+
+def test_clean_stop_still_unsubscribes(monkeypatch):
+    """R04 control case: an orderly shutdown (not a dead-connection teardown)
+    must still issue core.unsubscribe."""
+    now = {"value": 0.0}
+    monkeypatch.setattr(runtime.time, "monotonic", lambda: now["value"])
+    exporter = exporter_module.TrueNASExporter(
+        make_config(
+            enable_event_streams=True,
+            event_subscriptions=["reporting.realtime"],
+            event_read_timeout_seconds=60,
+            event_stale_after_seconds=30,
+        )
+    )
+    client = _LivenessClient(now, tick_seconds=1, outcomes=[])
+
+    def fake_recv():
+        client.recv_count += 1
+        now["value"] += 1
+        exporter._stop_event.set()
+        raise WebSocketTimeoutException()
+
+    client.recv_json = fake_recv
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: client)
+
+    exporter._event_stream_loop()
+
+    assert any(call[0] == "core.unsubscribe" for call in client.calls)

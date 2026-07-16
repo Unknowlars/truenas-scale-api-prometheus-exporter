@@ -2126,14 +2126,29 @@ class TrueNASExporter:
 
                     backoff = 2  # reset backoff on successful connection
                     last_message_monotonic = time.monotonic()
+                    connection_dead = False
 
                     try:
                         while not self._stop_event.is_set():
                             try:
                                 msg = client.recv_json()
                             except WebSocketTimeoutException:
+                                msg = None
+
+                            if isinstance(msg, dict) and msg.get("method") == "collection_update":
+                                # A genuine collection_update proves the connection is
+                                # alive right now; reset before any deadline check.
+                                last_message_monotonic = time.monotonic()
+                            else:
+                                # Evaluate the idle deadline on every recv_json() return
+                                # that isn't a fresh collection_update, not just on socket
+                                # timeout — a connection that keeps delivering other WS
+                                # traffic (server notifications, non-subscription
+                                # messages) would otherwise never trip the dead-connection
+                                # check even with the subscription itself long dead.
                                 idle_seconds = time.monotonic() - last_message_monotonic
                                 if idle_seconds >= self.config.event_read_timeout_seconds:
+                                    connection_dead = True
                                     raise RuntimeError(
                                         f"No event stream messages received for "
                                         f"{idle_seconds:.0f}s; assuming dead connection"
@@ -2141,9 +2156,7 @@ class TrueNASExporter:
                                 with self._lock:
                                     self._expire_stale_events()
                                 continue
-                            if msg.get("method") != "collection_update":
-                                continue
-                            last_message_monotonic = time.monotonic()
+
                             params = msg.get("params")
                             if not isinstance(params, dict):
                                 continue
@@ -2164,15 +2177,22 @@ class TrueNASExporter:
                                 self._expire_stale_events()
                                 self._dispatch_event(collection, payload)
                     finally:
-                        self._require_profile_method("core.unsubscribe")
+                        # A connection judged dead by the idle-deadline check is not worth
+                        # unsubscribing from — each core.unsubscribe call would block up to
+                        # the socket timeout on a socket that is not going to answer, adding
+                        # up to N x timeout of delay before reconnect. Still clear local
+                        # state below so metrics reflect the teardown immediately.
+                        if not connection_dead:
+                            self._require_profile_method("core.unsubscribe")
                         for event, subscription_id in list(subscribed_events.items()):
-                            try:
-                                client.call("core.unsubscribe", [subscription_id])
-                            except Exception:
-                                self._collector_error(
-                                    "event_unsubscribe",
-                                    f"Failed unsubscribing from {event}",
-                                )
+                            if not connection_dead:
+                                try:
+                                    client.call("core.unsubscribe", [subscription_id])
+                                except Exception:
+                                    self._collector_error(
+                                        "event_unsubscribe",
+                                        f"Failed unsubscribing from {event}",
+                                    )
                             with self._lock:
                                 self._collector_event_stream_up[event] = 0.0
                                 self._clear_cached_event_metrics(event)
