@@ -239,8 +239,10 @@ import logging
 import os
 import re
 import signal
+import sys
 import threading
 import time
+import traceback
 from typing import Any, cast
 from urllib.parse import urlparse
 
@@ -676,6 +678,34 @@ del _metric_spec
 
 LOG = logging.getLogger("truenas_exporter")
 EXPORTER_VERSION = __version__
+
+
+def _redacted_traceback_text(ws_url: str) -> str:
+    exc_text = "".join(traceback.format_exception(*sys.exc_info()))
+    parsed = urlparse(ws_url)
+    hostname = parsed.hostname
+    if not hostname:
+        return exc_text
+    replacements = {hostname}
+    if parsed.port is not None:
+        replacements.add(f"{hostname}:{parsed.port}")
+    elif parsed.scheme == "wss":
+        replacements.add(f"{hostname}:443")
+    elif parsed.scheme == "ws":
+        replacements.add(f"{hostname}:80")
+    for target in sorted(replacements, key=len, reverse=True):
+        exc_text = exc_text.replace(target, "<redacted-host>")
+    return exc_text
+
+
+def _log_exception_redacted(
+    logger: logging.Logger,
+    level: int,
+    message: str,
+    ws_url: str,
+    *args: Any,
+) -> None:
+    logger.log(level, "%s\n%s", message % args if args else message, _redacted_traceback_text(ws_url))
 
 # Pre-compiled regex for _normalize_path — avoids recompiling on every recursive call
 # inside _extract_generic_metrics / _extract_event_metrics.
@@ -2377,7 +2407,13 @@ class TrueNASExporter:
                         self._collector_event_stream_up[event] = 0.0
                     if not self._is_collector_mode():
                         self._publish_cached_events_to_default_registry()
-                LOG.warning("Event stream reconnecting in %ds", backoff, exc_info=True)
+                _log_exception_redacted(
+                    LOG,
+                    logging.WARNING,
+                    "Event stream reconnecting in %ds",
+                    self.config.ws_url,
+                    backoff,
+                )
                 if self._stop_event.wait(backoff):
                     break
                 backoff = min(backoff * 2, 120)  # exponential backoff, cap at 2 minutes
@@ -3495,7 +3531,12 @@ class TrueNASExporter:
             self._all_methods_discovered = True
 
         except Exception:
-            LOG.warning("Dynamic method discovery failed", exc_info=True)
+            _log_exception_redacted(
+                LOG,
+                logging.WARNING,
+                "Dynamic method discovery failed",
+                self.config.ws_url,
+            )
 
     def scrape_once(self) -> None:
         LAST_SCRAPE_TS.set(time.time())
@@ -4074,7 +4115,12 @@ class TrueNASExporter:
                     success = True
 
             except Exception:
-                LOG.exception("Scrape failed")
+                _log_exception_redacted(
+                    LOG,
+                    logging.ERROR,
+                    "Scrape failed",
+                    self.config.ws_url,
+                )
                 success = False
 
         if self._is_collector_mode():
@@ -5489,6 +5535,7 @@ def main() -> None:
         registry = CollectorRegistry(auto_describe=True)
         registry.register(TrueNASCollector(exporter))  # type: ignore[arg-type]
         server = _start_http_server(
+            config.exporter_bind_address,
             config.exporter_port,
             exporter._lock,
             registry=registry,
@@ -5504,6 +5551,7 @@ def main() -> None:
         registry = CollectorRegistry(auto_describe=True)
         registry.register(TrueNASCollector(exporter))  # type: ignore[arg-type]
         server = _start_http_server(
+            config.exporter_bind_address,
             config.exporter_port,
             exporter._lock,
             registry=registry,

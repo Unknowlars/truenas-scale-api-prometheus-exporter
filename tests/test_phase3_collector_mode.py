@@ -168,7 +168,8 @@ def test_main_legacy_registers_snapshot_registry_without_lock(monkeypatch):
 
     fake_exporter = FakeExporter()
 
-    def fake_start_http_server(port, lock, **kwargs):
+    def fake_start_http_server(host, port, lock, **kwargs):
+        captured["host"] = host
         captured["port"] = port
         captured["lock"] = lock
         captured.update(kwargs)
@@ -186,6 +187,7 @@ def test_main_legacy_registers_snapshot_registry_without_lock(monkeypatch):
 
     runtime.main()
 
+    assert captured["host"] == ""
     assert captured["lock"] is fake_exporter._lock
     assert captured["lock_metrics"] is False
     assert captured["readiness_check"]() is True

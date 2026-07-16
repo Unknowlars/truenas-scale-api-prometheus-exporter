@@ -43,6 +43,7 @@ class Config:
     enable_generic_event_metrics: bool
     dataset_snapshot_fallback_limit: int
     exporter_mode: str
+    exporter_bind_address: str = ""
     scrape_budget_seconds: int = 25
     event_stale_after_seconds: int = 15
     ca_file: str | None = None
@@ -71,6 +72,13 @@ def _int_env(name: str, default: str, minimum: int, maximum: int | None = None) 
         bounds = f"between {minimum} and {maximum}" if maximum is not None else f">= {minimum}"
         raise ValueError(f"{name} must be {bounds}, got {value}")
     return value
+
+
+def _bind_address_env(name: str, default: str = "") -> str:
+    raw = os.getenv(name, default)
+    if ":" in raw or any(char.isspace() for char in raw):
+        raise ValueError(f"{name} must be a host/IP without port or spaces")
+    return raw
 
 
 def load_config() -> Config:
@@ -128,6 +136,7 @@ def load_config() -> Config:
         timeout_seconds=_int_env("TRUENAS_TIMEOUT_SECONDS", "20", 1),
         verify_tls=_bool_env("TRUENAS_VERIFY_TLS", "true"),
         exporter_port=_int_env("EXPORTER_PORT", "9108", 1, 65535),
+        exporter_bind_address=_bind_address_env("EXPORTER_BIND_ADDRESS"),
         auto_discover_methods=_bool_env("AUTO_DISCOVER_METHODS", "false"),
         query_limit=_int_env("QUERY_LIMIT", "200", 1),
         max_method_calls=_int_env("MAX_METHOD_CALLS", "250", 1),

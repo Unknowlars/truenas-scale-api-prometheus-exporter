@@ -1,5 +1,7 @@
 import json
+import logging
 import math
+import sys
 from pathlib import Path
 
 import pytest
@@ -112,6 +114,52 @@ def test_load_config_supports_custom_ca_file(monkeypatch, tmp_path):
     monkeypatch.setenv("TRUENAS_CA_FILE", str(ca_file))
 
     assert exporter_module._load_config().ca_file == str(ca_file)
+
+
+def test_load_config_supports_bind_address(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EXPORTER_BIND_ADDRESS", "127.0.0.1")
+
+    assert exporter_module._load_config().exporter_bind_address == "127.0.0.1"
+
+
+def test_load_config_bind_address_defaults_to_all_interfaces(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.delenv("EXPORTER_BIND_ADDRESS", raising=False)
+
+    assert exporter_module._load_config().exporter_bind_address == ""
+
+
+@pytest.mark.parametrize("value", ["127.0.0.1:9108", "nas example", " 127.0.0.1"])
+def test_load_config_rejects_bind_address_with_port_or_spaces(monkeypatch, value):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EXPORTER_BIND_ADDRESS", value)
+
+    with pytest.raises(ValueError, match="EXPORTER_BIND_ADDRESS"):
+        exporter_module._load_config()
+
+
+def test_redacted_exception_log_preserves_traceback_without_host(caplog):
+    runtime = sys.modules[exporter_module.TrueNASExporter.__module__]
+    logger = logging.getLogger("truenas_exporter")
+    caplog.set_level(logging.ERROR, logger="truenas_exporter")
+
+    try:
+        raise RuntimeError("connection failed: wss://nas.example:443/api/current")
+    except RuntimeError:
+        runtime._log_exception_redacted(
+            logger,
+            logging.ERROR,
+            "scrubbed failure",
+            "wss://nas.example/api/current",
+        )
+
+    assert "<redacted-host>" in caplog.text
+    assert "Traceback (most recent call last)" in caplog.text
+    assert "nas.example" not in caplog.text
 
 
 def test_load_config_rejects_invalid_url_and_boolean(monkeypatch):

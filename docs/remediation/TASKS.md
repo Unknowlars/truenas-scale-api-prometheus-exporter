@@ -43,7 +43,7 @@ Rules for updating:
 | ID | Task | Area | Size | Depends on | Status | Updated | Notes |
 |----|------|------|------|------------|--------|---------|-------|
 | [T17](tasks/T17-legacy-metrics-blocking.md) | Legacy mode: `/metrics` must not block for the whole poll cycle | performance | M | — | done | 2026-07-16 | performance/no metric contract change |
-| [T18](tasks/T18-bind-address-and-log-leak.md) | Configurable bind address + stop hostname leaking via tracebacks | security | S | — | todo | | |
+| [T18](tasks/T18-bind-address-and-log-leak.md) | Configurable bind address + stop hostname leaking via tracebacks | security | S | — | done | 2026-07-16 | minor-version-worthy new env var |
 | [T19](tasks/T19-help-and-conventions.md) | HELP/type/naming corrections (gateway_reachable, blkio counters, smb LOCKS, snapshot-oldest HELP, per-disk HELP) | conventions | M | T03 | todo | | |
 | [T20](tasks/T20-dead-code-and-docs.md) | Remove dead code and the misleading 230-line version-history docstring | cleanup | S | — | todo | | Do last-ish; low conflict risk |
 | [T21](tasks/T21-new-low-cost-metrics.md) | Optional batch: api_key expiry, failover.reboot.info, kmip_sync_pending, v26 interface speed | metric gap | M | T11 | todo | | Stretch; minor-version worthy |
@@ -119,3 +119,7 @@ Move a one-line summary here when a task reaches `done`:
   without waiting on the scrape lock, with event-driven snapshot refresh
   throttled to one second; no metric contract change — local commit;
   patch-worthy performance fix
+- T18 — 2026-07-16 — `EXPORTER_BIND_ADDRESS` now controls HTTP bind host/IP
+  with unchanged all-interface default, and configured TrueNAS hosts are
+  redacted from preserved traceback logs — local commit; minor-version-worthy
+  new env var

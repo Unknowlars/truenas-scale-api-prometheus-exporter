@@ -73,4 +73,15 @@ flags the new env var documentation, follow its rules (read the script if it fai
 
 ## Outcome
 
-_(fill in when done)_
+- Added `EXPORTER_BIND_ADDRESS`, defaulting to `""`, with validation that rejects ports (`:`)
+  and whitespace. The configured host is threaded into the HTTP server bind path while the empty
+  default preserves all-interface binding.
+- Added redacted exception logging for the event reconnect warning, dynamic method discovery
+  warning, and scrape failure exception path. Tracebacks are preserved, but the configured
+  TrueNAS WebSocket host and host:port variants are replaced with `<redacted-host>`.
+- Documented the new env var in `.env.example`, the README configuration table, and Compose env
+  forwarding. Regenerated API parity artifacts after runtime line-number evidence changed.
+- Verification: `python3 -m pytest tests/test_http_integration.py tests/test_reliability.py
+  tests/test_cli.py -q` passed with 33 passed / 4 skipped; `./scripts/validate.sh` exited 0 with
+  236 tests passed, 91.41% coverage, generated checks, public release audit, Docker build, and
+  container version smoke.

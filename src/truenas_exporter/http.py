@@ -34,12 +34,21 @@ _LANDING_PAGE = b"""\
 
 
 def start_http_server(
-    port: int,
-    lock: Any,
+    host: str | int,
+    port: int | Any,
+    lock: Any | None = None,
     registry: CollectorRegistry | None = None,
     lock_metrics: bool = True,
     readiness_check: Callable[[], bool] | None = None,
 ) -> Any:
+    if lock is None:
+        bind_host = ""
+        bind_port = int(host)
+        metrics_lock: Any = port
+    else:
+        bind_host = str(host)
+        bind_port = int(port)
+        metrics_lock = lock
     metrics_app = make_wsgi_app() if registry is None else make_wsgi_app(registry=registry)
 
     def app(environ: dict[str, Any], start_response: Any) -> list[bytes]:
@@ -57,16 +66,21 @@ def start_http_server(
             start_response(status, [("Content-Type", "text/plain; charset=utf-8")])
             return [body]
         if lock_metrics:
-            with lock:
+            with metrics_lock:
                 return metrics_app(environ, start_response)
         return metrics_app(environ, start_response)
 
     server = make_server(
-        "", port, app, server_class=_ThreadingWSGIServer, handler_class=_QuietHandler
+        bind_host, bind_port, app, server_class=_ThreadingWSGIServer, handler_class=_QuietHandler
     )
     thread = threading.Thread(target=server.serve_forever, name="http-server", daemon=True)
     thread.start()
-    LOG.info("HTTP server started on :%d (GET /, GET /metrics, GET /healthz, GET /readyz)", port)
+    bind_label = bind_host or ""
+    LOG.info(
+        "HTTP server started on %s:%d (GET /, GET /metrics, GET /healthz, GET /readyz)",
+        bind_label,
+        bind_port,
+    )
     return server
 
 

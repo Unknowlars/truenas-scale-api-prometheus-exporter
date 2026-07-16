@@ -216,6 +216,7 @@ Every option is documented with inline comments in [`.env.example`](.env.example
 | `TRUENAS_VERIFY_TLS` | no | `true` | Set `false` only on a trusted LAN with a self-signed certificate |
 | `TRUENAS_CA_FILE` | no | — | Path to a custom CA bundle for TLS verification |
 | `EXPORTER_PORT` | no | `9108` | HTTP port for `/metrics`, `/healthz`, `/readyz` |
+| `EXPORTER_BIND_ADDRESS` | no | `""` | HTTP bind host/IP; empty binds all interfaces |
 | `SCRAPE_INTERVAL_SECONDS` | no | `30` | Poll interval for collectors |
 | `SCRAPE_BUDGET_SECONDS` | no | `25` | Hard deadline for a single scrape |
 | `LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |

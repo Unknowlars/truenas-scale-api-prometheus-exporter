@@ -13,6 +13,7 @@ def test_real_http_server_liveness_and_readiness():
     ready = {"value": False}
     try:
         server = exporter_module._start_http_server(
+            "",
             0,
             threading.Lock(),
             readiness_check=lambda: ready["value"],
@@ -89,6 +90,7 @@ def test_overlapping_metrics_are_consistent_and_health_stays_responsive():
     registry.register(exporter_module.TrueNASCollector(exporter))
     try:
         server = exporter_module._start_http_server(
+            "",
             0,
             exporter._lock,
             registry=registry,
@@ -158,6 +160,7 @@ def test_legacy_metrics_serves_snapshot_while_scrape_lock_is_held():
     registry.register(exporter_module.TrueNASCollector(exporter))
     try:
         server = exporter_module._start_http_server(
+            "",
             0,
             exporter._lock,
             registry=registry,
@@ -174,5 +177,22 @@ def test_legacy_metrics_serves_snapshot_while_scrape_lock_is_held():
         ) as response:
             body = response.read()
         assert b"truenas_up" in body
+    finally:
+        server.shutdown()
+
+
+def test_http_server_binds_configured_loopback_address():
+    try:
+        server = exporter_module._start_http_server(
+            "127.0.0.1",
+            0,
+            threading.Lock(),
+            readiness_check=lambda: True,
+        )
+    except PermissionError:
+        pytest.skip("local sandbox does not permit binding a loopback socket")
+
+    try:
+        assert server.server_address[0] == "127.0.0.1"
     finally:
         server.shutdown()
