@@ -1424,6 +1424,16 @@ EVENT_SOURCE_OVERRIDES: dict[str, str] = {
     "VIRT_INSTANCE_MEM": "virt.instance.metrics",
 }
 
+DOCUMENTED_TYPE_UNIT_OVERRIDES: dict[str, str] = {
+    "APP_BLKIO_READ_BYTES": "app.stats: integer cumulative bytes; Prometheus unit: bytes",
+    "APP_BLKIO_WRITE_BYTES": "app.stats: integer cumulative bytes; Prometheus unit: bytes",
+    "NETWORK_GATEWAY_REACHABLE": "route.system_routes: array of object; Prometheus unit: boolean gauge (1/0)",
+}
+
+PARSER_CONVERSION_OVERRIDES: dict[str, str] = {
+    "NETWORK_GATEWAY_REACHABLE": "_as_optional_bool accepts documented booleans/0/1 and omits malformed values",
+}
+
 
 def infer_metric_sources(variable: str, analysis: SourceAnalysis) -> tuple[str, tuple[str, ...]]:
     if variable in INTERNAL_VARIABLES:
@@ -2176,19 +2186,27 @@ def build_metric_mappings(
                 "Declared contract retained; source field is absent/opaque, sensitive, or producer is unreachable."
             )
 
-        mapping = {
-            "variable": variable,
-            "source_kind": source_kind,
-            "api_method_or_event": list(sources) if sources else ["exporter-owned state"],
-            "response_field": list(fields),
-            "documented_type_unit": _documented_type_unit(
+        documented_type_unit = DOCUMENTED_TYPE_UNIT_OVERRIDES.get(
+            variable,
+            _documented_type_unit(
                 sources,
                 fields,
                 pages_by_kind_and_title,
                 source_kind,
                 _metric_output_unit(metric),
             ),
-            "parser_conversion": _parser_conversion(metric, fields, status),
+        )
+
+        mapping = {
+            "variable": variable,
+            "source_kind": source_kind,
+            "api_method_or_event": list(sources) if sources else ["exporter-owned state"],
+            "response_field": list(fields),
+            "documented_type_unit": documented_type_unit,
+            "parser_conversion": PARSER_CONVERSION_OVERRIDES.get(
+                variable,
+                _parser_conversion(metric, fields, status),
+            ),
             "prometheus_metric": metric["name"],
             "metric_type": metric["type"],
             "labels": list(metric["labels"]),

@@ -85,4 +85,29 @@ python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_expo
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16.
+
+- Updated HELP text for `truenas_network_gateway_reachable`,
+  `truenas_app_blkio_read_bytes`, `truenas_app_blkio_write_bytes`,
+  `truenas_smb_open_file_count`, `truenas_snapshot_oldest_timestamp_seconds`,
+  and the five realtime disk I/O gauges without renaming or retyping any
+  metric.
+- Kept `truenas_network_gateway_reachable` emitting as a deprecated alias of
+  `truenas_network_default_gateway_configured`; the dashboard generator already
+  referenced the configured metric, so no dashboard source migration was needed.
+- Added the requested `smb.status` info-level comment and parity metadata
+  overrides so blkio fields are documented as cumulative bytes and the gateway
+  alias remains a boolean 1/0 compatibility metric.
+- Added a rendered-registry HELP contract test for the gateway alias and oldest
+  snapshot timestamp HELP lines.
+- Regenerated `docs/metrics-contract.json`, `docs/api-exporter-parity.json`,
+  and `docs/api-exporter-parity.md`. Dashboard generation was run and produced
+  no dashboard artifact diff.
+- Verification passed:
+  `python3 -m pytest tests/ -q` (`233 passed, 4 skipped`);
+  `python3 scripts/generate_metric_contract.py`;
+  `python3 scripts/generate_api_exporter_parity.py`;
+  `python3 scripts/generate_truenas_dashboard.py`;
+  `./scripts/validate.sh` (`237 passed`, 91.41% coverage,
+  `public_release_audit_ok`, Docker image build, version smoke `5.2.0`,
+  `validation_ok`).

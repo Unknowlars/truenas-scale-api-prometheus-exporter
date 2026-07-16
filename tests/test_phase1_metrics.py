@@ -1045,6 +1045,22 @@ def test_disable_created_metrics():
     assert "truenas_api_call_errors_created" not in output
 
 
+def test_t19_help_text_contract_updates():
+    from prometheus_client import generate_latest
+
+    output = generate_latest().decode()
+
+    assert (
+        "# HELP truenas_network_gateway_reachable Deprecated alias of "
+        "truenas_network_default_gateway_configured (route presence only — does NOT "
+        "test reachability); will be removed in a future release."
+    ) in output
+    assert (
+        "# HELP truenas_snapshot_oldest_timestamp_seconds Unix timestamp of the oldest "
+        "ZFS snapshot; absent when there are no snapshots."
+    ) in output
+
+
 # ---------------------------------------------------------------------------
 # Phase 2 additions — performance and cardinality tuning
 # ---------------------------------------------------------------------------

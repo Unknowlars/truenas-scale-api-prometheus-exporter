@@ -62,6 +62,26 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T19 remediation: corrected misleading HELP/contract text for
+  `truenas_network_gateway_reachable`, app blkio byte gauges,
+  `truenas_smb_open_file_count`, `truenas_snapshot_oldest_timestamp_seconds`,
+  and realtime disk I/O gauges without renaming, retyping, changing label sets,
+  or adding API calls. The gateway metric remains a deprecated alias of
+  `truenas_network_default_gateway_configured`; the dashboard generator already
+  referenced the configured metric. Regenerated metric contract and parity
+  artifacts; dashboard generation produced no dashboard diff. Focused
+  verification passed: `python3 -m pytest tests/ -q` (`233 passed, 4 skipped`).
+  Required generation passed:
+  `python3 scripts/generate_metric_contract.py &&
+  python3 scripts/generate_api_exporter_parity.py &&
+  python3 scripts/generate_truenas_dashboard.py`. Full verification passed:
+  `./scripts/validate.sh` (ruff, mypy, `237 passed`, 91.41% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is patch-worthy because it corrects existing HELP/parity
+  contract text without adding metrics or config.
+
 - 2026-07-16 T18 remediation: added `EXPORTER_BIND_ADDRESS` with an unchanged
   all-interface default, documented the env var in `.env.example`, README, and
   Compose forwarding, and redacted the configured TrueNAS WebSocket host from

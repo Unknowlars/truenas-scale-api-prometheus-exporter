@@ -3265,6 +3265,8 @@ class TrueNASExporter:
         """
         if not self.compatibility_profile.allows_method("smb.status"):
             return
+        # The info_level literals are unverified in the current API docs corpus;
+        # live systems validate these names.
         for info_level, gauge in (
             ("SESSIONS", SMB_SESSION_COUNT),
             ("SHARES", SMB_CONNECTION_COUNT),

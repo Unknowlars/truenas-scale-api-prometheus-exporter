@@ -134,7 +134,7 @@
       "variable": "APP_AVAILABLE_SPACE_BYTES"
     },
     {
-      "help": "App container block I/O read bytes",
+      "help": "Cumulative block-I/O bytes read by the app's containers since container start (counter semantics; use rate()); resets when containers restart.",
       "labels": [
         "app"
       ],
@@ -143,7 +143,7 @@
       "variable": "APP_BLKIO_READ_BYTES"
     },
     {
-      "help": "App container block I/O write bytes",
+      "help": "Cumulative block-I/O bytes written by the app's containers since container start (counter semantics; use rate()); resets when containers restart.",
       "labels": [
         "app"
       ],
@@ -981,7 +981,7 @@
       "variable": "DIRECTORYSERVICES_TIMEOUT_SECONDS"
     },
     {
-      "help": "Disk busy percentage (0\u2013100)",
+      "help": "Disk busy percentage (0\u2013100); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1018,7 +1018,7 @@
       "variable": "DISK_INFO"
     },
     {
-      "help": "Disk read throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk read throughput in bytes/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1027,7 +1027,7 @@
       "variable": "DISK_READ_BYTES_RATE"
     },
     {
-      "help": "Disk read operations/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk read operations/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1091,7 +1091,7 @@
       "variable": "DISK_TEMPERATURE_C"
     },
     {
-      "help": "Disk write throughput in bytes/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk write throughput in bytes/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1100,7 +1100,7 @@
       "variable": "DISK_WRITE_BYTES_RATE"
     },
     {
-      "help": "Disk write operations/sec (instantaneous snapshot from realtime API)",
+      "help": "Disk write operations/sec (instantaneous snapshot from realtime API); on systems reporting only aggregate disk stats a single series with disk=\"total\" is exported.",
       "labels": [
         "disk"
       ],
@@ -1870,7 +1870,7 @@
       "variable": "NETWORK_DEFAULT_ROUTES"
     },
     {
-      "help": "1 if the default IPv4 gateway is reachable",
+      "help": "Deprecated alias of truenas_network_default_gateway_configured (route presence only \u2014 does NOT test reachability); will be removed in a future release.",
       "labels": [],
       "name": "truenas_network_gateway_reachable",
       "type": "gauge",
@@ -2504,7 +2504,7 @@
       "variable": "SMB_NTLMV1_AUTH_ENABLED"
     },
     {
-      "help": "Number of SMB open files",
+      "help": "Number of SMB lock records reported by smb.status LOCKS (approximates open files).",
       "labels": [],
       "name": "truenas_smb_open_file_count",
       "type": "gauge",
@@ -2532,7 +2532,7 @@
       "variable": "SNAPSHOT_TOTAL_COUNT"
     },
     {
-      "help": "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots), refreshed every ~5 minutes",
+      "help": "Unix timestamp of the oldest ZFS snapshot; absent when there are no snapshots.",
       "labels": [],
       "name": "truenas_snapshot_oldest_timestamp_seconds",
       "type": "gauge",
