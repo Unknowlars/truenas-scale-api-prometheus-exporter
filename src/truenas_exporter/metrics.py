@@ -131,6 +131,7 @@ POOL_DEDUP_TABLE_SIZE_BYTES = declare_gauge("POOL_DEDUP_TABLE_SIZE_BYTES", "true
 POOL_EXPAND_REFLOWED_BYTES = declare_gauge("POOL_EXPAND_REFLOWED_BYTES", "truenas_pool_expand_reflowed_bytes", "API-reported bytes_reflowed value for the active pool expansion", ["pool"])
 POOL_EXPAND_TO_REFLOW_BYTES = declare_gauge("POOL_EXPAND_TO_REFLOW_BYTES", "truenas_pool_expand_to_reflow_bytes", "API-reported bytes_to_reflow value for the active pool expansion", ["pool"])
 POOL_EXPAND_PERCENT = declare_gauge("POOL_EXPAND_PERCENT", "truenas_pool_expand_percent", "Active pool expansion completion percentage (0 to 100)", ["pool"])
+POOL_STATUS_CODE = declare_gauge("POOL_STATUS_CODE", "truenas_pool_status_code", "Detailed v26 zpool status_code as label", ["pool", "status_code"])
 
 # ---------------------------------------------------------------------------
 # Datasets
@@ -174,6 +175,8 @@ DISK_TEMP_AGG_C = declare_gauge("DISK_TEMP_AGG_C", "truenas_disk_temperature_agg
 # ---------------------------------------------------------------------------
 INTERFACE_COUNT = declare_gauge("INTERFACE_COUNT", "truenas_interface_count", "Number of network interfaces")
 INTERFACE_LINK_UP = declare_gauge("INTERFACE_LINK_UP", "truenas_interface_link_up", "1 if interface link is up", ["interface"])
+INTERFACE_REALTIME_SPEED_MBITS = declare_gauge("INTERFACE_REALTIME_SPEED_MBITS", "truenas_interface_realtime_speed_mbits", "Realtime interface speed in megabits per second", ["interface"])
+INTERFACE_REALTIME_LINK_UP = declare_gauge("INTERFACE_REALTIME_LINK_UP", "truenas_interface_realtime_link_up", "1 if realtime interface link state is up", ["interface"])
 NETWORK_DEFAULT_ROUTES = declare_gauge("NETWORK_DEFAULT_ROUTES", "truenas_network_default_routes", "Number of default routes")
 NETWORK_NAMESERVERS = declare_gauge("NETWORK_NAMESERVERS", "truenas_network_nameservers", "Number of configured nameservers")
 NETWORK_GATEWAY_REACHABLE = declare_gauge(
@@ -872,6 +875,7 @@ UI_HTTPS_PORT = declare_gauge("UI_HTTPS_PORT", "truenas_ui_https_port", "Web UI 
 # KMIP / support / systemdataset (v5)
 # ---------------------------------------------------------------------------
 KMIP_ENABLED = declare_gauge("KMIP_ENABLED", "truenas_kmip_enabled", "1 if KMIP key management is enabled")
+KMIP_SYNC_PENDING = declare_gauge("KMIP_SYNC_PENDING", "truenas_kmip_sync_pending", "1 if KMIP key synchronization is pending")
 SUPPORT_AVAILABLE = declare_gauge("SUPPORT_AVAILABLE", "truenas_support_available", "1 if proactive support is available")
 SUPPORT_AVAILABLE_AND_ENABLED = declare_gauge("SUPPORT_AVAILABLE_AND_ENABLED", 
     "truenas_support_available_and_enabled",
@@ -1047,11 +1051,15 @@ REPORTING_TIER1_UPDATE_INTERVAL_SECONDS = declare_gauge("REPORTING_TIER1_UPDATE_
 # ---------------------------------------------------------------------------
 # IOMMU / 2FA / mail / alerts (v5)
 # ---------------------------------------------------------------------------
+API_KEY_COUNT = declare_gauge("API_KEY_COUNT", "truenas_api_key_count", "Number of API keys")
+API_KEY_EXPIRY_TS = declare_gauge("API_KEY_EXPIRY_TS", "truenas_api_key_expiry_timestamp_seconds", "API key expiration timestamp as Unix seconds", ["name"])
+API_KEY_REVOKED_COUNT = declare_gauge("API_KEY_REVOKED_COUNT", "truenas_api_key_revoked_count", "Number of revoked API keys")
 IOMMU_ENABLED = declare_gauge("IOMMU_ENABLED", "truenas_iommu_enabled", "1 if IOMMU/PCI passthrough is enabled")
 TWOFACTOR_ENABLED = declare_gauge("TWOFACTOR_ENABLED", "truenas_2fa_enabled", "1 if two-factor authentication is enabled")
 MAIL_CONFIGURED = declare_gauge("MAIL_CONFIGURED", "truenas_mail_configured", "1 if outgoing email (SMTP) is configured")
 ALERTSERVICE_COUNT = declare_gauge("ALERTSERVICE_COUNT", "truenas_alertservice_count", "Number of alert notification services")
 ALERTSERVICE_ENABLED = declare_gauge("ALERTSERVICE_ENABLED", "truenas_alertservice_enabled", "1 if alert service is enabled", ["name", "type"])
+FAILOVER_NODE_REBOOT_REQUIRED = declare_gauge("FAILOVER_NODE_REBOOT_REQUIRED", "truenas_failover_node_reboot_required", "1 if a failover node has documented reboot-required reasons", ["node"])
 
 # ---------------------------------------------------------------------------
 # Init/shutdown scripts / keychain / system global ID (v5)

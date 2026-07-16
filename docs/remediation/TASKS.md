@@ -46,7 +46,7 @@ Rules for updating:
 | [T18](tasks/T18-bind-address-and-log-leak.md) | Configurable bind address + stop hostname leaking via tracebacks | security | S | — | done | 2026-07-16 | minor-version-worthy new env var |
 | [T19](tasks/T19-help-and-conventions.md) | HELP/type/naming corrections (gateway_reachable, blkio counters, smb LOCKS, snapshot-oldest HELP, per-disk HELP) | conventions | M | T03 | done | 2026-07-16 | patch-worthy HELP/contract correction |
 | [T20](tasks/T20-dead-code-and-docs.md) | Remove dead code and the misleading 230-line version-history docstring | cleanup | S | — | done | 2026-07-16 | patch-worthy cleanup/no metric contract change |
-| [T21](tasks/T21-new-low-cost-metrics.md) | Optional batch: api_key expiry, failover.reboot.info, kmip_sync_pending, v26 interface speed | metric gap | M | T11 | todo | | Stretch; minor-version worthy |
+| [T21](tasks/T21-new-low-cost-metrics.md) | Optional batch: api_key expiry, failover.reboot.info, kmip_sync_pending, v26 interface speed | metric gap | M | T11 | done | 2026-07-16 | minor-version-worthy new metrics |
 
 ## Discovered during work
 
@@ -129,3 +129,6 @@ Move a one-line summary here when a task reaches `done`:
 - T20 — 2026-07-16 — dead runtime changelog, private event snapshot helper,
   no-op collector stubs, and stray comments were removed with no metric
   contract diff — local commit; patch-worthy cleanup
+- T21 — 2026-07-16 — API key, failover reboot, KMIP sync-pending, realtime
+  interface, and v26 zpool status-code metrics were added with fixture-only
+  coverage and no skipped sub-items — local commit; minor-version-worthy

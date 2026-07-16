@@ -1083,6 +1083,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     assign({"INTERFACE_COUNT", "INTERFACE_LINK_UP", "INTERFACE_MTU", "INTERFACE_TYPE"}, "interface.query")
     assign({"SERVICE_COUNT", "SERVICE_ENABLED", "SERVICE_RUNNING"}, "service.query")
     assign({"UPDATE_STATUS", "UPDATE_AVAILABLE", "UPDATE_DOWNLOAD_PROGRESS_PERCENT"}, "update.status")
+    assign({"API_KEY_COUNT", "API_KEY_EXPIRY_TS", "API_KEY_REVOKED_COUNT"}, "api_key.query")
     assign(
         {"TASK_COUNT", "TASK_ENABLED", "TASK_STATE", "TASK_LAST_RUN_TS"},
         "replication.query",
@@ -1121,6 +1122,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     assign({"UI_HTTPS_PORT"}, "system.general.config")
     assign({"SYSTEM_GLOBAL_ID"}, "system.global.id")
     assign({"KMIP_ENABLED"}, "kmip.config")
+    assign({"KMIP_SYNC_PENDING"}, "kmip.kmip_sync_pending")
     assign({"SUPPORT_CONFIG_ENABLED"}, "support.config")
     assign({"NETWORK_HTTPPROXY_CONFIGURED"}, "network.configuration.config")
     assign({"MAIL_CONFIGURED"}, "mail.config")
@@ -1130,6 +1132,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     assign({"APP_WEBDAV_SHARE_COUNT"}, "sharing.webshare.query")
     assign({"SMART_TEST_LAST_RESULT", "SMART_TEST_LAST_TIMESTAMP"}, "smart.test.results")
     assign({"SMB_SESSION_COUNT", "SMB_OPEN_FILE_COUNT", "SMB_CONNECTION_COUNT"}, "smb.status")
+    assign({"POOL_STATUS_CODE"}, "zpool.query")
     assign({"NFS_SERVER_STAT_OPS"}, "reporting.realtime")
     assign({"EXPORTER_INFO"}, "exporter build metadata")
 
@@ -1249,6 +1252,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     )
     assign({"DATASET_SNAPSHOT_COUNT"}, "pool.dataset.snapshot_count")
     assign({"FAILOVER_DISABLED_REASON", "FAILOVER_DISABLED_REASON_COUNT"}, "failover.disabled.reasons")
+    assign({"FAILOVER_NODE_REBOOT_REQUIRED"}, "failover.reboot.info")
     assign({"TRUENAS_IS_IX_HARDWARE"}, "truenas.is_ix_hardware")
     assign({"TRUENAS_IS_PRODUCTION"}, "truenas.is_production")
     assign({"SYSTEM_REBOOT_REQUIRED", "SYSTEM_REBOOT_REASON"}, "system.reboot.info")
@@ -1372,6 +1376,8 @@ EVENT_SOURCE_OVERRIDES: dict[str, str] = {
             "DISK_BUSY_PERCENT",
             "NETWORK_RX_BYTES_RATE",
             "NETWORK_TX_BYTES_RATE",
+            "INTERFACE_REALTIME_SPEED_MBITS",
+            "INTERFACE_REALTIME_LINK_UP",
             "ZFS_ARC_SIZE_BYTES",
             "ZFS_ARC_MAX_SIZE_BYTES",
             "ZFS_ARC_MIN_SIZE_BYTES",
@@ -1628,6 +1634,9 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "DISK_SMART_ENABLED": ("smartoptions (no documented enabled field)",),
         "DISK_INFO": ("name/model/bus; serial deliberately redacted",),
         "DISK_IN_USE": ("pool",),
+        "API_KEY_COUNT": ("row count",),
+        "API_KEY_EXPIRY_TS": ("expires_at",),
+        "API_KEY_REVOKED_COUNT": ("revoked count",),
         "INTERFACE_COUNT": ("row count",),
         "INTERFACE_LINK_UP": ("state.link_state",),
         "INTERFACE_MTU": ("state.mtu/mtu",),
@@ -1678,6 +1687,9 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "IPMI_SEL_FREE_SPACE_BYTES": ("free_space_remaining",),
         "FAILOVER_DISABLED_REASON_COUNT": ("result length",),
         "FAILOVER_DISABLED_REASON": ("result items",),
+        "FAILOVER_NODE_REBOOT_REQUIRED": ("this_node/other_node reboot_required_reasons length",),
+        "KMIP_SYNC_PENDING": ("result",),
+        "POOL_STATUS_CODE": ("status_code",),
         "SYSTEM_PRODUCT_TYPE": ("result",),
         "SYSTEM_VERSION": ("result",),
         "SYSTEM_HOST_ID": ("result",),
@@ -1925,6 +1937,8 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
             "DISK_BUSY_PERCENT": "disls.busy",
             "NETWORK_RX_BYTES_RATE": "schema opaque; compatibility parser key interfaces.received_bytes",
             "NETWORK_TX_BYTES_RATE": "schema opaque; compatibility parser key interfaces.sent_bytes",
+            "INTERFACE_REALTIME_SPEED_MBITS": "interfaces.<interface>.speed",
+            "INTERFACE_REALTIME_LINK_UP": "interfaces.<interface>.link_state via _link_is_up",
             "ZFS_ARC_SIZE_BYTES": "memory.arc_size",
             "ZFS_ARC_MAX_SIZE_BYTES": "schema absent from reporting.realtime 25.10.2",
             "ZFS_ARC_MIN_SIZE_BYTES": "schema absent from reporting.realtime 25.10.2",

@@ -82,4 +82,44 @@ python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_expo
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16:
+
+- Implemented item 1 with a dedicated `api_key.query` collector using strict
+  `select: ["id", "name", "expires_at", "revoked"]`, plus count-mode revoked
+  aggregation. New metrics: `truenas_api_key_count`,
+  `truenas_api_key_expiry_timestamp_seconds{name}`, and
+  `truenas_api_key_revoked_count`.
+- Implemented item 2 from documented `failover.reboot.info` structures. New
+  metric: `truenas_failover_node_reboot_required{node}` for `this_node` and
+  available `other_node` structures; `other_node: null` remains absent.
+- Implemented item 3 from documented `kmip.kmip_sync_pending`. New metric:
+  `truenas_kmip_sync_pending`.
+- Implemented item 4 from `reporting.realtime` interface `speed` and
+  `link_state`. New event-owned metrics:
+  `truenas_interface_realtime_speed_mbits{interface}` and
+  `truenas_interface_realtime_link_up{interface}`; ownership covers publish,
+  expiry, and poll-reset survival.
+- Implemented item 5 as a v26-only profile-gated collector by adding
+  `zpool.query` to `V26_ADDED_METHODS` and calling it only when the active
+  profile allows it. New metric:
+  `truenas_pool_status_code{pool,status_code}`.
+- Updated parity generator source/field mappings for all new metrics and
+  regenerated metric contract and parity artifacts. Dashboard generation
+  produced no dashboard file diff.
+- Added focused tests for safe API key selects, failure/null absence, KMIP
+  null handling, failover `other_node: null`, v26 zpool profile gating, and
+  realtime interface publish/expiry/reset behavior.
+- Verification passed: focused
+  `python3 -m pytest tests/test_t21_low_cost_metrics.py tests/test_phase2_events.py tests/test_api_catalog.py tests/test_runtime_api_parity.py -q`
+  (`60 passed`), full `python3 -m pytest tests/ -q` (`241 passed,
+  4 skipped`), required generators
+  `python3 scripts/generate_metric_contract.py`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `python3 scripts/generate_truenas_dashboard.py`, and
+  `./scripts/validate.sh` (`245 passed`, 91.31% coverage, dashboard
+  validation, generated checks, `public_release_audit_ok`, Docker build,
+  version smoke `5.2.0`, `validation_ok`).
+- Skipped sub-items: none.
+- Versioning: minor-version-worthy because new metrics were added; no existing
+  metric names, types, HELP text, or label sets changed, and no mutating API
+  calls were added.

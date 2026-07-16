@@ -81,6 +81,9 @@ from .metrics import (
     API_CALL_DURATION,
     API_CALL_ERRORS_TOTAL,
     API_CALL_SUCCESS,
+    API_KEY_COUNT,
+    API_KEY_EXPIRY_TS,
+    API_KEY_REVOKED_COUNT,
     APP_AVAILABLE_SPACE_BYTES,
     APP_BLKIO_READ_BYTES,
     APP_BLKIO_WRITE_BYTES,
@@ -209,6 +212,7 @@ from .metrics import (
     EVENT_STREAM_UP,
     FAILOVER_DISABLED_REASON,
     FAILOVER_DISABLED_REASON_COUNT,
+    FAILOVER_NODE_REBOOT_REQUIRED,
     FC_HOST_COUNT,
     FC_PORT_COUNT,
     FEATURE_ENABLED,
@@ -236,6 +240,8 @@ from .metrics import (
     INTERFACE_HAS_PENDING_CHANGES,
     INTERFACE_LINK_UP,
     INTERFACE_MTU,
+    INTERFACE_REALTIME_LINK_UP,
+    INTERFACE_REALTIME_SPEED_MBITS,
     INTERFACE_TYPE,
     IOMMU_ENABLED,
     IPMI_CHASSIS_DRIVE_FAULT,
@@ -266,6 +272,7 @@ from .metrics import (
     JOB_PROGRESS_PERCENT,
     JOB_TRANSIENT_ACTIVE_COUNT,
     KEYCHAIN_CREDENTIAL_COUNT,
+    KMIP_SYNC_PENDING,
     LAST_SCRAPE_TS,
     LOCAL_GROUP_COUNT,
     LOCAL_USER_COUNT,
@@ -331,6 +338,7 @@ from .metrics import (
     POOL_SCRUB_TASK_STATE,
     POOL_SIZE_BYTES,
     POOL_STATUS,
+    POOL_STATUS_CODE,
     POOL_VDEV_CHECKSUM_ERRORS,
     POOL_VDEV_READ_ERRORS,
     POOL_VDEV_WRITE_ERRORS,
@@ -621,10 +629,13 @@ class TrueNASExporter:
         # Prometheus scrapes partially-cleared / partially-refilled data.
         SYSTEM_STATE.clear()
         SYSTEM_REBOOT_REASON.clear()
+        API_KEY_EXPIRY_TS.clear()
+        FAILOVER_NODE_REBOOT_REQUIRED.clear()
         BOOT_POOL_STATUS.clear()
         BOOT_POOL_SCAN_STATE.clear()
         POOL_HEALTHY.clear()
         POOL_STATUS.clear()
+        POOL_STATUS_CODE.clear()
         POOL_SIZE_BYTES.clear()
         POOL_ALLOCATED_BYTES.clear()
         POOL_FREE_BYTES.clear()
@@ -1928,6 +1939,8 @@ class TrueNASExporter:
         interfaces = payload.get("interfaces")
         network_rx: dict[tuple[str, ...], float] = {}
         network_tx: dict[tuple[str, ...], float] = {}
+        interface_speed: dict[tuple[str, ...], float] = {}
+        interface_link_up: dict[tuple[str, ...], float] = {}
         if isinstance(interfaces, dict):
             for iface_name, iface_data in interfaces.items():
                 if not isinstance(iface_data, dict):
@@ -1935,12 +1948,20 @@ class TrueNASExporter:
                 iface = _str_label(iface_name)
                 rx = _as_float(iface_data.get("received_bytes_rate"))
                 tx = _as_float(iface_data.get("sent_bytes_rate"))
+                speed = _as_float(iface_data.get("speed"))
+                link_up = _link_is_up(iface_data.get("link_state"))
                 if rx is not None:
                     network_rx[(iface,)] = rx
                 if tx is not None:
                     network_tx[(iface,)] = tx
+                if speed is not None:
+                    interface_speed[(iface,)] = speed
+                if link_up is not None:
+                    interface_link_up[(iface,)] = 1.0 if link_up else 0.0
         self._collector_event_series[metric_name(NETWORK_RX_BYTES_RATE)] = network_rx
         self._collector_event_series[metric_name(NETWORK_TX_BYTES_RATE)] = network_tx
+        self._collector_event_series[metric_name(INTERFACE_REALTIME_SPEED_MBITS)] = interface_speed
+        self._collector_event_series[metric_name(INTERFACE_REALTIME_LINK_UP)] = interface_link_up
 
         pools_rt = payload.get("pools")
         pool_read: dict[tuple[str, ...], float] = {}
@@ -3169,8 +3190,114 @@ class TrueNASExporter:
             LOG.debug("sharing.smb.query failed", exc_info=True)
 
     # ------------------------------------------------------------------
+    # API key inventory
+    # ------------------------------------------------------------------
+
+    def _collect_api_key_metrics(self, client: JsonRpcWsClient) -> None:
+        """Collect bounded API key inventory without fetching key material."""
+        try:
+            keys = self._call(
+                client,
+                "api_key.query",
+                [
+                    [],
+                    {
+                        "limit": self.config.query_limit,
+                        "select": ["id", "name", "expires_at", "revoked"],
+                    },
+                ],
+            )
+        except Exception:
+            LOG.debug("api_key.query failed", exc_info=True)
+            return
+
+        if not isinstance(keys, list):
+            return
+
+        API_KEY_EXPIRY_TS.clear()
+        try:
+            API_KEY_COUNT.set(
+                self._count_or_len(client, "api_key.query", keys, self.config.query_limit)
+            )
+        except Exception:
+            LOG.debug("api_key.query count failed", exc_info=True)
+
+        for key in keys[: self.config.max_entity_calls]:
+            if not isinstance(key, dict):
+                continue
+            raw_name = key.get("name")
+            if not isinstance(raw_name, str) or not raw_name:
+                continue
+            expires_at = _parse_ts(key.get("expires_at"))
+            if expires_at is not None:
+                API_KEY_EXPIRY_TS.labels(name=raw_name).set(expires_at)
+
+        try:
+            API_KEY_REVOKED_COUNT.set(
+                self._query_count(client, "api_key.query", [["revoked", "=", True]])
+            )
+        except Exception:
+            LOG.debug("api_key.query revoked count failed", exc_info=True)
+
+    # ------------------------------------------------------------------
+    # v26 zpool status details
+    # ------------------------------------------------------------------
+
+    def _collect_zpool_status_metrics(self, client: JsonRpcWsClient) -> None:
+        """Collect v26-only zpool status_code values when the active profile allows it."""
+        if not self.compatibility_profile.allows_method("zpool.query"):
+            return
+        try:
+            zpools = self._call(client, "zpool.query", [{}])
+        except Exception:
+            LOG.debug("zpool.query failed", exc_info=True)
+            return
+
+        if not isinstance(zpools, list):
+            return
+
+        POOL_STATUS_CODE.clear()
+        for pool in zpools[: self.config.max_entity_calls]:
+            if not isinstance(pool, dict):
+                continue
+            raw_pool_name = pool.get("name")
+            raw_status_code = pool.get("status_code")
+            if not isinstance(raw_pool_name, str) or not raw_pool_name:
+                continue
+            if not isinstance(raw_status_code, str) or not raw_status_code:
+                continue
+            POOL_STATUS_CODE.labels(
+                pool=raw_pool_name,
+                status_code=raw_status_code.upper(),
+            ).set(1)
+
+    # ------------------------------------------------------------------
     # System extra metrics (reboot, gateway, identity, HA) (NEW)
     # ------------------------------------------------------------------
+
+    def _collect_failover_reboot_info(self, client: JsonRpcWsClient) -> None:
+        try:
+            reboot_info = self._call(client, "failover.reboot.info", [])
+        except Exception:
+            LOG.debug("failover.reboot.info failed", exc_info=True)
+            return
+
+        if not isinstance(reboot_info, dict):
+            return
+
+        FAILOVER_NODE_REBOOT_REQUIRED.clear()
+        for node_label, field in (
+            ("this_node", "this_node"),
+            ("other_node", "other_node"),
+        ):
+            node_info = reboot_info.get(field)
+            if not isinstance(node_info, dict):
+                continue
+            reasons = node_info.get("reboot_required_reasons")
+            if isinstance(reasons, list):
+                FAILOVER_NODE_REBOOT_REQUIRED.labels(node=node_label).set(
+                    1 if reasons else 0
+                )
 
     def _collect_system_extra_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         # Pending reboot
@@ -3244,6 +3371,8 @@ class TrueNASExporter:
                         FAILOVER_DISABLED_REASON.labels(reason=reason).set(1)
         except Exception:
             LOG.debug("failover.disabled.reasons failed", exc_info=True)
+
+        self._collect_failover_reboot_info(client)
 
     # ------------------------------------------------------------------
     # Main scrape
@@ -3350,6 +3479,7 @@ class TrueNASExporter:
                     self._collect_directoryservices_metrics(client, result_cache)
                     self._collect_ipmi_metrics(client)
                     self._collect_share_metrics(client)
+                    self._collect_api_key_metrics(client)
                     self._collect_system_extra_metrics(client, result_cache)
                     # v3 additions
                     self._collect_smb_nfs_sessions(client)
@@ -3605,6 +3735,8 @@ class TrueNASExporter:
                         topology = pool.get("topology")
                         if isinstance(topology, dict):
                             self._extract_vdev_errors(pool_name, topology)
+
+                    self._collect_zpool_status_metrics(client)
 
                     # --- Disks ---
                     disks = result_cache.get("disk.query")
@@ -4849,10 +4981,21 @@ class TrueNASExporter:
     # v5 collectors: KMIP / support / systemdataset
     # ------------------------------------------------------------------
 
+    def _collect_kmip_sync_pending(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
+        try:
+            pending = cache.get("kmip.kmip_sync_pending")
+            if pending is None:
+                pending = self._call(client, "kmip.kmip_sync_pending", [])
+            _set_optional_bool_gauge(KMIP_SYNC_PENDING, pending)
+        except Exception:
+            LOG.debug("kmip.kmip_sync_pending failed", exc_info=True)
+
     def _collect_infrastructure_configs(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         """Collect KMIP, support, and system dataset configs."""
         # kmip.config includes endpoint and key-management configuration and
         # cannot be server-side selected. The legacy metric remains NaN.
+
+        self._collect_kmip_sync_pending(client, cache)
 
         # Support
         try:

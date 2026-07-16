@@ -62,6 +62,33 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T21 remediation: added the low-cost metrics batch with only
+  documented read-only methods/events and fixture/synthetic validation. New
+  metrics are `truenas_api_key_count`,
+  `truenas_api_key_expiry_timestamp_seconds{name}`,
+  `truenas_api_key_revoked_count`,
+  `truenas_failover_node_reboot_required{node}`,
+  `truenas_kmip_sync_pending`,
+  `truenas_interface_realtime_speed_mbits{interface}`,
+  `truenas_interface_realtime_link_up{interface}`, and v26-only
+  `truenas_pool_status_code{pool,status_code}`. `api_key.query` uses a strict
+  non-secret select, `zpool.query` is profile-gated through `V26_ADDED_METHODS`,
+  and realtime interface metrics are event-owned for publish/expiry/reset
+  behavior. No T21 sub-items were skipped. Regenerated metric contract and
+  parity artifacts; dashboard generation produced no dashboard file diff.
+  Required verification passed: focused
+  `python3 -m pytest tests/test_t21_low_cost_metrics.py tests/test_phase2_events.py tests/test_api_catalog.py tests/test_runtime_api_parity.py -q`
+  (`60 passed`), full `python3 -m pytest tests/ -q` (`241 passed,
+  4 skipped`), generators
+  `python3 scripts/generate_metric_contract.py`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `python3 scripts/generate_truenas_dashboard.py`, and
+  `./scripts/validate.sh` (ruff, mypy, `245 passed`, 91.31% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is minor-version-worthy because it adds metrics.
+
 - 2026-07-16 T20 remediation: removed cleanup-only runtime dead code without
   changing metric behavior. The large historical module changelog is now a
   short current summary, `_merge_event_snapshot` is gone, no-op SMART/UPS/

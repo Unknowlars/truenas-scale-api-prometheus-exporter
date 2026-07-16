@@ -127,6 +127,29 @@
       "variable": "API_CALL_SUCCESS"
     },
     {
+      "help": "Number of API keys",
+      "labels": [],
+      "name": "truenas_api_key_count",
+      "type": "gauge",
+      "variable": "API_KEY_COUNT"
+    },
+    {
+      "help": "API key expiration timestamp as Unix seconds",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_api_key_expiry_timestamp_seconds",
+      "type": "gauge",
+      "variable": "API_KEY_EXPIRY_TS"
+    },
+    {
+      "help": "Number of revoked API keys",
+      "labels": [],
+      "name": "truenas_api_key_revoked_count",
+      "type": "gauge",
+      "variable": "API_KEY_REVOKED_COUNT"
+    },
+    {
       "help": "Bytes available for new app installs",
       "labels": [],
       "name": "truenas_app_available_space_bytes",
@@ -1239,6 +1262,15 @@
       "variable": "FAILOVER_DISABLED_REASON_COUNT"
     },
     {
+      "help": "1 if a failover node has documented reboot-required reasons",
+      "labels": [
+        "node"
+      ],
+      "name": "truenas_failover_node_reboot_required",
+      "type": "gauge",
+      "variable": "FAILOVER_NODE_REBOOT_REQUIRED"
+    },
+    {
       "help": "Number of Fibre Channel host adapters",
       "labels": [],
       "name": "truenas_fc_host_count",
@@ -1472,6 +1504,24 @@
       "name": "truenas_interface_mtu",
       "type": "gauge",
       "variable": "INTERFACE_MTU"
+    },
+    {
+      "help": "1 if realtime interface link state is up",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_interface_realtime_link_up",
+      "type": "gauge",
+      "variable": "INTERFACE_REALTIME_LINK_UP"
+    },
+    {
+      "help": "Realtime interface speed in megabits per second",
+      "labels": [
+        "interface"
+      ],
+      "name": "truenas_interface_realtime_speed_mbits",
+      "type": "gauge",
+      "variable": "INTERFACE_REALTIME_SPEED_MBITS"
     },
     {
       "help": "Interface type (PHYSICAL/BRIDGE/etc)",
@@ -1715,6 +1765,13 @@
       "name": "truenas_kmip_enabled",
       "type": "gauge",
       "variable": "KMIP_ENABLED"
+    },
+    {
+      "help": "1 if KMIP key synchronization is pending",
+      "labels": [],
+      "name": "truenas_kmip_sync_pending",
+      "type": "gauge",
+      "variable": "KMIP_SYNC_PENDING"
     },
     {
       "help": "Unix timestamp of last scrape attempt",
@@ -2320,6 +2377,16 @@
       "name": "truenas_pool_status",
       "type": "gauge",
       "variable": "POOL_STATUS"
+    },
+    {
+      "help": "Detailed v26 zpool status_code as label",
+      "labels": [
+        "pool",
+        "status_code"
+      ],
+      "name": "truenas_pool_status_code",
+      "type": "gauge",
+      "variable": "POOL_STATUS_CODE"
     },
     {
       "help": "Checksum errors on pool vdev since last scrub clear",

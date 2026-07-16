@@ -30,11 +30,18 @@ V26_REMOVED_METHODS: frozenset[str] = frozenset(
 # as removed — the exporter keeps populating truenas_nvmet_session_count on v26.
 V26_REMOVED_EVENTS: frozenset[str] = frozenset({"virt.instance.metrics"})
 
-# v26 replaced the virt.* Incus/LXD API with container.*/lxc.*. These methods and
-# the container.metrics event do not exist on 25.10, so they are added to the 26.0
-# profile only (never the 25.10 profile).
+# v26 replaced the virt.* Incus/LXD API with container.*/lxc.* and adds small
+# read-only surfaces such as webshare/smb status and zpool status detail. These
+# methods and the container.metrics event do not exist on 25.10, so they are
+# added to the 26.0 profile only (never the 25.10 profile).
 V26_ADDED_METHODS: frozenset[str] = frozenset(
-    {"container.query", "sharing.webshare.query", "smb.status", "webshare.config"}
+    {
+        "container.query",
+        "sharing.webshare.query",
+        "smb.status",
+        "webshare.config",
+        "zpool.query",
+    }
 )
 V26_ADDED_EVENTS: frozenset[str] = frozenset({"container.metrics"})
 
