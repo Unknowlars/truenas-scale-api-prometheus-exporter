@@ -52,6 +52,22 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T03 remediation: stopped exporting `pool.query.dedup_table_size`
+  bytes through the ratio-named `truenas_pool_dedup_ratio` metric. The ratio
+  metric remains declared for one compatibility release with HELP text and API
+  parity notes documenting that no TrueNAS 25.10/26.0 ratio source is
+  documented and the series is intentionally absent; DDT size continues through
+  `truenas_pool_dedup_table_size_bytes`. Focused verification passed:
+  `python3 -m pytest tests/test_runtime_api_parity.py tests/test_phase1_metrics.py -q`
+  (`70 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `191 passed`, 90.55% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was provided.
+
 - 2026-07-16 T02 remediation: stopped fabricating `truenas_cpu_user_percent`
   from aggregate realtime CPU usage and `truenas_cpu_idle_percent` from
   `100 - usage` when `reporting.realtime` does not provide split fields.

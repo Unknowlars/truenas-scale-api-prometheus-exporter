@@ -3482,13 +3482,10 @@ class TrueNASExporter:
                                 POOL_AUTOTRIM_ENABLED.labels(pool=pool_name), autotrim
                             )
 
-                        # Compatibility alias: the legacy ratio-named metric has
-                        # always read this byte-valued API field.
                         dedup = _as_float(
                             self._response_field(pool, "dedup_table_size", "dedup_table_quota")
                         )
                         if dedup is not None:
-                            POOL_DEDUP_RATIO.labels(pool=pool_name).set(dedup)
                             POOL_DEDUP_TABLE_SIZE_BYTES.labels(pool=pool_name).set(dedup)
 
                         expand = pool.get("expand")

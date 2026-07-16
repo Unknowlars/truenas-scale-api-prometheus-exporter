@@ -273,8 +273,9 @@ MANUAL_GENERIC_METHODS = frozenset(
 
 DEPRECATED_METRICS: dict[str, str] = {
     "POOL_DEDUP_RATIO": (
-        "Compatibility alias: it historically exported pool.query.dedup_table_size bytes "
-        "despite a ratio name; use truenas_pool_dedup_table_size_bytes."
+        "Deprecated compatibility metric: no documented ratio source in TrueNAS "
+        "25.10/26.0; declared for one release but intentionally absent. Use "
+        "truenas_pool_dedup_table_size_bytes for DDT size."
     ),
     "NETWORK_GATEWAY_REACHABLE": (
         "Compatibility alias: the documented route inventory proves configuration, not "
@@ -1555,7 +1556,7 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "POOL_SCAN_PERCENT": ("scan.percentage",),
         "POOL_FRAGMENTATION": ("fragmentation",),
         "POOL_AUTOTRIM_ENABLED": ("autotrim.value",),
-        "POOL_DEDUP_RATIO": ("dedup_table_size",),
+        "POOL_DEDUP_RATIO": (),
         "POOL_DEDUP_TABLE_SIZE_BYTES": ("dedup_table_size",),
         "POOL_EXPAND_SIZE_BYTES": ("expand.bytes_to_reflow",),
         "POOL_EXPAND_REFLOWED_BYTES": ("expand.bytes_reflowed",),

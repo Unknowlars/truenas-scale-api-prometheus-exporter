@@ -182,6 +182,10 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
     assert vmemory_states == {"RNP", "PRD", "RPRD"}
     assert labeled(runtime.POOL_FRAGMENTATION, "tank") == 0
     assert labeled(runtime.POOL_DEDUP_TABLE_SIZE_BYTES, "tank") == 1048576
+    assert not any(
+        sample.labels.get("pool") == "tank"
+        for sample in list(runtime.POOL_DEDUP_RATIO.collect())[0].samples
+    )
     assert labeled(runtime.POOL_SCAN_BYTES_PROCESSED, "tank") == 0
     assert labeled(runtime.POOL_SCAN_BYTES_TOTAL, "tank") == 0
     assert labeled(runtime.POOL_EXPAND_REFLOWED_BYTES, "tank") == 978944
@@ -198,8 +202,17 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
     assert not any(method in {"smb.status", "smart.test.results"} for method, _ in calls)
 
     update["status"] = {}
+    pool[0]["dedup_table_size"] = None
     exporter.scrape_once()
     assert math.isnan(value(runtime.UPDATE_AVAILABLE))
+    assert not any(
+        sample.labels.get("pool") == "tank"
+        for sample in list(runtime.POOL_DEDUP_RATIO.collect())[0].samples
+    )
+    assert not any(
+        sample.labels.get("pool") == "tank"
+        for sample in list(runtime.POOL_DEDUP_TABLE_SIZE_BYTES.collect())[0].samples
+    )
 
 
 def test_documented_owned_collectors_and_secret_exclusions(monkeypatch: pytest.MonkeyPatch) -> None:

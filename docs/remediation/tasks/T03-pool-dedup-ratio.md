@@ -78,4 +78,11 @@ python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_expo
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16.
+
+- Stopped writing `pool.query.dedup_table_size` bytes into `truenas_pool_dedup_ratio`; the metric remains declared as an absent deprecated compatibility metric for one release.
+- Kept `truenas_pool_dedup_table_size_bytes` unchanged as the DDT size metric and updated the ratio metric HELP/parity note to document the migration.
+- Confirmed the checked 25.10 `pool.query`, v26 `pool.query`, and v26 `zpool.query` docs do not expose a documented dedup ratio source; the dashboard generator already references the bytes metric, not the ratio metric.
+- Updated `tests/test_runtime_api_parity.py` to assert DDT bytes are exported only through `truenas_pool_dedup_table_size_bytes`, and that null DDT size leaves both metrics absent.
+- Regenerated `docs/metrics-contract.json`, `docs/api-exporter-parity.md`, and `docs/api-exporter-parity.json`; dashboard generation produced no tracked dashboard diff.
+- Verification: `python3 -m pytest tests/test_runtime_api_parity.py tests/test_phase1_metrics.py -q` (`70 passed`); `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`; `./scripts/validate.sh` (`validation_ok`, `191 passed`, 90.55% coverage, Docker image build and version smoke `5.2.0`).

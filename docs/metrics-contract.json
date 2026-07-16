@@ -2081,7 +2081,7 @@
       "variable": "POOL_COUNT"
     },
     {
-      "help": "Pool deduplication ratio (1.0 means no dedup savings)",
+      "help": "Deprecated: no documented ratio source in TrueNAS 25.10/26.0; always absent. Use truenas_pool_dedup_table_size_bytes for DDT size.",
       "labels": [
         "pool"
       ],
