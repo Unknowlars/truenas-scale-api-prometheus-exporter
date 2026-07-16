@@ -31,7 +31,7 @@ Rules for updating:
 |----|------|------|------|------------|--------|---------|-------|
 | [T09](tasks/T09-vdev-error-metrics.md) | Re-enable pool vdev read/write/checksum error metrics via `pool.query` topology | metric gap | M | — | done | 2026-07-16 | minor-version-worthy |
 | [T10](tasks/T10-disk-temperature-alerts.md) | Wire `disk.temperature_alerts` → `disk_temperature_alert_count` | metric gap | S | — | done | 2026-07-16 | minor-version-worthy |
-| [T11](tasks/T11-profile-unknown-intersection.md) | Make `PROFILE_UNKNOWN` a true 25.10∩26.0 intersection | version compat | S | — | todo | | |
+| [T11](tasks/T11-profile-unknown-intersection.md) | Make `PROFILE_UNKNOWN` a true 25.10∩26.0 intersection | version compat | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T12](tasks/T12-profile-thread-race.md) | Fix cross-thread `compatibility_profile` race | reliability | M | T11 | todo | | |
 | [T13](tasks/T13-wipe-on-failure.md) | Don't wipe all metrics on pre-auth connection failure | reliability | M | — | todo | | Policy change — read spec carefully |
 | [T14](tasks/T14-auto-skip-permanence.md) | Re-try auto-skipped methods on profile change / periodically | reliability | S | T11 | todo | | |
@@ -94,3 +94,6 @@ Move a one-line summary here when a task reaches `done`:
 - T10 — 2026-07-16 — disk temperature alert counts now emit from documented
   `disk.temperature_alerts` rows with fail-closed absence on call failure —
   local commit; minor-version-worthy
+- T11 — 2026-07-16 — `PROFILE_UNKNOWN` now uses the true 25.10/26.0
+  compatibility intersection and excludes v26-added methods/events — local
+  commit; patch-worthy

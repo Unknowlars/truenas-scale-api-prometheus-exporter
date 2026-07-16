@@ -84,4 +84,25 @@ python3 scripts/generate_api_exporter_parity.py
 
 ## Outcome
 
-_(fill in when done)_
+Implemented. `PROFILE_UNKNOWN` now uses explicit 25.10/26.0 intersection sets for
+reviewed methods, telemetry methods, reviewed events, default event
+subscriptions, and query-limit methods while preserving `V26_REMOVED_METHODS` for
+suppression logging and leaving `PROFILES` / `get_profile` fallback semantics
+unchanged.
+
+Tests now assert that unknown reviewed methods/events equal the profile
+intersection, that v26-added methods are disjoint from unknown, and that
+`PROFILE_UNKNOWN` does not transport either `container.query` or
+`virt.instance.query` during virt collection. Stale unknown==v26 expectations for
+container, webshare, SMB status, and `container.metrics` were updated.
+
+Verification:
+- `rg -n "PROFILE_UNKNOWN" scripts` returned no matches; parity generation does
+  not bake old unknown==v26 assumptions.
+- `python3 -m pytest tests/test_removed_source_suppression.py tests/test_api_catalog.py tests/test_phase1_metrics.py -q`
+  passed: 74 tests.
+- `python3 scripts/generate_api_exporter_parity.py` completed; generated parity
+  artifacts were already current.
+- `./scripts/validate.sh` exited 0: ruff, mypy, 209 tests at 91.42% coverage,
+  dashboard validation, parity checks, public-release audit, Docker image build,
+  and version smoke all passed with `validation_ok`.

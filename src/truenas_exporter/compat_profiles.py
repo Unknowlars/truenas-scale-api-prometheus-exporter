@@ -104,6 +104,9 @@ _V26_TELEMETRY_METHODS = _V25_TELEMETRY_METHODS - V26_REMOVED_METHODS
 # container.metrics (v26); each profile keeps only the name its version exposes.
 _V25_EVENTS = frozenset(DEFAULT_SAFE_EVENT_SUBSCRIPTIONS) - V26_ADDED_EVENTS
 _V26_EVENTS = frozenset(DEFAULT_SAFE_EVENT_SUBSCRIPTIONS) - V26_REMOVED_EVENTS
+_UNKNOWN_METHODS = _V25_METHODS & _V26_METHODS
+_UNKNOWN_TELEMETRY_METHODS = _V25_TELEMETRY_METHODS & _V26_TELEMETRY_METHODS
+_UNKNOWN_EVENTS = _V25_EVENTS & _V26_EVENTS
 
 # The pinned 25.10.2 documentation says these VM memory methods return
 # "megabytes", but a live TrueNAS SCALE 25.10.3 system returns raw *bytes*
@@ -153,13 +156,15 @@ PROFILE_26_0 = CompatibilityProfile(
 PROFILE_UNKNOWN = CompatibilityProfile(
     name="unknown",
     target_version="common-intersection",
-    reviewed_methods=_V26_METHODS,
-    telemetry_methods=_V26_TELEMETRY_METHODS,
-    reviewed_events=_V26_EVENTS,
-    default_event_subscriptions=PROFILE_26_0.default_event_subscriptions,
+    reviewed_methods=_UNKNOWN_METHODS,
+    telemetry_methods=_UNKNOWN_TELEMETRY_METHODS,
+    reviewed_events=_UNKNOWN_EVENTS,
+    default_event_subscriptions=tuple(
+        event for event in DEFAULT_SAFE_EVENT_SUBSCRIPTIONS if event in _UNKNOWN_EVENTS
+    ),
     removed_methods=V26_REMOVED_METHODS,
     removed_events=V26_REMOVED_EVENTS,
-    query_limit_methods=QUERY_LIMIT_METHODS - V26_REMOVED_METHODS,
+    query_limit_methods=QUERY_LIMIT_METHODS & _UNKNOWN_METHODS,
     unit_conversions=_V26_UNIT_CONVERSIONS,
 )
 
@@ -180,3 +185,4 @@ def get_profile(name: ProfileName | str) -> CompatibilityProfile:
 
 assert _V25_EVENTS <= DOCUMENTED_EVENT_NAMES
 assert _V26_EVENTS <= DOCUMENTED_EVENT_NAMES
+assert _UNKNOWN_EVENTS <= DOCUMENTED_EVENT_NAMES

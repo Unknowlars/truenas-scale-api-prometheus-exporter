@@ -46,6 +46,16 @@ review evidence. Future changes remain subject to `./scripts/validate.sh`, the
 generated metric-contract check, the read-only API policy, and the prohibition
 on hosted CI.
 
+The 2026-07-16 T11 remediation made `PROFILE_UNKNOWN` a true 25.10/26.0 API
+intersection, excluding v26-added methods/events when version detection falls
+back to unknown while preserving removed-method suppression logging. Verification
+passed locally: `python3 -m pytest tests/test_removed_source_suppression.py
+tests/test_api_catalog.py tests/test_phase1_metrics.py -q` (74 tests),
+`python3 scripts/generate_api_exporter_parity.py`, and `./scripts/validate.sh`
+(ruff, mypy, 209 tests at 91.42% coverage, dashboard validation, parity checks,
+public-release audit, Docker image build, version smoke, `validation_ok`). No
+live smoke was run because no read-only TrueNAS API key was available.
+
 The 2026-07-15 public-release hardening pass restored the local release gate,
 added a tracked-file public-release audit, and completed Docker-backed
 validation on this host.
