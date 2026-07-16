@@ -970,7 +970,7 @@ def test_disable_created_metrics():
 # ---------------------------------------------------------------------------
 
 
-def test_scrub_task_collector_uses_exact_count_and_bounded_detail(monkeypatch):
+def test_scrub_task_collector_skips_count_for_short_list(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
@@ -987,12 +987,12 @@ def test_scrub_task_collector_uses_exact_count_and_bounded_detail(monkeypatch):
     exporter._collect_scrub_task_metrics(object(), {})
 
     scrub_calls = [c for c in calls if c[0] == "pool.scrub.query"]
-    assert len(scrub_calls) == 2
-    assert scrub_calls[1][1] == [[], {"count": True}]
-    assert gauge_value(exporter_module.POOL_SCRUB_TASK_COUNT) == 301
+    assert len(scrub_calls) == 1
+    assert scrub_calls[0][1][1]["select"] == ["id", "pool_name", "enabled"]
+    assert gauge_value(exporter_module.POOL_SCRUB_TASK_COUNT) == 1
 
 
-def test_cloud_backup_collector_uses_exact_count_and_safe_detail_select(monkeypatch):
+def test_cloud_backup_collector_skips_count_for_short_list_and_safe_detail_select(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
@@ -1012,13 +1012,13 @@ def test_cloud_backup_collector_uses_exact_count_and_safe_detail_select(monkeypa
     exporter._collect_cloud_backup_metrics(object(), {})
 
     backup_calls = [c for c in calls if c[0] == "cloud_backup.query"]
-    assert len(backup_calls) == 2
+    assert len(backup_calls) == 1
     assert backup_calls[0][1][1]["select"] == ["id", "enabled"]
-    assert gauge_value(exporter_module.CLOUD_BACKUP_TASK_COUNT) == 402
+    assert gauge_value(exporter_module.CLOUD_BACKUP_TASK_COUNT) == 2
     assert not list(exporter_module.CLOUD_BACKUP_TASK_STATE.collect())[0].samples
 
 
-def test_cronjob_collector_uses_exact_count_and_excludes_command(monkeypatch):
+def test_cronjob_collector_skips_count_for_short_list_and_excludes_command(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
     calls = []
 
@@ -1035,9 +1035,9 @@ def test_cronjob_collector_uses_exact_count_and_excludes_command(monkeypatch):
     exporter._collect_cronjob_metrics(object(), {})
 
     cron_calls = [c for c in calls if c[0] == "cronjob.query"]
-    assert len(cron_calls) == 2
+    assert len(cron_calls) == 1
     assert cron_calls[0][1][1]["select"] == ["id", "enabled"]
-    assert gauge_value(exporter_module.CRONJOB_COUNT) == 503
+    assert gauge_value(exporter_module.CRONJOB_COUNT) == 1
 
 
 def task_samples(metric, **labels):
@@ -1116,9 +1116,8 @@ def test_task_collectors_emit_outcomes_and_use_safe_selects(monkeypatch):
     }
     for method, expected_select in expected_selects.items():
         method_calls = [call for call in calls if call[0] == method]
-        assert len(method_calls) == 2
+        assert len(method_calls) == 1
         assert method_calls[0][1][1]["select"] == expected_select
-        assert method_calls[1][1] == [[], {"count": True}]
 
     assert task_sample_value(
         exporter_module.TASK_STATE,

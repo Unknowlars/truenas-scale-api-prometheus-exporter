@@ -62,6 +62,25 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T15 remediation: deduplicated redundant per-cycle read-only API
+  calls without metric or config contract changes. The main and extended disk
+  collectors now share one selected `disk.query`; service, protocol, and
+  reporting-enabled collectors share one selected `service.query`; the VM list
+  fetch is skipped when generic method metrics are disabled; and T15-listed
+  bounded list+count collectors use list length unless the limit is reached.
+  A default synthetic `RecordingClient` scrape measured 128 JSON-RPC calls
+  before T15 and 117 after. Focused verification passed:
+  `python3 -m pytest tests/test_t15_duplicate_api_calls.py tests/test_phase1_metrics.py::test_cronjob_collector_skips_count_for_short_list_and_excludes_command -q`
+  (`5 passed`). Required full verification passed:
+  `python3 -m pytest tests/ -q` (`219 passed, 2 skipped`),
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `./scripts/validate.sh` (ruff, mypy, `221 passed`, 91.38% coverage,
+  dashboard validation, generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`). Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is patch-worthy performance work with no metric contract
+  change.
+
 - 2026-07-16 T14 remediation: auto-skipped methods now heal on compatibility
   profile changes and through a per-method 24-hour amnesty window. The
   `_note_profile` helper centralizes T12's monotonic profile update behavior

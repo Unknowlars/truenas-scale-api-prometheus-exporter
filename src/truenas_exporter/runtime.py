@@ -1267,6 +1267,19 @@ class TrueNASExporter:
             )
         return result
 
+    def _count_or_len(
+        self,
+        client: JsonRpcWsClient,
+        method: str,
+        items: list[Any],
+        limit: int,
+        filters: list[Any] | None = None,
+        extra_options: dict[str, Any] | None = None,
+    ) -> int:
+        if len(items) < limit:
+            return len(items)
+        return self._query_count(client, method, filters, extra_options)
+
     def _require_profile_method(self, method: str) -> None:
         if self.compatibility_profile.allows_method(method):
             return
@@ -1509,6 +1522,7 @@ class TrueNASExporter:
         self,
         client: JsonRpcWsClient,
         service_names: tuple[str, ...],
+        cache: dict[str, Any] | None = None,
     ) -> dict[str, bool]:
         ordered_names: list[str] = []
         seen: set[str] = set()
@@ -1520,13 +1534,22 @@ class TrueNASExporter:
         if not ordered_names:
             return {}
 
-        services = self._call(client, "service.query", [[[
-            "service", "in", ordered_names,
-        ]], {
-            "extra": {"include_state": False},
-            "limit": len(ordered_names),
-            "select": ["service", "enable"],
-        }])
+        cached_services = cache.get("service.query") if cache is not None else None
+        if isinstance(cached_services, list):
+            services = [
+                svc
+                for svc in cached_services
+                if isinstance(svc, dict)
+                and (svc.get("service") or svc.get("name")) in seen
+            ]
+        else:
+            services = self._call(client, "service.query", [[[
+                "service", "in", ordered_names,
+            ]], {
+                "extra": {"include_state": False},
+                "limit": len(ordered_names),
+                "select": ["service", "enable"],
+            }])
 
         enabled_by_service: dict[str, bool] = {}
         if isinstance(services, list):
@@ -2473,13 +2496,13 @@ class TrueNASExporter:
     # ------------------------------------------------------------------
 
     def _collect_entity_detail_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
-        vm_query = cache.get("vm.query") or self._safe_call_auto(client, "vm.query")
-        vm_list = vm_query if isinstance(vm_query, list) else []
         try:
             VM_COUNT.set(self._query_count(client, "vm.query"))
         except Exception:
             LOG.debug("vm.query count failed", exc_info=True)
         if self.config.enable_generic_method_metrics:
+            vm_query = cache.get("vm.query") or self._safe_call_auto(client, "vm.query")
+            vm_list = vm_query if isinstance(vm_query, list) else []
             for vm_index, vm in enumerate(vm_list[: self.config.max_entity_calls]):
                 if not isinstance(vm, dict):
                     continue
@@ -2498,7 +2521,9 @@ class TrueNASExporter:
         app_query = cache.get("app.query") or self._safe_call_auto(client, "app.query")
         app_list = app_query if isinstance(app_query, list) else []
         try:
-            APP_COUNT.set(self._query_count(client, "app.query"))
+            APP_COUNT.set(
+                self._count_or_len(client, "app.query", app_list, self.config.query_limit)
+            )
         except Exception:
             LOG.debug("app.query count failed", exc_info=True)
         APP_STATE.clear()
@@ -2725,7 +2750,11 @@ class TrueNASExporter:
             return
 
         try:
-            DATASET_COUNT.set(self._query_count(client, "pool.dataset.query"))
+            DATASET_COUNT.set(
+                self._count_or_len(
+                    client, "pool.dataset.query", datasets, self.config.max_datasets
+                )
+            )
         except Exception:
             LOG.debug("pool.dataset.query count failed", exc_info=True)
         # NOTE: DATASET_* gauges are already cleared at the top of scrape_once()
@@ -2894,7 +2923,9 @@ class TrueNASExporter:
                      "select": ["id", "name", "enabled", "state"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "replication.query")
+                total = self._count_or_len(
+                    client, "replication.query", items, self.config.query_limit
+                )
                 self._export_task_list(
                     "replication",
                     items,
@@ -2915,7 +2946,9 @@ class TrueNASExporter:
                      "select": ["id", "description", "enabled", "job"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "cloudsync.query")
+                total = self._count_or_len(
+                    client, "cloudsync.query", items, self.config.query_limit
+                )
                 self._export_task_list(
                     "cloudsync",
                     items,
@@ -2936,7 +2969,9 @@ class TrueNASExporter:
                      "select": ["id", "enabled", "job"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "rsynctask.query")
+                total = self._count_or_len(
+                    client, "rsynctask.query", items, self.config.query_limit
+                )
                 self._export_task_list(
                     "rsynctask",
                     items,
@@ -2956,7 +2991,9 @@ class TrueNASExporter:
                      "select": ["id", "enabled", "state"]}
             ])
             if isinstance(items, list):
-                total = self._query_count(client, "pool.snapshottask.query")
+                total = self._count_or_len(
+                    client, "pool.snapshottask.query", items, self.config.query_limit
+                )
                 self._export_task_list(
                     "snapshottask",
                     items,
@@ -3226,7 +3263,7 @@ class TrueNASExporter:
     # Extended disk info (rotational, SMART) (v3)
     # ------------------------------------------------------------------
 
-    def _collect_disk_extended_metrics(self, client: JsonRpcWsClient) -> None:
+    def _collect_disk_extended_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         """Collect disk rotational flag and SMART status via disk.query.
 
         v25.10.2 field names:
@@ -3235,11 +3272,26 @@ class TrueNASExporter:
           togglesmart   — not present in v25.10.2; SMART enabled status is omitted
         """
         try:
-            disks = self._call_query_with_fallback(
-                client, "disk.query",
-                {"select": ["name", "identifier", "type", "rotationrate", "model", "bus"]},
-                allow_bare_fallback=False,
-            )
+            disks = cache.get("disk.query")
+            if disks is None:
+                disks = self._call_query_with_fallback(
+                    client, "disk.query",
+                    {
+                        "extra": {"pools": True},
+                        "select": [
+                            "name",
+                            "identifier",
+                            "size",
+                            "pool",
+                            "type",
+                            "rotationrate",
+                            "model",
+                            "bus",
+                        ],
+                    },
+                    allow_bare_fallback=False,
+                )
+                cache["disk.query"] = disks
             if not isinstance(disks, list):
                 return
             DISK_INFO.clear()
@@ -3467,7 +3519,7 @@ class TrueNASExporter:
                     self._collect_gpu_metrics(client)
                     self._collect_jbof_metrics(client)
                     self._collect_auth_session_metrics(client)
-                    self._collect_disk_extended_metrics(client)
+                    self._collect_disk_extended_metrics(client, result_cache)
                     self._collect_smart_test_results(client)
 
                     # --- System state (use cache if already fetched) ---
@@ -3717,12 +3769,26 @@ class TrueNASExporter:
                             self._extract_vdev_errors(pool_name, topology)
 
                     # --- Disks ---
-                    # Fresh call with extra fields not included in the generic pass.
-                    disks = self._call_query_with_fallback(
-                        client, "disk.query",
-                        {"extra": {"pools": True}, "select": ["name", "identifier", "size", "pool"]},
-                        allow_bare_fallback=False,
-                    )
+                    disks = result_cache.get("disk.query")
+                    if disks is None:
+                        disks = self._call_query_with_fallback(
+                            client, "disk.query",
+                            {
+                                "extra": {"pools": True},
+                                "select": [
+                                    "name",
+                                    "identifier",
+                                    "size",
+                                    "pool",
+                                    "type",
+                                    "rotationrate",
+                                    "model",
+                                    "bus",
+                                ],
+                            },
+                            allow_bare_fallback=False,
+                        )
+                        result_cache["disk.query"] = disks
                     disk_list = disks if isinstance(disks, list) else []
                     DISK_COUNT.set(len(disk_list))
                     disk_names: list[str] = []
@@ -3842,11 +3908,13 @@ class TrueNASExporter:
                         if iface_type and iface_type != "unknown":
                             INTERFACE_TYPE.labels(interface=name, type=iface_type).set(1)
 
-                    # --- Services (fresh call with rich select/extra params) ---
-                    services = self._call_query_with_fallback(
-                        client, "service.query",
-                        {"extra": {"include_state": True}, "select": ["service", "enable", "state"]},
-                    )
+                    services = result_cache.get("service.query")
+                    if services is None:
+                        services = self._call_query_with_fallback(
+                            client, "service.query",
+                            {"extra": {"include_state": True}, "select": ["service", "enable", "state"]},
+                        )
+                        result_cache["service.query"] = services
                     service_list = services if isinstance(services, list) else []
                     SERVICE_COUNT.set(len(service_list))
                     for svc in service_list:
@@ -4100,7 +4168,11 @@ class TrueNASExporter:
             return
 
         try:
-            BOOT_ENV_COUNT.set(self._query_count(client, "boot.environment.query"))
+            BOOT_ENV_COUNT.set(
+                self._count_or_len(
+                    client, "boot.environment.query", envs, self.config.query_limit
+                )
+            )
         except Exception:
             BOOT_ENV_COUNT.set(len(envs))
         active_count = 0
@@ -4251,7 +4323,11 @@ class TrueNASExporter:
 
         if isinstance(instances, list):
             try:
-                VIRT_INSTANCE_COUNT.set(self._query_count(client, instance_method))
+                VIRT_INSTANCE_COUNT.set(
+                    self._count_or_len(
+                        client, instance_method, instances, self.config.query_limit
+                    )
+                )
             except Exception:
                 LOG.debug("%s count failed", instance_method, exc_info=True)
             VIRT_INSTANCE_RUNNING.clear()
@@ -4635,7 +4711,11 @@ class TrueNASExporter:
             return
 
         try:
-            POOL_SCRUB_TASK_COUNT.set(self._query_count(client, "pool.scrub.query"))
+            POOL_SCRUB_TASK_COUNT.set(
+                self._count_or_len(
+                    client, "pool.scrub.query", tasks, self.config.query_limit
+                )
+            )
         except Exception:
             LOG.debug("pool.scrub.query count failed", exc_info=True)
 
@@ -4727,7 +4807,11 @@ class TrueNASExporter:
             return
 
         try:
-            CLOUD_BACKUP_TASK_COUNT.set(self._query_count(client, "cloud_backup.query"))
+            CLOUD_BACKUP_TASK_COUNT.set(
+                self._count_or_len(
+                    client, "cloud_backup.query", tasks, self.config.query_limit
+                )
+            )
         except Exception:
             LOG.debug("cloud_backup.query count failed", exc_info=True)
 
@@ -4759,7 +4843,9 @@ class TrueNASExporter:
             return
 
         try:
-            CRONJOB_COUNT.set(self._query_count(client, "cronjob.query"))
+            CRONJOB_COUNT.set(
+                self._count_or_len(client, "cronjob.query", jobs, self.config.query_limit)
+            )
         except Exception:
             LOG.debug("cronjob.query count failed", exc_info=True)
 
@@ -4784,7 +4870,9 @@ class TrueNASExporter:
         """Collect protocol service configuration flags."""
         protocol_services: dict[str, bool] | None = None
         try:
-            protocol_services = self._query_service_enable_map(client, ("ssh", "ftp", "snmp"))
+            protocol_services = self._query_service_enable_map(
+                client, ("ssh", "ftp", "snmp"), cache
+            )
         except Exception:
             COLLECTOR_ERRORS_TOTAL.labels(collector="protocol_services").inc()
             LOG.debug("service.query for protocol services failed", exc_info=True)
@@ -5010,7 +5098,9 @@ class TrueNASExporter:
 
         # Reporting service enable state
         try:
-            reporting_services = self._query_service_enable_map(client, ("netdata", "reporting"))
+            reporting_services = self._query_service_enable_map(
+                client, ("netdata", "reporting"), cache
+            )
             if reporting_services:
                 enabled = reporting_services.get("netdata")
                 if enabled is None:
