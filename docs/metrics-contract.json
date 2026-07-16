@@ -2599,7 +2599,7 @@
       "variable": "SNAPSHOT_TOTAL_COUNT"
     },
     {
-      "help": "Unix timestamp of the oldest ZFS snapshot; absent when there are no snapshots.",
+      "help": "Unix timestamp of the oldest ZFS snapshot; absent when there are no snapshots; refreshed every ~5 minutes.",
       "labels": [],
       "name": "truenas_snapshot_oldest_timestamp_seconds",
       "type": "gauge",

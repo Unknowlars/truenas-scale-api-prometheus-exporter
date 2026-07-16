@@ -1057,7 +1057,7 @@ def test_t19_help_text_contract_updates():
     ) in output
     assert (
         "# HELP truenas_snapshot_oldest_timestamp_seconds Unix timestamp of the oldest "
-        "ZFS snapshot; absent when there are no snapshots."
+        "ZFS snapshot; absent when there are no snapshots; refreshed every ~5 minutes."
     ) in output
 
 

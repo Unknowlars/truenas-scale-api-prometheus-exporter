@@ -799,7 +799,7 @@ SNAPSHOT_TOTAL_COUNT = declare_gauge("SNAPSHOT_TOTAL_COUNT", "truenas_snapshot_c
 SNAPSHOT_OLDEST_TS = declare_gauge(
     "SNAPSHOT_OLDEST_TS",
     "truenas_snapshot_oldest_timestamp_seconds",
-    "Unix timestamp of the oldest ZFS snapshot; absent when there are no snapshots.",
+    "Unix timestamp of the oldest ZFS snapshot; absent when there are no snapshots; refreshed every ~5 minutes.",
 )
 
 # ---------------------------------------------------------------------------
