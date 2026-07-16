@@ -239,6 +239,86 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
     assert "select" not in oldest_options
 
 
+def test_oldest_snapshot_timestamp_uses_reduced_cadence_cache(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
+    oldest_calls = []
+
+    def fake_call(client, method, params=None):
+        assert method == "pool.snapshot.query"
+        options = params[1]
+        if options.get("count"):
+            return 321
+        oldest_calls.append(params)
+        return [{"properties": {"creation": {"parsed": 1700000000 + len(oldest_calls)}}}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_snapshot_metrics(object(), {})
+    assert gauge_value(exporter_module.SNAPSHOT_TOTAL_COUNT) == 321
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000001
+    assert len(oldest_calls) == 1
+
+    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES):
+        exporter._reset_poll_metrics()
+        exporter._collect_snapshot_metrics(object(), {})
+        assert gauge_value(exporter_module.SNAPSHOT_TOTAL_COUNT) == 321
+        assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000001
+        assert len(oldest_calls) == 1
+
+    exporter._reset_poll_metrics()
+    exporter._collect_snapshot_metrics(object(), {})
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000002
+    assert len(oldest_calls) == 2
+
+
+def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
+    fail_oldest = False
+
+    def fake_call(client, method, params=None):
+        assert method == "pool.snapshot.query"
+        options = params[1]
+        if options.get("count"):
+            return 321
+        if fail_oldest:
+            raise exporter_module.JsonRpcError("oldest snapshot unavailable")
+        return [{"properties": {"creation": {"parsed": 1700000000}}}]
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_snapshot_metrics(object(), {})
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000000
+
+    before_errors = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="snapshots"
+    )._value.get()
+    fail_oldest = True
+    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1):
+        exporter._reset_poll_metrics()
+        exporter._collect_snapshot_metrics(object(), {})
+
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000000
+    assert (
+        exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots")._value.get()
+        == before_errors + 1
+    )
+
+    for _ in range(
+        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1,
+        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES
+        * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        + 2,
+    ):
+        exporter._reset_poll_metrics()
+        exporter._collect_snapshot_metrics(object(), {})
+
+    assert math.isnan(gauge_value(exporter_module.SNAPSHOT_OLDEST_TS))
+
+
 def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", dataset_snapshot_fallback_limit=50))
     calls = []
@@ -1820,6 +1900,99 @@ def test_disk_temperature_alert_failure_keeps_sibling_disk_metrics(monkeypatch):
     assert labeled_value(exporter_module.DISK_SIZE_BYTES, "sda") == 100
     assert labeled_value(exporter_module.DISK_TEMPERATURE_C, "sda") == 34
     assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+
+
+def test_disk_temperature_agg_uses_reduced_cadence_cache(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    temp_calls = []
+
+    def fake_call(client, method, params=None):
+        assert method == "disk.temperature_agg"
+        temp_calls.append(params)
+        return {"sda": {"min": 30 + len(temp_calls), "max": 40, "avg": 35}}
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+    assert len(temp_calls) == 1
+
+    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES):
+        exporter._reset_poll_metrics()
+        exporter._collect_disk_temperature_agg(object(), ["sda"])
+        assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+        assert len(temp_calls) == 1
+
+    exporter._reset_poll_metrics()
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 32
+    assert len(temp_calls) == 2
+
+
+def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    fail_agg = False
+
+    def fake_call(client, method, params=None):
+        assert method == "disk.temperature_agg"
+        if fail_agg:
+            raise exporter_module.JsonRpcError("temperature agg unavailable")
+        return {"sda": {"min": 31, "max": 35, "avg": 33}}
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+
+    before_errors = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="disks"
+    )._value.get()
+    fail_agg = True
+    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1):
+        exporter._reset_poll_metrics()
+        exporter._collect_disk_temperature_agg(object(), ["sda"])
+
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+    assert (
+        exporter_module.COLLECTOR_ERRORS_TOTAL.labels(collector="disks")._value.get()
+        == before_errors + 1
+    )
+
+    for _ in range(
+        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1,
+        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES
+        * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        + 2,
+    ):
+        exporter._reset_poll_metrics()
+        exporter._collect_disk_temperature_agg(object(), ["sda"])
+
+    assert list(exporter_module.DISK_TEMP_AGG_C.collect())[0].samples == []
+
+
+def test_disk_temperature_agg_refetches_when_disk_list_changes(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    temp_calls = []
+
+    def fake_call(client, method, params=None):
+        assert method == "disk.temperature_agg"
+        temp_calls.append(params[0])
+        return {
+            disk_name: {"min": 30 + len(temp_calls), "max": 40, "avg": 35}
+            for disk_name in params[0]
+        }
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+    assert temp_calls == [["sda"]]
+
+    exporter._reset_poll_metrics()
+    exporter._collect_disk_temperature_agg(object(), ["sda", "sdb"])
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 32
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sdb", "min") == 32
+    assert temp_calls == [["sda"], ["sda", "sdb"]]
 
 
 def test_disk_temperature_alerts_not_called_without_disks(monkeypatch):

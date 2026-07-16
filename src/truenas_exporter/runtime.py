@@ -702,6 +702,12 @@ _POLL_RESET_EXCLUDED_NAMES = {
     *_EVENT_SOURCE_BY_METRIC_NAME,
 }
 
+# Heavy middleware-side aggregations are slow-moving; refresh them less often
+# while re-emitting cached values between refreshes.
+DISK_TEMP_AGG_REFRESH_CYCLES = 10
+SNAPSHOT_OLDEST_REFRESH_CYCLES = 10
+HEAVY_QUERY_CACHE_MAX_STALE_FACTOR = 3
+
 
 def _set_optional_bool_gauge(gauge: Any, value: Any) -> None:
     parsed = _as_optional_bool(value)
@@ -767,6 +773,16 @@ class TrueNASExporter:
         self._auto_skipped_methods: set[str] = set()
         self._auto_skipped_at: dict[str, float] = {}
         self._has_detected_concrete_profile = False
+        self._disk_temp_agg_cycle = 0
+        self._disk_temp_agg_disk_names: tuple[str, ...] = ()
+        self._disk_temp_agg_cache: dict[tuple[str, str], float] = {}
+        self._disk_temp_agg_last_success_cycle: int | None = None
+        self._disk_temp_agg_last_attempt_cycle: int | None = None
+        self._snapshot_oldest_cycle = 0
+        self._snapshot_oldest_cached_value: float | None = None
+        self._snapshot_oldest_has_cache = False
+        self._snapshot_oldest_last_success_cycle: int | None = None
+        self._snapshot_oldest_last_attempt_cycle: int | None = None
 
     # ------------------------------------------------------------------
     # Internal utilities
@@ -3810,19 +3826,7 @@ class TrueNASExporter:
                             DISK_SIZE_BYTES.labels(disk=disk_name).set(size)
 
                     if disk_names:
-                        try:
-                            temp_agg = self._call(client, "disk.temperature_agg", [disk_names, 7])
-                            if isinstance(temp_agg, dict):
-                                for disk_name, agg in temp_agg.items():
-                                    if isinstance(agg, dict):
-                                        for kind in ("min", "max", "avg"):
-                                            val = _as_float(agg.get(kind))
-                                            if val is not None:
-                                                DISK_TEMP_AGG_C.labels(
-                                                    disk=_str_label(disk_name), kind=kind,
-                                                ).set(val)
-                        except Exception:
-                            LOG.debug("disk.temperature_agg failed", exc_info=True)
+                        self._collect_disk_temperature_agg(client, disk_names)
                         try:
                             temp_alerts = self._call(
                                 client, "disk.temperature_alerts", [disk_names]
@@ -4444,6 +4448,66 @@ class TrueNASExporter:
         except Exception:
             LOG.debug("iscsi.global.sessions failed", exc_info=True)
 
+    def _emit_cached_disk_temp_agg(self) -> None:
+        for (disk_name, kind), val in self._disk_temp_agg_cache.items():
+            DISK_TEMP_AGG_C.labels(disk=disk_name, kind=kind).set(val)
+
+    def _collect_disk_temperature_agg(
+        self,
+        client: JsonRpcWsClient,
+        disk_names: list[str],
+    ) -> None:
+        """Collect cached 7-day disk temperature aggregates."""
+        self._disk_temp_agg_cycle += 1
+        current_cycle = self._disk_temp_agg_cycle
+        current_disk_names = tuple(disk_names)
+        disk_list_changed = current_disk_names != self._disk_temp_agg_disk_names
+        if disk_list_changed:
+            self._disk_temp_agg_disk_names = current_disk_names
+            self._disk_temp_agg_cache = {}
+            self._disk_temp_agg_last_success_cycle = None
+            self._disk_temp_agg_last_attempt_cycle = None
+
+        last_success = self._disk_temp_agg_last_success_cycle
+        last_attempt = self._disk_temp_agg_last_attempt_cycle
+        should_refresh = (
+            disk_list_changed
+            or last_attempt is None
+            or current_cycle - last_attempt >= DISK_TEMP_AGG_REFRESH_CYCLES - 1
+        )
+
+        if should_refresh:
+            self._disk_temp_agg_last_attempt_cycle = current_cycle
+            try:
+                temp_agg = self._call(client, "disk.temperature_agg", [disk_names, 7])
+            except Exception:
+                COLLECTOR_ERRORS_TOTAL.labels(collector="disks").inc()
+                LOG.debug("disk.temperature_agg failed", exc_info=True)
+            else:
+                cache: dict[tuple[str, str], float] = {}
+                if isinstance(temp_agg, dict):
+                    for disk_name, agg in temp_agg.items():
+                        if not isinstance(agg, dict):
+                            continue
+                        disk_label = _str_label(disk_name)
+                        for kind in ("min", "max", "avg"):
+                            val = _as_float(agg.get(kind))
+                            if val is not None:
+                                cache[(disk_label, kind)] = val
+                self._disk_temp_agg_cache = cache
+                self._disk_temp_agg_last_success_cycle = current_cycle
+                last_success = current_cycle
+
+        if (
+            last_success is not None
+            and current_cycle - last_success
+            >= DISK_TEMP_AGG_REFRESH_CYCLES * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        ):
+            self._disk_temp_agg_cache = {}
+            self._disk_temp_agg_last_success_cycle = None
+
+        self._emit_cached_disk_temp_agg()
+
     # ------------------------------------------------------------------
     # Network extras
     # ------------------------------------------------------------------
@@ -4743,34 +4807,72 @@ class TrueNASExporter:
             COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots").inc()
             LOG.debug("pool.snapshot.query count failed", exc_info=True)
 
-        try:
-            # v26 note: pool.snapshot.query returns empty properties {} unless
-            # extra.properties requests them, so order_by on
-            # properties.creation.parsed would sort None<None and raise EINVAL
-            # server-side. The nested select alias also returns {} on v26, so we
-            # fetch the full object (limit 1) and let
-            # _extract_snapshot_creation_timestamp read properties.creation.parsed.
-            oldest_query = self._call(client, "pool.snapshot.query", [
-                [], {
-                    "limit": 1,
-                    "order_by": ["properties.creation.parsed"],
-                    "extra": {"properties": ["creation"]},
-                }
-            ])
-        except Exception:
-            COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots").inc()
-            LOG.debug("pool.snapshot.query oldest snapshot failed", exc_info=True)
-            return
+        self._collect_snapshot_oldest_metric(client)
 
-        oldest_snapshot: Any = None
-        if isinstance(oldest_query, list):
-            oldest_snapshot = oldest_query[0] if oldest_query else None
-        elif isinstance(oldest_query, dict):
-            oldest_snapshot = oldest_query
+    def _emit_cached_snapshot_oldest(self) -> None:
+        if self._snapshot_oldest_cached_value is not None:
+            SNAPSHOT_OLDEST_TS.set(self._snapshot_oldest_cached_value)
 
-        oldest_ts = self._extract_snapshot_creation_timestamp(oldest_snapshot)
-        if oldest_ts is not None:
-            SNAPSHOT_OLDEST_TS.set(oldest_ts)
+    def _collect_snapshot_oldest_metric(self, client: JsonRpcWsClient) -> None:
+        """Collect cached oldest snapshot timestamp."""
+        self._snapshot_oldest_cycle += 1
+        current_cycle = self._snapshot_oldest_cycle
+        last_success = self._snapshot_oldest_last_success_cycle
+        last_attempt = self._snapshot_oldest_last_attempt_cycle
+        should_refresh = (
+            last_attempt is None
+            or current_cycle - last_attempt >= SNAPSHOT_OLDEST_REFRESH_CYCLES - 1
+        )
+
+        if should_refresh:
+            self._snapshot_oldest_last_attempt_cycle = current_cycle
+            oldest_query: Any = None
+            refresh_succeeded = False
+            try:
+                # v26 note: pool.snapshot.query returns empty properties {} unless
+                # extra.properties requests them, so order_by on
+                # properties.creation.parsed would sort None<None and raise EINVAL
+                # server-side. The nested select alias also returns {} on v26, so we
+                # fetch the full object (limit 1) and let
+                # _extract_snapshot_creation_timestamp read properties.creation.parsed.
+                oldest_query = self._call(client, "pool.snapshot.query", [
+                    [], {
+                        "limit": 1,
+                        "order_by": ["properties.creation.parsed"],
+                        "extra": {"properties": ["creation"]},
+                    }
+                ])
+                refresh_succeeded = True
+            except Exception:
+                COLLECTOR_ERRORS_TOTAL.labels(collector="snapshots").inc()
+                LOG.debug("pool.snapshot.query oldest snapshot failed", exc_info=True)
+
+            if refresh_succeeded:
+                oldest_snapshot: Any = None
+                if isinstance(oldest_query, list):
+                    oldest_snapshot = oldest_query[0] if oldest_query else None
+                elif isinstance(oldest_query, dict):
+                    oldest_snapshot = oldest_query
+
+                self._snapshot_oldest_cached_value = (
+                    self._extract_snapshot_creation_timestamp(oldest_snapshot)
+                )
+                self._snapshot_oldest_has_cache = True
+                self._snapshot_oldest_last_success_cycle = current_cycle
+                last_success = current_cycle
+
+        if (
+            self._snapshot_oldest_has_cache
+            and last_success is not None
+            and current_cycle - last_success
+            >= SNAPSHOT_OLDEST_REFRESH_CYCLES * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+        ):
+            self._snapshot_oldest_cached_value = None
+            self._snapshot_oldest_has_cache = False
+            self._snapshot_oldest_last_success_cycle = None
+
+        if self._snapshot_oldest_has_cache:
+            self._emit_cached_snapshot_oldest()
 
     # ------------------------------------------------------------------
     # v5 collectors: Pool resilver config

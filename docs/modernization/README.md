@@ -62,6 +62,23 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T16 remediation: reduced server-heavy read-only query cadence for
+  7-day disk temperature aggregation and the oldest-snapshot sorted query.
+  Both metrics now fetch on the first cycle, refresh every 10 cycles, re-emit
+  cached values between refreshes, keep serving cache after refresh failures,
+  count/log collector errors, and expire stale cache after 3x cadence cycles.
+  `truenas_snapshot_count` remains every-cycle via `_query_count`. No metric
+  names or label sets changed; the required HELP cadence suffixes were
+  regenerated into the generated artifacts. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py -q` (`55 passed`).
+  Required generation passed:
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Full verification passed: `./scripts/validate.sh` (ruff, mypy, `226 passed`,
+  91.55% coverage, dashboard validation, generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`). Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available.
+
 - 2026-07-16 T15 remediation: deduplicated redundant per-cycle read-only API
   calls without metric or config contract changes. The main and extended disk
   collectors now share one selected `disk.query`; service, protocol, and

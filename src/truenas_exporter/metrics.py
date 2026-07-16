@@ -167,7 +167,7 @@ DISK_COUNT = declare_gauge("DISK_COUNT", "truenas_disk_count", "Number of disks"
 DISK_SIZE_BYTES = declare_gauge("DISK_SIZE_BYTES", "truenas_disk_size_bytes", "Disk size in bytes", ["disk"])
 DISK_TEMPERATURE_C = declare_gauge("DISK_TEMPERATURE_C", "truenas_disk_temperature_celsius", "Disk temperature in Celsius", ["disk"])
 DISK_TEMP_ALERT_COUNT = declare_gauge("DISK_TEMP_ALERT_COUNT", "truenas_disk_temperature_alert_count", "Temperature alert count per disk", ["disk"])
-DISK_TEMP_AGG_C = declare_gauge("DISK_TEMP_AGG_C", "truenas_disk_temperature_agg_celsius", "Aggregated disk temperature metrics", ["disk", "kind"])
+DISK_TEMP_AGG_C = declare_gauge("DISK_TEMP_AGG_C", "truenas_disk_temperature_agg_celsius", "Aggregated disk temperature metrics refreshed every ~5 minutes", ["disk", "kind"])
 
 # ---------------------------------------------------------------------------
 # Network
@@ -754,7 +754,7 @@ POOL_SCRUB_LAST_RUN_TS = declare_gauge("POOL_SCRUB_LAST_RUN_TS", "truenas_pool_s
 # Snapshots (v5 — pool.snapshot.query)
 # ---------------------------------------------------------------------------
 SNAPSHOT_TOTAL_COUNT = declare_gauge("SNAPSHOT_TOTAL_COUNT", "truenas_snapshot_count", "Total number of ZFS snapshots")
-SNAPSHOT_OLDEST_TS = declare_gauge("SNAPSHOT_OLDEST_TS", "truenas_snapshot_oldest_timestamp_seconds", "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots)")
+SNAPSHOT_OLDEST_TS = declare_gauge("SNAPSHOT_OLDEST_TS", "truenas_snapshot_oldest_timestamp_seconds", "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots), refreshed every ~5 minutes")
 
 # ---------------------------------------------------------------------------
 # SMART test results (legacy declarations; no documented 25.10.2 producer)

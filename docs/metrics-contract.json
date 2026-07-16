@@ -1063,7 +1063,7 @@
       "variable": "DISK_SMART_ENABLED"
     },
     {
-      "help": "Aggregated disk temperature metrics",
+      "help": "Aggregated disk temperature metrics refreshed every ~5 minutes",
       "labels": [
         "disk",
         "kind"
@@ -2532,7 +2532,7 @@
       "variable": "SNAPSHOT_TOTAL_COUNT"
     },
     {
-      "help": "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots)",
+      "help": "Unix timestamp of the oldest ZFS snapshot (0 if no snapshots), refreshed every ~5 minutes",
       "labels": [],
       "name": "truenas_snapshot_oldest_timestamp_seconds",
       "type": "gauge",

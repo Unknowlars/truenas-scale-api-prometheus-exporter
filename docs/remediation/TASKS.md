@@ -36,7 +36,7 @@ Rules for updating:
 | [T13](tasks/T13-wipe-on-failure.md) | Don't wipe all metrics on pre-auth connection failure | reliability | M | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T14](tasks/T14-auto-skip-permanence.md) | Re-try auto-skipped methods on profile change / periodically | reliability | S | T11 | done | 2026-07-16 | patch-worthy behavior fix |
 | [T15](tasks/T15-duplicate-api-calls.md) | Deduplicate per-cycle API calls (disk.query ×2, service.query ×3, list+count pairs) | performance | M | — | done | 2026-07-16 | performance/no metric contract change; default synthetic scrape 128→117 calls |
-| [T16](tasks/T16-expensive-query-cadence.md) | Reduce cadence of server-heavy queries (7-day temp agg, snapshot sort) | performance | S | — | todo | | |
+| [T16](tasks/T16-expensive-query-cadence.md) | Reduce cadence of server-heavy queries (7-day temp agg, snapshot sort) | performance | S | — | done | 2026-07-16 | performance/no metric name or label contract change; HELP cadence documented |
 
 ## P3 — Conventions, security polish, cleanup
 
@@ -111,3 +111,7 @@ Move a one-line summary here when a task reaches `done`:
   deduplicated with no metric or config contract change; default synthetic
   scrape fell from 128 to 117 calls — local commit; patch-worthy performance
   fix
+- T16 — 2026-07-16 — server-heavy disk temperature aggregate and oldest-snapshot
+  sorted queries now refresh every 10 cycles while cached values are re-emitted
+  with bounded staleness; no metric name or label contract change — local
+  commit; patch-worthy performance fix

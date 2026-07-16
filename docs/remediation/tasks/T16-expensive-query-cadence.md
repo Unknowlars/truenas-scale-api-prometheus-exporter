@@ -71,4 +71,25 @@ python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_expo
 
 ## Outcome
 
-_(fill in when done)_
+Implemented per-instance 10-cycle refresh cadence for
+`disk.temperature_agg(disk_names, 7)` and the sorted oldest-snapshot
+`pool.snapshot.query`, with cached re-emission after `_reset_poll_metrics`
+clears gauges each scrape. Both caches keep serving the last successful values
+after refresh failures, increment/log collector errors on failed refreshes, and
+drop cached values after 3x cadence cycles without a successful refresh.
+
+`SNAPSHOT_TOTAL_COUNT` remains an every-cycle `_query_count(pool.snapshot.query)`
+call. Disk temperature aggregate cache state is invalidated immediately when
+the disk list changes. No API methods, metric names, or label sets changed;
+only the required HELP text cadence suffixes changed, and generated contract /
+parity artifacts were regenerated.
+
+Tests added in `tests/test_phase1_metrics.py` cover first-cycle fetch, skipped
+cycles re-emitting cached samples, cycle-10 refetch, refresh failure with
+collector error accounting, cache expiry, and disk-list-triggered refetch.
+Verification passed locally:
+`python3 -m pytest tests/test_phase1_metrics.py -q` (`55 passed`);
+`python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`;
+and `./scripts/validate.sh` (ruff, mypy, `226 passed`, 91.55% coverage,
+dashboard validation, generated checks, `public_release_audit_ok`, Docker image
+build, container version smoke `5.2.0`, and `validation_ok`).
