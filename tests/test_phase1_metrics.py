@@ -1314,6 +1314,44 @@ def test_safe_call_auto_runtime_skips_missing_argument_methods(monkeypatch):
     assert "virt.global.get_network" in exporter._auto_skipped_methods
 
 
+def test_safe_call_auto_runtime_skips_missing_method_until_amnesty(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", ))
+    calls = []
+    now = 1000.0
+
+    def fake_monotonic():
+        return now
+
+    def fake_call(client, method, params=None):
+        calls.append((method, params))
+        raise exporter_module.JsonRpcError(
+            "container.query failed: {'error': 'Method does not exist'}"
+        )
+
+    monkeypatch.setattr(exporter_module.time, "monotonic", fake_monotonic)
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    skipped_before = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="auto_discovery_skipped"
+    )._value.get()
+
+    assert exporter._safe_call_auto(object(), "container.query") is None
+    assert exporter._safe_call_auto(object(), "container.query") is None
+    assert len(calls) == 1
+    assert exporter._auto_skipped_methods == {"container.query"}
+
+    now += 86400
+    assert exporter._safe_call_auto(object(), "container.query") is None
+    assert exporter._safe_call_auto(object(), "container.query") is None
+
+    assert len(calls) == 2
+    assert exporter._auto_skipped_methods == {"container.query"}
+    skipped_after = exporter_module.COLLECTOR_ERRORS_TOTAL.labels(
+        collector="auto_discovery_skipped"
+    )._value.get()
+    assert skipped_after - skipped_before == 2
+
+
 def test_requires_entity_param_includes_virt_global_get_network():
     assert "virt.global.get_network" in exporter_module.REQUIRES_ENTITY_PARAM
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pytest
@@ -119,6 +120,33 @@ def test_app_image_query_remains_eligible_for_reviewed_count_use(profile: Any) -
     assert exporter._query_count(client, "app.image.query") == 0
 
     assert client.calls == [("app.image.query", [[], {"count": True}])]
+
+
+def test_profile_change_clears_auto_skipped_methods_and_retries(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = runtime.TrueNASExporter(make_config(), compatibility_profile=PROFILE_UNKNOWN)
+    exporter._auto_skipped_methods.add("container.query")
+    exporter._auto_skipped_at["container.query"] = 123.0
+    calls: list[tuple[str, Any]] = []
+
+    def fake_call(client: Any, method: str, params: Any = None) -> Any:
+        calls.append((method, params))
+        return []
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+
+    with caplog.at_level(logging.INFO):
+        exporter._note_profile(PROFILE_26_0)
+
+    assert exporter.compatibility_profile is PROFILE_26_0
+    assert exporter._auto_skipped_methods == set()
+    assert exporter._auto_skipped_at == {}
+    assert "Cleared 1 auto-skipped methods" in caplog.text
+
+    assert exporter._safe_call_auto(object(), "container.query") == []
+    assert [method for method, _params in calls] == ["container.query"]
 
 
 def test_v25_still_transports_removed_in_v26_sources() -> None:

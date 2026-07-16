@@ -62,6 +62,22 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T14 remediation: auto-skipped methods now heal on compatibility
+  profile changes and through a per-method 24-hour amnesty window. The
+  `_note_profile` helper centralizes T12's monotonic profile update behavior
+  with T14's auto-skip clearing, logs the number of cleared methods at INFO,
+  and clears the new skip timestamp map with `_auto_skipped_methods`. Focused
+  verification passed:
+  `python3 -m pytest tests/test_removed_source_suppression.py tests/test_phase1_metrics.py -q`
+  (`70 passed`). Regenerated API parity artifacts because runtime line
+  evidence changed. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `217 passed`, 91.47% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is patch-worthy because
+  it is a behavior/robustness fix with no metric or config changes.
+
 - 2026-07-16 T13 remediation: delayed the polling metric wipe until
   `scrape_once` has constructed the client and completed authentication plus
   version bootstrap, so pre-auth connection/auth/version failures republish the

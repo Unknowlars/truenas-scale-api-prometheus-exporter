@@ -67,4 +67,27 @@ python3 -m pytest tests/test_removed_source_suppression.py tests/test_phase1_met
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16.
+
+- Replaced the profile update path with `_note_profile`, called from `_bootstrap_connection`, so
+  T12's monotonic concrete-profile behavior and T14 auto-skip clearing share one helper.
+- `_auto_skipped_methods` now clears, with `_auto_skipped_at`, whenever the active profile object
+  or name changes; INFO logging includes the number of methods cleared and the profile transition.
+- Added per-method 24-hour amnesty timestamps. A skipped method is retried once after the amnesty
+  window; if it still fails with the existing `_AUTO_SKIP_ERROR_PATTERNS`, it re-enters
+  `_auto_skipped_methods` and is suppressed again without per-cycle retry storms.
+- Added regression coverage in `tests/test_removed_source_suppression.py` and
+  `tests/test_phase1_metrics.py` for existing method-not-found skip behavior, profile-change
+  clearing/retry, and amnesty retry/re-skip counter behavior.
+- Regenerated `docs/api-exporter-parity.md` and `docs/api-exporter-parity.json` because runtime
+  line evidence changed.
+
+Verification:
+
+- `python3 -m pytest tests/test_removed_source_suppression.py tests/test_phase1_metrics.py -q`
+  (`70 passed`)
+- `python3 scripts/generate_api_exporter_parity.py`
+- `./scripts/validate.sh` (`217 passed`, 91.47% coverage, dashboard validation, generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke `5.2.0`, `validation_ok`)
+
+Patch-worthy: behavior/robustness fix only; no metric, label, help, type, or config changes.

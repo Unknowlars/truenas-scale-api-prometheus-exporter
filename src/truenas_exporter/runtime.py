@@ -765,6 +765,7 @@ class TrueNASExporter:
         # when it changes, rather than exposing a UUID-valued label.
         self._last_boot_id: str | None = None
         self._auto_skipped_methods: set[str] = set()
+        self._auto_skipped_at: dict[str, float] = {}
         self._has_detected_concrete_profile = False
 
     # ------------------------------------------------------------------
@@ -1079,7 +1080,7 @@ class TrueNASExporter:
             return get_profile("26.0")
         return get_profile("unknown")
 
-    def _update_compatibility_profile(self, detected_profile: CompatibilityProfile) -> None:
+    def _note_profile(self, detected_profile: CompatibilityProfile) -> None:
         # Profile reads stay lock-free: CPython attribute-reference reads are atomic.
         # Guard writes with auto-skip clearing so both exporter threads see a coherent update.
         with self._lock:
@@ -1090,11 +1091,29 @@ class TrueNASExporter:
                     and current_profile.name in {"25.10", "26.0"}
                 ):
                     return
+                if current_profile is not detected_profile or current_profile.name != detected_profile.name:
+                    cleared = len(self._auto_skipped_methods)
+                    self._auto_skipped_methods.clear()
+                    self._auto_skipped_at.clear()
+                    LOG.info(
+                        "Cleared %d auto-skipped methods after compatibility profile change: %s -> %s",
+                        cleared,
+                        current_profile.name,
+                        detected_profile.name,
+                    )
                 self.compatibility_profile = detected_profile
                 return
 
-            if current_profile.name != detected_profile.name:
+            if current_profile is not detected_profile or current_profile.name != detected_profile.name:
+                cleared = len(self._auto_skipped_methods)
                 self._auto_skipped_methods.clear()
+                self._auto_skipped_at.clear()
+                LOG.info(
+                    "Cleared %d auto-skipped methods after compatibility profile change: %s -> %s",
+                    cleared,
+                    current_profile.name,
+                    detected_profile.name,
+                )
             self.compatibility_profile = detected_profile
             self._has_detected_concrete_profile = True
 
@@ -1108,7 +1127,7 @@ class TrueNASExporter:
         try:
             version_short = self._call(client, "system.version_short", [])
         except Exception:
-            self._update_compatibility_profile(get_profile("unknown"))
+            self._note_profile(get_profile("unknown"))
             self._collector_error(
                 "version_detection",
                 "system.version_short detection failed; using unknown compatibility profile",
@@ -1117,10 +1136,10 @@ class TrueNASExporter:
             return None
 
         if isinstance(version_short, str):
-            self._update_compatibility_profile(self._profile_for_version_short(version_short))
+            self._note_profile(self._profile_for_version_short(version_short))
             return version_short
 
-        self._update_compatibility_profile(get_profile("unknown"))
+        self._note_profile(get_profile("unknown"))
         self._collector_error(
             "version_detection",
             f"system.version_short returned malformed {type(version_short).__name__}; "
@@ -1592,7 +1611,11 @@ class TrueNASExporter:
 
     def _safe_call_auto(self, client: JsonRpcWsClient, method: str) -> Any | None:
         if method in self._auto_skipped_methods:
-            return None
+            skipped_at = self._auto_skipped_at.get(method)
+            if skipped_at is None or time.monotonic() - skipped_at < 86400:
+                return None
+            self._auto_skipped_methods.discard(method)
+            self._auto_skipped_at.pop(method, None)
 
         params = self._auto_params(method)
         try:
@@ -1600,6 +1623,7 @@ class TrueNASExporter:
         except Exception as exc:
             if self._should_runtime_skip_method(exc):
                 self._auto_skipped_methods.add(method)
+                self._auto_skipped_at[method] = time.monotonic()
                 LOG.info("Auto-skip method after runtime error: %s", method)
                 COLLECTOR_ERRORS_TOTAL.labels(collector="auto_discovery_skipped").inc()
                 return None
