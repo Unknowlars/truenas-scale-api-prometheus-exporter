@@ -1570,9 +1570,18 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "POOL_SCAN_BYTES_TOTAL": ("scan.bytes_to_process",),
         "POOL_SCAN_SECONDS_REMAINING": ("scan.total_secs_left",),
         "POOL_LAST_SCAN_TS": ("scan.end_time",),
-        "POOL_VDEV_READ_ERRORS": ("topology.stats.read_errors (schema opaque)",),
-        "POOL_VDEV_WRITE_ERRORS": ("topology.stats.write_errors (schema opaque)",),
-        "POOL_VDEV_CHECKSUM_ERRORS": ("topology.stats.checksum_errors (schema opaque)",),
+        "POOL_VDEV_READ_ERRORS": (
+            "topology.<class>[].stats.read_errors "
+            "(inner vdev stats schema opaque; extraction fails closed)",
+        ),
+        "POOL_VDEV_WRITE_ERRORS": (
+            "topology.<class>[].stats.write_errors "
+            "(inner vdev stats schema opaque; extraction fails closed)",
+        ),
+        "POOL_VDEV_CHECKSUM_ERRORS": (
+            "topology.<class>[].stats.checksum_errors "
+            "(inner vdev stats schema opaque; extraction fails closed)",
+        ),
         "DATASET_COUNT": ("row count",),
         "DATASET_USED_BYTES": ("used.parsed",),
         "DATASET_AVAILABLE_BYTES": ("available.parsed",),
@@ -2118,9 +2127,6 @@ def build_metric_mappings(
     forced_unavailable = {
         "CLOUD_BACKUP_TASK_STATE",
         "CONSOLEMENU_ENABLED",
-        "POOL_VDEV_READ_ERRORS",
-        "POOL_VDEV_WRITE_ERRORS",
-        "POOL_VDEV_CHECKSUM_ERRORS",
         "MEMORY_PHYSICAL_FREE_BYTES",
         "MEMORY_PHYSICAL_CACHED_BYTES",
         "MEMORY_PHYSICAL_BUFFERS_BYTES",

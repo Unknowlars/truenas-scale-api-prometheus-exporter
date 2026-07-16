@@ -106,6 +106,45 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
     pool[0]["dedup_table_size"] = {"parsed": 1048576}
     pool[0]["scan"]["bytes_processed"] = {"value": 0}
     pool[0]["scan"]["bytes_to_process"] = {"parsed": 0}
+    pool[0]["topology"] = {
+        "data": [
+            {
+                "name": "mirror-0",
+                "children": [
+                    {
+                        "name": "sda",
+                        "stats": {
+                            "read_errors": 0,
+                            "write_errors": 3,
+                            "checksum_errors": 1,
+                        },
+                    },
+                    {
+                        "path": "/dev/disk/by-id/disk-b",
+                        "stats": {
+                            "read_errors": 2,
+                            "write_errors": 0,
+                            "checksum_errors": 4,
+                        },
+                    },
+                ],
+            }
+        ],
+        "cache": [
+            {
+                "guid": "cache-guid-1",
+                "stats": {
+                    "read_errors": 5,
+                    "write_errors": 0,
+                    "checksum_errors": 0,
+                },
+            }
+        ],
+        "log": [],
+        "spare": [],
+        "special": [],
+        "dedup": [],
+    }
     disks = fixture("disk_query_selected.json")
     update = fixture("update_status_normal.json")
     vmemory = fixture("vm_get_vmemory_in_use.json")
@@ -191,6 +230,33 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
     assert labeled(runtime.POOL_EXPAND_REFLOWED_BYTES, "tank") == 978944
     assert labeled(runtime.POOL_EXPAND_TO_REFLOW_BYTES, "tank") == 835584
     assert labeled(runtime.POOL_EXPAND_PERCENT, "tank") == pytest.approx(85.35564853556485)
+    read_errors = {
+        (sample.labels["pool"], sample.labels["vdev"]): sample.value
+        for sample in list(runtime.POOL_VDEV_READ_ERRORS.collect())[0].samples
+    }
+    write_errors = {
+        (sample.labels["pool"], sample.labels["vdev"]): sample.value
+        for sample in list(runtime.POOL_VDEV_WRITE_ERRORS.collect())[0].samples
+    }
+    checksum_errors = {
+        (sample.labels["pool"], sample.labels["vdev"]): sample.value
+        for sample in list(runtime.POOL_VDEV_CHECKSUM_ERRORS.collect())[0].samples
+    }
+    assert read_errors == {
+        ("tank", "sda"): 0,
+        ("tank", "/dev/disk/by-id/disk-b"): 2,
+        ("tank", "cache-guid-1"): 5,
+    }
+    assert write_errors == {
+        ("tank", "sda"): 3,
+        ("tank", "/dev/disk/by-id/disk-b"): 0,
+        ("tank", "cache-guid-1"): 0,
+    }
+    assert checksum_errors == {
+        ("tank", "sda"): 1,
+        ("tank", "/dev/disk/by-id/disk-b"): 4,
+        ("tank", "cache-guid-1"): 0,
+    }
     assert labeled(runtime.DISK_TEMPERATURE_C, "sda") == 0
     assert labeled(runtime.INTERFACE_MTU, "enp1s0") == 9000
     assert labeled(runtime.UPDATE_STATUS, "NORMAL") == 1
@@ -199,10 +265,19 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
 
     assert ("vm.get_available_memory", [False]) in calls
     assert ("disk.temperatures", [["sda", "nvme0n1"], False]) in calls
+    pool_query_calls = [(method, params) for method, params in calls if method == "pool.query"]
+    assert any(
+        isinstance(params, list)
+        and len(params) == 2
+        and isinstance(params[1], dict)
+        and "topology" in params[1].get("select", [])
+        for _method, params in pool_query_calls
+    )
     assert not any(method in {"smb.status", "smart.test.results"} for method, _ in calls)
 
     update["status"] = {}
     pool[0]["dedup_table_size"] = None
+    pool[0]["topology"] = None
     exporter.scrape_once()
     assert math.isnan(value(runtime.UPDATE_AVAILABLE))
     assert not any(
@@ -212,6 +287,10 @@ def test_main_scrape_uses_documented_params_units_and_nested_shapes(monkeypatch:
     assert not any(
         sample.labels.get("pool") == "tank"
         for sample in list(runtime.POOL_DEDUP_TABLE_SIZE_BYTES.collect())[0].samples
+    )
+    assert not any(
+        sample.labels.get("pool") == "tank"
+        for sample in list(runtime.POOL_VDEV_READ_ERRORS.collect())[0].samples
     )
 
 

@@ -3536,7 +3536,23 @@ class TrueNASExporter:
                     # cache entry (which may have been fetched with no select).
                     pools = self._call_query_with_fallback(
                         client, "pool.query",
-                        {"select": ["name", "healthy", "warning", "status", "size", "allocated", "free", "scan", "fragmentation", "autotrim", "dedup_table_size", "expand"]},
+                        {
+                            "select": [
+                                "name",
+                                "healthy",
+                                "warning",
+                                "status",
+                                "size",
+                                "allocated",
+                                "free",
+                                "scan",
+                                "fragmentation",
+                                "autotrim",
+                                "dedup_table_size",
+                                "expand",
+                                "topology",
+                            ]
+                        },
                     )
                     pool_list = pools if isinstance(pools, list) else []
                     POOL_COUNT.set(len(pool_list))
@@ -3636,8 +3652,9 @@ class TrueNASExporter:
                                 if ts is not None:
                                     POOL_LAST_SCAN_TS.labels(pool=pool_name).set(ts)
 
-                        # Vdev stats fields are opaque in the committed pool.query
-                        # schema. Legacy vdev error metrics remain unavailable.
+                        topology = pool.get("topology")
+                        if isinstance(topology, dict):
+                            self._extract_vdev_errors(pool_name, topology)
 
                     # --- Disks ---
                     # Fresh call with extra fields not included in the generic pass.

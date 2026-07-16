@@ -52,6 +52,22 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T09 remediation: re-enabled
+  `truenas_pool_vdev_read_errors`, `truenas_pool_vdev_write_errors`, and
+  `truenas_pool_vdev_checksum_errors` from documented `pool.query.topology`
+  data while preserving the existing gauge names, help text, labels, and
+  fail-closed walker behavior. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py tests/test_runtime_api_parity.py -q`
+  (`81 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`.
+  Required full validation passed: `./scripts/validate.sh` completed ruff,
+  mypy, `206 passed`, 91.40% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is
+  minor-version-worthy because declared compatibility metrics now emit.
+
 - 2026-07-16 T08 remediation: enabled existing
   `truenas_task_state{task_type,name,state}` and
   `truenas_task_last_run_timestamp_seconds{task_type,name}` producers for

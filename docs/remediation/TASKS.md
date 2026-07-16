@@ -29,7 +29,7 @@ Rules for updating:
 
 | ID | Task | Area | Size | Depends on | Status | Updated | Notes |
 |----|------|------|------|------------|--------|---------|-------|
-| [T09](tasks/T09-vdev-error-metrics.md) | Re-enable pool vdev read/write/checksum error metrics via `pool.query` topology | metric gap | M | — | todo | | |
+| [T09](tasks/T09-vdev-error-metrics.md) | Re-enable pool vdev read/write/checksum error metrics via `pool.query` topology | metric gap | M | — | done | 2026-07-16 | minor-version-worthy |
 | [T10](tasks/T10-disk-temperature-alerts.md) | Wire `disk.temperature_alerts` → `disk_temperature_alert_count` | metric gap | S | — | todo | | |
 | [T11](tasks/T11-profile-unknown-intersection.md) | Make `PROFILE_UNKNOWN` a true 25.10∩26.0 intersection | version compat | S | — | todo | | |
 | [T12](tasks/T12-profile-thread-race.md) | Fix cross-thread `compatibility_profile` race | reliability | M | T11 | todo | | |
@@ -87,4 +87,7 @@ Move a one-line summary here when a task reaches `done`:
   bounded `pool.dataset.snapshot_count` fallback — local commit; minor-version-worthy
 - T08 — 2026-07-16 — replication, cloudsync, rsynctask, and snapshottask outcome
   state/last-run metrics now emit from safe selected fields — local commit;
+  minor-version-worthy
+- T09 — 2026-07-16 — pool vdev read/write/checksum error gauges now emit from
+  `pool.query` topology with fail-closed extraction — local commit;
   minor-version-worthy

@@ -76,4 +76,27 @@ python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_expo
 
 ## Outcome
 
-_(fill in when done)_
+Done on 2026-07-16.
+
+- `pool.query` now requests `topology` in the owned pool collector select and calls the existing
+  fail-closed vdev walker after scan metrics when `pool.get("topology")` is a dict.
+- Re-enabled the existing
+  `truenas_pool_vdev_{read,write,checksum}_errors{pool,vdev}` gauges without renaming or
+  retyping them; legitimate API zeroes publish, while null topology, missing stats/keys,
+  malformed children, and the existing depth guard omit samples without crashing.
+- Updated API parity mappings so the three gauges are active dedicated metrics sourced from
+  `topology.<class>[].stats.{read_errors,write_errors,checksum_errors}` with the documented
+  opaque-inner-schema/fail-closed note.
+- Payload-size note: the synthetic mirror-plus-cache topology used by the regression test is
+  359 bytes as compact JSON (676 bytes pretty-printed). The checked-in 25.10.2 fixture still has
+  `topology: null`, so no live fixture size was available.
+- Versioning note: minor-version-worthy because previously declared-but-dead metrics now emit.
+
+Verification:
+
+- `python3 -m pytest tests/test_phase1_metrics.py tests/test_runtime_api_parity.py -q`
+  passed: 81 tests.
+- `python3 scripts/generate_metric_contract.py && python3 scripts/generate_api_exporter_parity.py && python3 scripts/generate_truenas_dashboard.py`
+  passed.
+- `./scripts/validate.sh` exited 0: 206 tests, 91.40% coverage, dashboard/parity/generated
+  checks, public release audit, Docker build, and version smoke passed.

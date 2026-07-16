@@ -147,8 +147,46 @@ def reset_gauges():
         exporter_module.TASK_ENABLED,
         exporter_module.TASK_STATE,
         exporter_module.TASK_LAST_RUN_TS,
+        exporter_module.POOL_VDEV_READ_ERRORS,
+        exporter_module.POOL_VDEV_WRITE_ERRORS,
+        exporter_module.POOL_VDEV_CHECKSUM_ERRORS,
     ):
         reset_metric(metric)
+
+
+def test_vdev_error_walker_fails_closed_on_malformed_topology():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+
+    exporter._extract_vdev_errors(
+        "tank",
+        {
+            "data": [
+                {"name": "missing-stats"},
+                {"name": "missing-keys", "stats": {"alloc": 1}},
+                {
+                    "name": "non-list-children",
+                    "children": {"bad": {"stats": {"read_errors": 1}}},
+                },
+                "not-a-vdev",
+            ],
+            "cache": None,
+        },
+    )
+
+    assert list(exporter_module.POOL_VDEV_READ_ERRORS.collect())[0].samples == []
+    assert list(exporter_module.POOL_VDEV_WRITE_ERRORS.collect())[0].samples == []
+    assert list(exporter_module.POOL_VDEV_CHECKSUM_ERRORS.collect())[0].samples == []
+
+
+def test_vdev_error_walker_stops_at_existing_depth_guard():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    vdev = {"name": "leaf-too-deep", "stats": {"read_errors": 1}}
+    for depth in range(8):
+        vdev = {"name": f"level-{depth}", "children": [vdev]}
+
+    exporter._extract_vdev_errors("tank", {"data": [vdev]})
+
+    assert list(exporter_module.POOL_VDEV_READ_ERRORS.collect())[0].samples == []
 
 
 def test_snapshot_count_uses_exact_count_query(monkeypatch):
