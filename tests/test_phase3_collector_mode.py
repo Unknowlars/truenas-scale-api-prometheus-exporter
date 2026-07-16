@@ -4,6 +4,7 @@ from conftest import make_config
 
 import truenas_exporter as exporter_module
 
+runtime = sys.modules[exporter_module.TrueNASExporter.__module__]
 http_module = sys.modules[exporter_module._start_http_server.__module__]
 
 
@@ -24,6 +25,27 @@ def _family_by_name(families, name):
         if family.name == name:
             return family
     raise AssertionError(f"missing family: {name}")
+
+
+def _sample_value(families, family_name, labels=None):
+    expected = labels or {}
+    family = _family_by_name(families, family_name)
+    for sample in family.samples:
+        if sample.name == family_name and dict(sample.labels) == expected:
+            return sample.value
+    raise AssertionError(f"missing sample: {family_name}{expected}")
+
+
+def _has_sample(families, family_name, labels=None):
+    expected = labels or {}
+    try:
+        family = _family_by_name(families, family_name)
+    except AssertionError:
+        return False
+    return any(
+        sample.name == family_name and dict(sample.labels) == expected
+        for sample in family.samples
+    )
 
 
 def _build_exporter(monkeypatch):
@@ -169,6 +191,51 @@ def test_full_parity_collector_never_scrapes_on_request(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config())
     monkeypatch.setattr(exporter, "scrape_once", lambda: (_ for _ in ()).throw(AssertionError("scrape")))
     assert list(exporter_module.TrueNASCollector(exporter).collect())
+
+
+def test_collector_snapshot_keeps_polled_metrics_on_pre_auth_failure(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="collector"))
+    labels = {"pool": "tank", "status": "ONLINE"}
+    exporter_module.POOL_STATUS.clear()
+    exporter_module.POOL_STATUS.labels(**labels).set(1)
+    exporter_module.SCRAPE_SUCCESS.set(1)
+    exporter._publish_metric_snapshot()
+
+    def fail_connect(**_kwargs):
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", fail_connect)
+
+    exporter.scrape_once()
+    snapshot = exporter.metric_snapshot()
+
+    assert _sample_value(snapshot, exporter_module.POOL_STATUS._name, labels) == 1
+    assert _sample_value(snapshot, exporter_module.SCRAPE_SUCCESS._name) == 0
+
+    exporter_module.POOL_STATUS.clear()
+
+
+def test_collector_snapshot_wipes_stale_polled_metrics_on_pre_auth_failure(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="collector", interval_seconds=30)
+    )
+    labels = {"pool": "tank", "status": "ONLINE"}
+    exporter_module.POOL_STATUS.clear()
+    exporter_module.POOL_STATUS.labels(**labels).set(1)
+    exporter._last_scrape_success_monotonic = 0
+    exporter._publish_metric_snapshot()
+
+    def fail_connect(**_kwargs):
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", fail_connect)
+    monkeypatch.setattr(runtime.time, "monotonic", lambda: 301)
+
+    exporter.scrape_once()
+    snapshot = exporter.metric_snapshot()
+
+    assert not _has_sample(snapshot, exporter_module.POOL_STATUS._name, labels)
+    assert _sample_value(snapshot, exporter_module.SCRAPE_SUCCESS._name) == 0
 
 
 def test_link_state_enums_are_mapped_explicitly():

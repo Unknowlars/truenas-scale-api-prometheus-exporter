@@ -92,4 +92,31 @@ python3 -m pytest tests/test_runtime_lifecycle.py tests/test_phase3_collector_mo
 
 ## Outcome
 
-_(fill in when done)_
+Implemented as a patch-worthy failure-mode fix with no metric or config
+contract changes. `scrape_once` now completes client construction,
+authentication, and version bootstrap before running the polling metric reset
+and explicit label-gauge clear block. Connection/auth/version failures before
+that point set `truenas_up` to `0`, set scrape duration, keep
+`LAST_SCRAPE_TS` as the last attempt timestamp, and republish the collector
+snapshot with previous polled values still visible beside `truenas_up 0`.
+
+Post-bootstrap failures preserve the previous behavior: the scrape has already
+started from a fresh polling snapshot, so any mid-cycle failure publishes
+partial/absent polled data with `truenas_up 0`. Added a stale-data guard that
+wipes and republishes when the last successful scrape is older than
+`max(3 * interval_seconds, 300)` so old values cannot survive indefinitely
+across repeated pre-auth failures. Dashboards and alerts should key outage
+state on `truenas_up == 0`, not on metric absence.
+
+Tests added in `tests/test_phase3_collector_mode.py` and
+`tests/test_runtime_lifecycle.py` cover pre-auth preservation in collector
+snapshots, post-bootstrap wipe-on-failure, and the stale guard. Regenerated API
+parity artifacts because moving the runtime producer block changed generated
+line evidence.
+
+Verification passed locally:
+`python3 -m pytest tests/test_runtime_lifecycle.py tests/test_phase3_collector_mode.py tests/test_http_integration.py -q`
+(`32 passed, 2 skipped`) and `./scripts/validate.sh` (ruff, mypy, `215
+passed`, 91.44% coverage, dashboard validation, generated checks,
+`public_release_audit_ok`, Docker image build, container version smoke `5.2.0`,
+and `validation_ok`).

@@ -45,6 +45,25 @@ class _BootstrapClient:
         return True
 
 
+class _ScrapeClient:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return None
+
+    def authenticate(self, _key, call=None):
+        if call is not None:
+            call("auth.login_with_api_key", ["redacted-test-key"])
+
+    def call(self, method, params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        return True
+
+
 def test_call_diagnostics_fallback_and_count(monkeypatch):
     exporter = exporter_module.TrueNASExporter(make_config())
     client = _CallClient(result=3)
@@ -124,6 +143,29 @@ def test_first_bootstrap_failure_still_selects_unknown_profile():
 
     assert exporter.compatibility_profile.name == "unknown"
     assert exporter._collector_errors["version_detection"] == 1
+
+
+def test_scrape_wipes_polled_metrics_after_bootstrap_before_mid_cycle_failure(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="collector"))
+    labels = {"pool": "tank", "status": "ONLINE"}
+    exporter_module.POOL_STATUS.clear()
+    exporter_module.POOL_STATUS.labels(**labels).set(1)
+
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", lambda **_kwargs: _ScrapeClient())
+    monkeypatch.setattr(exporter, "_collect_reporting_timeseries", lambda *_args: None)
+    monkeypatch.setattr(
+        exporter,
+        "_collect_filesystem_metrics",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("mid-cycle failure")),
+    )
+
+    exporter.scrape_once()
+    snapshot = exporter.metric_snapshot()
+    pool_status = [family for family in snapshot if family.name == exporter_module.POOL_STATUS._name]
+    up = next(family for family in snapshot if family.name == exporter_module.SCRAPE_SUCCESS._name)
+
+    assert not pool_status or not pool_status[0].samples
+    assert up.samples[0].value == 0
 
 
 def test_timestamp_status_and_generic_extractors_cover_edge_shapes():

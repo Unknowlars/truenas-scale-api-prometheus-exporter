@@ -62,6 +62,24 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T13 remediation: delayed the polling metric wipe until
+  `scrape_once` has constructed the client and completed authentication plus
+  version bootstrap, so pre-auth connection/auth/version failures republish the
+  previous collector snapshot with `truenas_up=0` instead of blanking polled
+  metrics. Post-bootstrap failures still publish the fresh partial/absent
+  cycle with `truenas_up=0`. A stale guard now wipes after
+  `max(3 * interval_seconds, 300)` since the last successful scrape so old
+  values cannot survive indefinitely. Focused verification passed:
+  `python3 -m pytest tests/test_runtime_lifecycle.py tests/test_phase3_collector_mode.py tests/test_http_integration.py -q`
+  (`32 passed, 2 skipped`). Regenerated API parity artifacts because runtime
+  line evidence changed. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `215 passed`, 91.44% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was available. This is patch-worthy because
+  it is a behavior/robustness fix with no metric or config changes.
+
 - 2026-07-16 T12 remediation: made compatibility profile updates monotonic and
   lock-guarded so a transient `system.version_short` failure after detecting a
   concrete `25.10` or `26.0` profile records `version_detection` but does not

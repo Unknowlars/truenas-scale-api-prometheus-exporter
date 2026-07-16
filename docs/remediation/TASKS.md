@@ -33,7 +33,7 @@ Rules for updating:
 | [T10](tasks/T10-disk-temperature-alerts.md) | Wire `disk.temperature_alerts` → `disk_temperature_alert_count` | metric gap | S | — | done | 2026-07-16 | minor-version-worthy |
 | [T11](tasks/T11-profile-unknown-intersection.md) | Make `PROFILE_UNKNOWN` a true 25.10∩26.0 intersection | version compat | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T12](tasks/T12-profile-thread-race.md) | Fix cross-thread `compatibility_profile` race | reliability | M | T11 | done | 2026-07-16 | patch-worthy behavior fix |
-| [T13](tasks/T13-wipe-on-failure.md) | Don't wipe all metrics on pre-auth connection failure | reliability | M | — | todo | | Policy change — read spec carefully |
+| [T13](tasks/T13-wipe-on-failure.md) | Don't wipe all metrics on pre-auth connection failure | reliability | M | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T14](tasks/T14-auto-skip-permanence.md) | Re-try auto-skipped methods on profile change / periodically | reliability | S | T11 | todo | | |
 | [T15](tasks/T15-duplicate-api-calls.md) | Deduplicate per-cycle API calls (disk.query ×2, service.query ×3, list+count pairs) | performance | M | — | todo | | |
 | [T16](tasks/T16-expensive-query-cadence.md) | Reduce cadence of server-heavy queries (7-day temp agg, snapshot sort) | performance | S | — | todo | | |
@@ -101,3 +101,6 @@ Move a one-line summary here when a task reaches `done`:
   lock-guarded, preserving concrete profiles across transient version-detection
   failures while allowing concrete version changes to clear auto-skips — local
   commit; patch-worthy
+- T13 — 2026-07-16 — pre-auth scrape failures now preserve the previous
+  collector snapshot with `truenas_up=0`, while stale data is bounded by a
+  `max(3 * interval, 300s)` guard — local commit; patch-worthy
