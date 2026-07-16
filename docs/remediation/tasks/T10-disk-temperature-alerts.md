@@ -70,4 +70,30 @@ python3 scripts/generate_api_exporter_parity.py
 
 ## Outcome
 
-_(fill in when done)_
+Done 2026-07-16.
+
+- Confirmed both 25.10.2 and v26 document `disk.temperature_alerts` with one
+  required `names` parameter (`array[string]`) and a bare `array[object]`
+  return of active alert rows for the queried disks.
+- Added a dedicated `scrape_once` disk-block call after `disk.temperature_agg`:
+  `self._call(client, "disk.temperature_alerts", [disk_names])` only when the
+  disk list is non-empty.
+- Successful alert responses now count rows by queried disk and publish
+  `truenas_disk_temperature_alert_count{disk}` for every queried disk,
+  including `0` for disks without alert rows.
+- Failed `disk.temperature_alerts` calls are caught and debug-logged; alert
+  count samples remain absent and sibling disk size/temperature metrics still
+  collect.
+- `disk.temperature_alerts` remains in `REQUIRES_ENTITY_PARAM`; generic and
+  auto-discovery bare calls remain blocked.
+- Regenerated API/exporter parity artifacts so the metric is reported as an
+  active dedicated producer from `disk.temperature_alerts`.
+- Added fixture-style regression coverage in `tests/test_phase1_metrics.py`
+  for successful two-row/zero-fill behavior, call failure, and empty disk list.
+- Verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py -q` (`49 passed`);
+  `python3 scripts/generate_api_exporter_parity.py`;
+  `./scripts/validate.sh` (`209 passed`, 91.41% coverage,
+  `public_release_audit_ok`, Docker image build, `validation_ok`).
+  Optional live smoke was skipped because no read-only live TrueNAS target/key
+  was available.

@@ -52,6 +52,26 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T10 remediation: enabled the existing
+  `truenas_disk_temperature_alert_count{disk}` gauge from the documented
+  `disk.temperature_alerts([names])` method after confirming both the 25.10.2
+  and v26 docs require one disk-name list parameter and return a bare array of
+  alert objects. Successful calls publish per-queried-disk counts, including
+  `0` for disks without alert rows; failed calls leave alert-count samples
+  absent while sibling disk size and temperature metrics continue collecting.
+  `disk.temperature_alerts` remains blocked from generic/auto-discovery bare
+  calls through `REQUIRES_ENTITY_PARAM`. Focused verification passed:
+  `python3 -m pytest tests/test_phase1_metrics.py -q` (`49 passed`).
+  Regenerated required parity artifacts with
+  `python3 scripts/generate_api_exporter_parity.py`. Required full validation
+  passed: `./scripts/validate.sh` completed ruff, mypy, `209 passed`, 91.41%
+  coverage, dashboard validation (`dashboard_ok panels=318
+  metric_references=287`), generated checks, `public_release_audit_ok`, Docker
+  image build, container version smoke `5.2.0`, and `validation_ok`. Optional
+  live smoke was skipped because no read-only live TrueNAS target/key was
+  available. This is minor-version-worthy because a declared compatibility
+  metric now emits.
+
 - 2026-07-16 T09 remediation: re-enabled
   `truenas_pool_vdev_read_errors`, `truenas_pool_vdev_write_errors`, and
   `truenas_pool_vdev_checksum_errors` from documented `pool.query.topology`

@@ -150,6 +150,7 @@ def reset_gauges():
         exporter_module.POOL_VDEV_READ_ERRORS,
         exporter_module.POOL_VDEV_WRITE_ERRORS,
         exporter_module.POOL_VDEV_CHECKSUM_ERRORS,
+        exporter_module.DISK_TEMP_ALERT_COUNT,
     ):
         reset_metric(metric)
 
@@ -1683,3 +1684,140 @@ def test_full_domain_scrape_accepts_rich_read_only_fixture(monkeypatch):
     exporter.scrape_once()
 
     assert exporter_module.SCRAPE_SUCCESS._value.get() == 1
+
+
+def test_disk_temperature_alert_count_emits_zero_for_queried_disks_without_alerts(monkeypatch):
+    class DiskClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: DiskClient())
+
+    def disk_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {}
+        if method == "disk.query":
+            return [
+                {"name": "sda", "size": 100, "pool": "tank"},
+                {"name": "sdb", "size": 200, "pool": None},
+            ]
+        if method == "disk.temperature_agg":
+            return {}
+        if method == "disk.temperature_alerts":
+            assert _params == [["sda", "sdb"]]
+            return [
+                {"args": {"device": "sda"}, "id": "alert-1"},
+                {"args": {"device": "sda"}, "id": "alert-2"},
+            ]
+        if method == "disk.temperatures":
+            return {}
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return []
+        if method.endswith((".config", ".status", ".info", ".summary")):
+            return {}
+        return {}
+
+    monkeypatch.setattr(exporter, "_call", disk_call)
+    exporter.scrape_once()
+
+    assert labeled_value(exporter_module.DISK_TEMP_ALERT_COUNT, "sda") == 2
+    assert labeled_value(exporter_module.DISK_TEMP_ALERT_COUNT, "sdb") == 0
+
+
+def test_disk_temperature_alert_failure_keeps_sibling_disk_metrics(monkeypatch):
+    class DiskClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: DiskClient())
+
+    def disk_call(_client, method, _params=None):
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {}
+        if method == "disk.query":
+            return [{"name": "sda", "size": 100, "pool": "tank"}]
+        if method == "disk.temperature_agg":
+            return {"sda": {"min": 31, "max": 35, "avg": 33}}
+        if method == "disk.temperature_alerts":
+            raise exporter_module.JsonRpcError("temperature alerts unavailable")
+        if method == "disk.temperatures":
+            return {"sda": 34}
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return []
+        if method.endswith((".config", ".status", ".info", ".summary")):
+            return {}
+        return {}
+
+    monkeypatch.setattr(exporter, "_call", disk_call)
+    exporter.scrape_once()
+
+    assert list(exporter_module.DISK_TEMP_ALERT_COUNT.collect())[0].samples == []
+    assert labeled_value(exporter_module.DISK_SIZE_BYTES, "sda") == 100
+    assert labeled_value(exporter_module.DISK_TEMPERATURE_C, "sda") == 34
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
+
+
+def test_disk_temperature_alerts_not_called_without_disks(monkeypatch):
+    class DiskClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def authenticate(self, _api_key, call=None):
+            if call is not None:
+                call("auth.login_with_api_key", [])
+
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    monkeypatch.setattr(exporter_module, "JsonRpcWsClient", lambda **_kwargs: DiskClient())
+    calls = []
+
+    def disk_call(_client, method, _params=None):
+        calls.append(method)
+        if method == "auth.login_with_api_key":
+            return True
+        if method == "system.version_short":
+            return "25.10.2"
+        if method == "system.state":
+            return "READY"
+        if method == "system.info":
+            return {}
+        if method.endswith((".query", ".list", ".sessions")) or method == "core.get_jobs":
+            return []
+        if method.endswith((".config", ".status", ".info", ".summary")):
+            return {}
+        return {}
+
+    monkeypatch.setattr(exporter, "_call", disk_call)
+    exporter.scrape_once()
+
+    assert "disk.temperature_alerts" not in calls

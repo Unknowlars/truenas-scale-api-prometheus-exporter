@@ -3697,6 +3697,37 @@ class TrueNASExporter:
                                                 ).set(val)
                         except Exception:
                             LOG.debug("disk.temperature_agg failed", exc_info=True)
+                        try:
+                            temp_alerts = self._call(
+                                client, "disk.temperature_alerts", [disk_names]
+                            )
+                            if isinstance(temp_alerts, list):
+                                alert_counts = dict.fromkeys(disk_names, 0)
+                                for alert in temp_alerts:
+                                    if not isinstance(alert, dict):
+                                        continue
+                                    raw_alert_disk = _first_not_none(
+                                        alert.get("disk"),
+                                        alert.get("device"),
+                                        alert.get("name"),
+                                    )
+                                    args = alert.get("args")
+                                    if isinstance(args, dict):
+                                        raw_alert_disk = _first_not_none(
+                                            raw_alert_disk,
+                                            args.get("disk"),
+                                            args.get("device"),
+                                            args.get("name"),
+                                        )
+                                    if (
+                                        isinstance(raw_alert_disk, str)
+                                        and raw_alert_disk in alert_counts
+                                    ):
+                                        alert_counts[raw_alert_disk] += 1
+                                for disk_name, count in alert_counts.items():
+                                    DISK_TEMP_ALERT_COUNT.labels(disk=disk_name).set(count)
+                        except Exception:
+                            LOG.debug("disk.temperature_alerts failed", exc_info=True)
 
                     # The method requires the disk list and include-thresholds flag.
                     temps = None
