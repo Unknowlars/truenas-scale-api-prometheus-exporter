@@ -605,6 +605,19 @@ def build_dashboard():
         ]}],
     ))
     y += 8
+    panels.append(timeseries(
+        "CPU Time Breakdown",
+        [
+            tgt(f'truenas_cpu_user_percent{{instance=~"{I}"}}', 'User', 'A'),
+            tgt(f'truenas_cpu_system_percent{{instance=~"{I}"}}', 'System', 'B'),
+            tgt(f'truenas_cpu_iowait_percent{{instance=~"{I}"}}', 'IOWait', 'C'),
+            tgt(f'truenas_cpu_interrupt_percent{{instance=~"{I}"}}', 'IRQ', 'D'),
+            tgt(f'truenas_cpu_idle_percent{{instance=~"{I}"}}', 'Idle', 'E'),
+        ],
+        0, y, w=24, unit="percent", stacked=True,
+        desc="Host CPU time breakdown. User/system/idle are absent when the API does not report a user/system split.",
+    ))
+    y += 8
 
     # ── ROW: Memory & Swap ──────────────────────────────────────────────
     panels.append(row("Memory & Swap", y))
@@ -754,6 +767,76 @@ def build_dashboard():
         12, y, unit="Bps", desc="Per-pool read/write throughput.",
     ))
     y += 8
+    panels.extend([
+        stat("Snap Task Max", f'max(truenas_snapshot_task_max_count{{instance=~"{I}"}})', 0, y, w=4, desc="Maximum number of snapshot tasks allowed."),
+        stat("Snap Task Max Total", f'max(truenas_snapshot_task_max_total_count{{instance=~"{I}"}})', 4, y, w=4, desc="Maximum total snapshot tasks allowed."),
+        stat("Scrub Enabled", f'count(truenas_pool_scrub_task_enabled{{instance=~"{I}", pool=~"$pool"}} == 1)', 8, y, w=4, desc="Pools with an enabled scrub task."),
+        stat("Pools Warning", f'sum(truenas_pool_warning{{instance=~"{I}", pool=~"$pool"}})', 12, y, w=4,
+             desc="Pools currently flagging a warning.", thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
+        stat("Scanning Now", f'count(truenas_pool_scan_seconds_remaining{{instance=~"{I}", pool=~"$pool"}} > 0)', 16, y, w=4, desc="Pools with an active scrub/resilver scan."),
+        stat("Oldest Scan", f'time() - min(truenas_pool_last_scan_timestamp_seconds{{instance=~"{I}", pool=~"$pool"}})', 20, y, w=4, unit="s", desc="Age of the least-recently-scanned pool."),
+    ])
+    y += 4
+    pool_status_table_targets = [
+        table_target(f'max by (pool, status) (truenas_pool_status{{instance=~"{I}", pool=~"$pool"}})', 'A'),
+        table_target(f'max by (pool, status_code) (truenas_pool_status_code{{instance=~"{I}", pool=~"$pool"}})', 'B'),
+        table_target(f'max by (pool) (truenas_pool_warning{{instance=~"{I}", pool=~"$pool"}})', 'C'),
+        table_target(f'max by (pool) (truenas_pool_scrub_task_enabled{{instance=~"{I}", pool=~"$pool"}})', 'D'),
+        table_target(f'time() - max by (pool) (truenas_pool_last_scan_timestamp_seconds{{instance=~"{I}", pool=~"$pool"}})', 'E'),
+    ]
+    panels.append(table(
+        "Pool Status & Scrub Detail", pool_status_table_targets, 0, y, h=8,
+        desc="Pool status enum, v26 detailed status_code, warning flag, scrub-task enablement, and time since last scan.",
+        transforms=[
+            outer_join('pool'),
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {
+                    'pool': 'Pool', 'status': 'Status', 'status_code': 'Status Code',
+                    'Value #C': 'Warning', 'Value #D': 'Scrub Enabled', 'Value #E': 'Since Last Scan',
+                },
+                'indexByName': {'Pool': 0, 'Status': 1, 'Status Code': 2, 'Warning': 3, 'Scrub Enabled': 4, 'Since Last Scan': 5},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Pool', 'desc': False}]}),
+        ],
+        overrides=[
+            {"matcher": {"id": "byName", "options": "Warning"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": bmap("⚠ Warning", "red", "OK", "green")}]},
+            {"matcher": {"id": "byName", "options": "Scrub Enabled"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]},
+            {"matcher": {"id": "byName", "options": "Since Last Scan"}, "properties": [{"id": "unit", "value": "s"}]},
+        ],
+        sort_col='Pool', sort_desc=False,
+    ))
+    y += 8
+    panels.append(timeseries(
+        "Pool Scan Bytes Progress",
+        [
+            tgt(f'truenas_pool_scan_bytes_processed{{instance=~"{I}", pool=~"$pool"}}', '{{pool}} processed', 'A'),
+            tgt(f'truenas_pool_scan_bytes_total{{instance=~"{I}", pool=~"$pool"}}', '{{pool}} total', 'B'),
+        ],
+        0, y, unit="bytes", desc="Bytes processed vs. total for the last/active pool scrub or resilver scan.",
+    ))
+    panels.append(timeseries(
+        "Pool Realtime Capacity",
+        [
+            tgt(f'truenas_pool_realtime_available_bytes{{instance=~"{I}", pool=~"$pool"}}', '{{pool}} available', 'A'),
+            tgt(f'truenas_pool_realtime_total_bytes{{instance=~"{I}", pool=~"$pool"}}', '{{pool}} total', 'B'),
+            tgt(f'truenas_pool_realtime_used_bytes{{instance=~"{I}", pool=~"$pool"}}', '{{pool}} used', 'C'),
+        ],
+        12, y, unit="bytes", desc="Per-pool capacity from the reporting.realtime event stream.",
+    ))
+    y += 8
+    panels.append(timeseries(
+        "Pool Scan ETA",
+        [tgt(f'truenas_pool_scan_seconds_remaining{{instance=~"{I}", pool=~"$pool"}}', '{{pool}}', 'A')],
+        0, y, unit="s", desc="Estimated seconds remaining in the active pool scan.",
+    ))
+    panels.append(timeseries(
+        "Pool Scan Errors",
+        [tgt(f'truenas_pool_scan_errors{{instance=~"{I}", pool=~"$pool"}}', '{{pool}}', 'A')],
+        12, y, unit="short", bars=True,
+        desc="Errors found during the last/active pool scan.",
+    ))
+    y += 8
 
     # ── ROW: ZFS ARC & Cache ────────────────────────────────────────────
     panels.append(row("ZFS ARC & Cache", y))
@@ -809,9 +892,11 @@ def build_dashboard():
             tgt(f'truenas_zfs_demand_data_hits_per_second{{instance=~"{I}"}}', 'Data hits/s', 'B'),
             tgt(f'truenas_zfs_demand_metadata_accesses_per_second{{instance=~"{I}"}}', 'Meta accesses/s', 'C'),
             tgt(f'truenas_zfs_demand_meta_hits_per_second{{instance=~"{I}"}}', 'Meta hits/s', 'D'),
+            tgt(f'truenas_zfs_demand_data_io_hits_per_second{{instance=~"{I}"}}', 'Data I/O hits/s', 'E'),
+            tgt(f'truenas_zfs_demand_metadata_io_hits_per_second{{instance=~"{I}"}}', 'Metadata I/O hits/s', 'F'),
         ],
         8, y, w=8, unit="ops",
-        desc="Demand access rates for data and metadata.",
+        desc="Demand access rates for data and metadata, including I/O-level hit rates.",
     ))
     panels.append(timeseries(
         "L2ARC Throughput",
@@ -921,6 +1006,28 @@ def build_dashboard():
         overrides=disk_overrides, transforms=disk_table_transforms, sort_col='Busy %',
     ))
     y += 10
+    panels.append(table(
+        "Disk Identity",
+        [table_target(f'truenas_disk_info{{instance=~"{I}", disk=~"$disk"}}', 'A')],
+        0, y, w=12, h=8,
+        desc="Disk model, serial number, and bus for each device.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {'disk': 'Disk', 'model': 'Model', 'serial': 'Serial', 'bus': 'Bus'},
+                'indexByName': {'Disk': 0, 'Model': 1, 'Serial': 2, 'Bus': 3},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Disk', 'desc': False}]}),
+        ],
+        sort_col='Disk', sort_desc=False,
+    ))
+    panels.append(timeseries(
+        "Aggregated Disk Temperature (~5 min)",
+        [tgt(f'truenas_disk_temperature_agg_celsius{{instance=~"{I}", disk=~"$disk"}}', '{{disk}} {{kind}}', 'A')],
+        12, y, w=12, unit="celsius",
+        desc="Aggregated (e.g. min/avg/max) disk temperature, refreshed on the heavy-query cadence.",
+    ))
+    y += 8
 
     # ── ROW: Network & Interfaces ───────────────────────────────────────
     panels.append(row("Network & Interfaces", y))
@@ -958,6 +1065,33 @@ def build_dashboard():
         thresholds=[{"color": "blue", "value": 0}, {"color": "green", "value": 9000}],
     ))
     y += 8
+    panels.append(state_timeline(
+        "Interface Realtime Link State",
+        [tgt(f'truenas_interface_realtime_link_up{{instance=~"{I}", interface=~"$interface"}}', '{{interface}}', 'A')],
+        0, y, w=12, desc="Link up/down from the reporting.realtime event stream.", overrides=STATE_OVERRIDES,
+    ))
+    panels.append(timeseries(
+        "Interface Realtime Speed",
+        [tgt(f'truenas_interface_realtime_speed_mbits{{instance=~"{I}", interface=~"$interface"}}', '{{interface}}', 'A')],
+        12, y, w=12, unit="short", desc="Realtime link speed in megabits per second.",
+    ))
+    y += 8
+    panels.append(table(
+        "Interface Types",
+        [table_target(f'truenas_interface_type{{instance=~"{I}", interface=~"$interface"}}', 'A')],
+        0, y, w=24, h=6,
+        desc="Interface type (PHYSICAL/BRIDGE/etc) per interface.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {'interface': 'Interface', 'type': 'Type'},
+                'indexByName': {'Interface': 0, 'Type': 1},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Interface', 'desc': False}]}),
+        ],
+        sort_col='Interface', sort_desc=False,
+    ))
+    y += 6
 
     # ── ROW: Services & Shares ──────────────────────────────────────────
     panels.append(row("Services & Shares", y))
@@ -1197,6 +1331,11 @@ def build_dashboard():
         desc="App resource footprint, update posture, and exposure summary.", overrides=app_overrides, transforms=app_table_transforms, sort_col='Memory',
     ))
     y += 10
+    panels.append(stat(
+        "DH Window", f'max(truenas_app_dockerhub_pull_limit_window_seconds{{instance=~"{I}"}})', 0, y, w=6, unit="s",
+        desc="DockerHub rate-limit window duration.",
+    ))
+    y += 4
 
     # ── ROW: Virtualization ─────────────────────────────────────────────
     panels.append(row("Virtualization (VMs & Incus)", y))
@@ -1242,6 +1381,12 @@ def build_dashboard():
         "Incus Instance Memory",
         [tgt(f'truenas_virt_instance_mem_bytes{{instance=~"{I}"}}', '{{name}}', 'A')],
         0, y, w=24, unit="bytes", desc="Per-instance memory usage.",
+    ))
+    y += 8
+    panels.append(state_timeline(
+        "Incus Instance Running State",
+        [tgt(f'truenas_virt_instance_running{{instance=~"{I}"}}', '{{name}} ({{type}})', 'A')],
+        0, y, w=24, desc="Incus/LXD instance running state history.", overrides=STATE_OVERRIDES,
     ))
     y += 8
 
@@ -1392,6 +1537,54 @@ def build_dashboard():
         sort_col='Task', sort_desc=False,
     ))
     y += 10
+    panels.extend([
+        stat("Alert Svcs", f'max(truenas_alertservice_count{{instance=~"{I}"}})', 0, y, w=4, desc="Configured alert notification services."),
+        stat("Cron On", f'sum(truenas_cronjob_enabled{{instance=~"{I}"}})', 4, y, w=4, desc="Enabled cron jobs."),
+        stat("Cloud Bkp On", f'sum(truenas_cloud_backup_task_enabled{{instance=~"{I}"}})', 8, y, w=4, desc="Enabled cloud backup tasks."),
+        stat("Boot Changes", f'max(truenas_system_boot_changes_total{{instance=~"{I}"}})', 12, y, w=4, desc="Boot ID changes seen since exporter start (proxy for reboot count).", graph=True),
+        stat("Update Avail", f'clamp_max(count(truenas_update_version_available{{instance=~"{I}"}} == 1), 1)', 16, y, w=4,
+             desc="A newer version is available.", mappings=bmap("⬆ Available", "yellow", "Current", "green")),
+        stat("Reboot Reason", f'clamp_max(count(truenas_system_reboot_reason{{instance=~"{I}"}}), 1)', 20, y, w=4,
+             desc="A pending-reboot reason is currently reported.", mappings=bmap("Set", "yellow", "None", GRAY)),
+    ])
+    y += 4
+    panels.append(table(
+        "Alert Services",
+        [table_target(f'truenas_alertservice_enabled{{instance=~"{I}"}}', 'A')],
+        0, y, w=12, h=8,
+        desc="Configured alert notification services and their enablement.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'name': 'Name', 'type': 'Type', 'Value': 'Enabled'},
+                'indexByName': {'Name': 0, 'Type': 1, 'Enabled': 2},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Name', 'desc': False}]}),
+        ],
+        overrides=[{"matcher": {"id": "byName", "options": "Enabled"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": BOOL_MAP}]}],
+        sort_col='Name', sort_desc=False,
+    ))
+    panels.append(table(
+        "Update & Reboot Status",
+        [
+            table_target(
+                f'label_replace(truenas_update_status{{instance=~"{I}"}}, "field", "Update Status", "__name__", ".*") '
+                f'or label_replace(truenas_update_version_available{{instance=~"{I}"}} == 1, "field", "Version Available", "__name__", ".*") '
+                f'or label_replace(truenas_system_reboot_reason{{instance=~"{I}"}}, "field", "Reboot Reason", "__name__", ".*")',
+                'A',
+            ),
+        ],
+        12, y, w=12, h=8,
+        desc="Current update status/available version and any pending reboot reason.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {'field': 'Field', 'status': 'Status', 'version': 'Version', 'reason': 'Reason'},
+                'indexByName': {'Field': 0, 'Status': 1, 'Version': 2, 'Reason': 3},
+            }),
+        ],
+    ))
+    y += 8
 
     # ── ROW: Security & Platform ────────────────────────────────────────
     panels.append(row("Security & Platform", y))
@@ -1500,6 +1693,34 @@ def build_dashboard():
         sort_col='Days to Expiry', sort_desc=False,
     ))
     y += 10
+    panels.extend([
+        stat("API Keys", f'max(truenas_api_key_count{{instance=~"{I}"}})', 0, y, w=4, desc="Configured API keys."),
+        stat("API Keys Revoked", f'max(truenas_api_key_revoked_count{{instance=~"{I}"}})', 4, y, w=4,
+             desc="Revoked API keys.", thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}]),
+        stat("KMIP Sync Pending", f'max(truenas_kmip_sync_pending{{instance=~"{I}"}})', 8, y, w=4,
+             desc="KMIP key synchronization pending.", mappings=bmap("Pending", "yellow", "No", "green")),
+        stat("Managed by TC", f'max(truenas_managed_by_truecommand{{instance=~"{I}"}})', 12, y, w=4, desc="Managed by TrueCommand.", mappings=NEUTRAL_MAP),
+        stat("Support Avail", f'max(truenas_support_available{{instance=~"{I}"}})', 16, y, w=4, desc="Proactive support available.", mappings=NEUTRAL_MAP),
+        stat("Pwd Min Age", f'max(truenas_system_security_password_min_age_days{{instance=~"{I}"}})', 20, y, w=4, unit="d", desc="Configured minimum password age."),
+    ])
+    y += 4
+    panels.append(table(
+        "API Key Expiry",
+        [table_target(f'floor((truenas_api_key_expiry_timestamp_seconds{{instance=~"{I}"}} - time()) / 86400)', 'A')],
+        0, y, w=24, h=8,
+        desc="Days until each API key expires (negative = already expired).",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'name': 'Name', 'Value': 'Days to Expiry'},
+                'indexByName': {'Name': 0, 'Days to Expiry': 1},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Days to Expiry', 'desc': False}]}),
+        ],
+        overrides=[{"matcher": {"id": "byName", "options": "Days to Expiry"}, "properties": [{"id": "unit", "value": "short"}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "red", "value": None}, {"color": "yellow", "value": 14}, {"color": "green", "value": 30}]}}]}],
+        sort_col='Days to Expiry', sort_desc=False,
+    ))
+    y += 8
 
     # ── COLLAPSED ROW: Boot Environment ─────────────────────────────────
     boot_panels = []
@@ -1527,6 +1748,18 @@ def build_dashboard():
         6, by, w=18, unit="bytes", desc="Bytes used by each boot environment.",
     ))
     by += 8
+    boot_panels.append(stat("Boot Scan %", f'max(truenas_boot_pool_scan_percent{{instance=~"{I}"}})', 0, by, w=6, unit="percent", desc="Boot pool active scan percentage."))
+    boot_panels.append(state_timeline(
+        "Boot Pool Scan State",
+        [tgt(f'truenas_boot_pool_scan_state{{instance=~"{I}"}}', '{{state}}', 'A')],
+        6, by, w=9, h=4, desc="Boot pool scrub/resilver state.",
+    ))
+    boot_panels.append(state_timeline(
+        "Boot Pool Status",
+        [tgt(f'truenas_boot_pool_status{{instance=~"{I}"}}', '{{status}}', 'A')],
+        15, by, w=9, h=4, desc="Boot pool status.",
+    ))
+    by += 4
     panels.append(row("Boot Environment", y, collapsed=True, panels=boot_panels))
     y += 1
 
@@ -1559,6 +1792,37 @@ def build_dashboard():
         stat("Resilver On", f'max(truenas_pool_resilver_enabled{{instance=~"{I}"}})', 20, hy, w=4, mappings=NEUTRAL_MAP),
     ])
     hy += 4
+    hw_panels.append(stat("Physical Cores", f'max(truenas_host_physical_cpu_cores{{instance=~"{I}"}})', 0, hy, w=6, desc="Host physical CPU cores (non-HT)."))
+    hw_panels.append(table(
+        "Host & Chassis Identity",
+        [
+            table_target(
+                f'label_replace(max by (hostname, version, product_type) (truenas_host_info{{instance=~"{I}"}}), "component", "Host", "__name__", ".*") '
+                f'or label_replace(max by (manufacturer, product) (truenas_host_system_info{{instance=~"{I}"}}), "component", "System", "__name__", ".*") '
+                f'or label_replace(max by (model) (truenas_host_cpu_info{{instance=~"{I}"}}), "component", "CPU", "__name__", ".*") '
+                f'or label_replace(max by (model) (truenas_chassis_hardware{{instance=~"{I}"}}), "component", "Chassis", "__name__", ".*") '
+                f'or label_replace(max by (variant) (truenas_hw_virt_variant{{instance=~"{I}"}}), "component", "Hypervisor", "__name__", ".*") '
+                f'or label_replace(max by (index, model, vendor, pci_id) (truenas_gpu_info{{instance=~"{I}"}}), "component", "GPU", "__name__", ".*")',
+                'A',
+            ),
+        ],
+        6, hy, w=18, h=8,
+        desc="Static host, system, CPU, chassis, hypervisor, and GPU identity labels.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {
+                    'component': 'Component', 'hostname': 'Hostname', 'version': 'Version', 'product_type': 'Product Type',
+                    'manufacturer': 'Manufacturer', 'product': 'Product', 'model': 'Model', 'variant': 'Variant',
+                    'index': 'GPU Index', 'vendor': 'Vendor', 'pci_id': 'PCI ID',
+                },
+                'indexByName': {'Component': 0, 'Hostname': 1, 'Version': 2, 'Product Type': 3, 'Manufacturer': 4, 'Product': 5, 'Model': 6, 'Variant': 7, 'GPU Index': 8, 'Vendor': 9, 'PCI ID': 10},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Component', 'desc': False}]}),
+        ],
+        sort_col='Component', sort_desc=False,
+    ))
+    hy += 8
     panels.append(row("Hardware & IPMI", y, collapsed=True, panels=hw_panels))
     y += 1
 
@@ -1577,6 +1841,34 @@ def build_dashboard():
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}]),
     ])
     py += 4
+    proto_panels.append(table(
+        "Failover Disabled Reasons",
+        [table_target(f'truenas_failover_disabled_reason{{instance=~"{I}"}}', 'A')],
+        0, py, w=12, h=6,
+        desc="Reasons HA failover is currently disabled.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {'reason': 'Reason'},
+                'indexByName': {'Reason': 0},
+            }),
+        ],
+    ))
+    proto_panels.append(table(
+        "Failover Node Reboot Required",
+        [table_target(f'truenas_failover_node_reboot_required{{instance=~"{I}"}}', 'A')],
+        12, py, w=12, h=6,
+        desc="Failover nodes with a documented reboot-required reason.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'node': 'Node', 'Value': 'Reboot Required'},
+                'indexByName': {'Node': 0, 'Reboot Required': 1},
+            }),
+        ],
+        overrides=[{"matcher": {"id": "byName", "options": "Reboot Required"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-background"}}, {"id": "mappings", "value": bmap("Required", "red", "No", "green")}]}],
+    ))
+    py += 6
     panels.append(row("Advanced Protocols (NVMe-oF / FC / HA)", y, collapsed=True, panels=proto_panels))
     y += 1
 
@@ -1602,6 +1894,33 @@ def build_dashboard():
              thresholds=[{"color": "green", "value": 0}, {"color": "red", "value": 1}]),
     ])
     ay += 4
+    audit_panels.append(table(
+        "Directory Service Type",
+        [table_target(f'truenas_directoryservices_service_type{{instance=~"{I}"}}', 'A')],
+        0, ay, w=12, h=6,
+        desc="Configured directory service type (always 1 when configured).",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {'service_type': 'Service Type'},
+                'indexByName': {'Service Type': 0},
+            }),
+        ],
+    ))
+    audit_panels.append(table(
+        "Directory Service Status",
+        [table_target(f'truenas_directoryservices_status{{instance=~"{I}"}}', 'A')],
+        12, ay, w=12, h=6,
+        desc="Per-service directory service status.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {'service': 'Service', 'status': 'Status'},
+                'indexByName': {'Service': 0, 'Status': 1},
+            }),
+        ],
+    ))
+    ay += 6
     panels.append(row("Audit & Directory Services", y, collapsed=True, panels=audit_panels))
     y += 1
 
@@ -1647,6 +1966,37 @@ def build_dashboard():
              desc="Maximum configured NTP poll interval."),
     ])
     cy += 4
+    cfg_panels.extend([
+        stat("FS Paths", f'truenas_filesystem_path_count{{instance=~"{I}"}}', 0, cy, w=6, desc="Filesystem paths being scraped."),
+        stat("NTP Prefer", f'max(truenas_ntp_server_prefer_count{{instance=~"{I}"}})', 6, cy, w=6, desc="NTP servers marked prefer."),
+    ])
+    cfg_panels.append(table(
+        "System Identity",
+        [
+            table_target(
+                f'label_replace(truenas_system_global_id{{instance=~"{I}"}}, "field", "Global ID", "__name__", ".*") '
+                f'or label_replace(truenas_system_host_id{{instance=~"{I}"}}, "field", "Host ID", "__name__", ".*") '
+                f'or label_replace(truenas_system_product_type{{instance=~"{I}"}}, "field", "Product Type", "__name__", ".*") '
+                f'or label_replace(truenas_system_state{{instance=~"{I}"}}, "field", "State", "__name__", ".*") '
+                f'or label_replace(truenas_system_version{{instance=~"{I}"}}, "field", "Version", "__name__", ".*") '
+                f'or label_replace(truenas_systemdataset_pool{{instance=~"{I}"}}, "field", "System Dataset Pool", "__name__", ".*")',
+                'A',
+            ),
+        ],
+        12, cy, w=12, h=8,
+        desc="Static system identity labels: global/host ID, product type, current state, version, and system dataset pool.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True, 'Value': True},
+                'renameByName': {
+                    'field': 'Field', 'global_id': 'Global ID', 'host_id': 'Host ID', 'product_type': 'Product Type',
+                    'state': 'State', 'version': 'Version', 'pool': 'Pool',
+                },
+                'indexByName': {'Field': 0, 'Global ID': 1, 'Host ID': 2, 'Product Type': 3, 'State': 4, 'Version': 5, 'Pool': 6},
+            }),
+        ],
+    ))
+    cy += 8
     panels.append(row("System Configuration", y, collapsed=True, panels=cfg_panels))
     y += 1
 
@@ -1935,6 +2285,70 @@ def build_dashboard():
         overrides=api_overrides, transforms=api_table_transforms, sort_col='Duration s',
     ))
     apy += 10
+    api_panels.append(table(
+        "Generic Event Field Extraction",
+        [
+            table_target(
+                f'label_replace(truenas_event_boolean_value{{instance=~"{I}"}}, "kind", "boolean", "__name__", ".*") '
+                f'or label_replace(truenas_event_numeric_value{{instance=~"{I}"}}, "kind", "numeric", "__name__", ".*") '
+                f'or label_replace(truenas_event_list_length{{instance=~"{I}"}}, "kind", "list_length", "__name__", ".*") '
+                f'or label_replace(truenas_event_status_value{{instance=~"{I}"}}, "kind", "status", "__name__", ".*")',
+                'A',
+            ),
+        ],
+        0, apy, w=12, h=8,
+        desc="Fallback per-event-field values extracted for undocumented event payload fields (path identifies the field).",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'event': 'Event', 'path': 'Path', 'kind': 'Kind', 'status': 'Status', 'Value': 'Value'},
+                'indexByName': {'Event': 0, 'Path': 1, 'Kind': 2, 'Value': 3, 'Status': 4},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Event', 'desc': False}]}),
+        ],
+        sort_col='Event', sort_desc=False,
+    ))
+    api_panels.append(table(
+        "Generic Method Field Extraction",
+        [
+            table_target(
+                f'label_replace(truenas_method_boolean_value{{instance=~"{I}", method=~"$method"}}, "kind", "boolean", "__name__", ".*") '
+                f'or label_replace(truenas_method_numeric_value{{instance=~"{I}", method=~"$method"}}, "kind", "numeric", "__name__", ".*") '
+                f'or label_replace(truenas_method_list_length{{instance=~"{I}", method=~"$method"}}, "kind", "list_length", "__name__", ".*") '
+                f'or label_replace(truenas_method_status_value{{instance=~"{I}", method=~"$method"}}, "kind", "status", "__name__", ".*")',
+                'A',
+            ),
+        ],
+        12, apy, w=12, h=8,
+        desc="Fallback per-method-field values extracted for undocumented API method result fields (path identifies the field).",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'method': 'Method', 'path': 'Path', 'kind': 'Kind', 'status': 'Status', 'Value': 'Value'},
+                'indexByName': {'Method': 0, 'Path': 1, 'Kind': 2, 'Value': 3, 'Status': 4},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Method', 'desc': False}]}),
+        ],
+        sort_col='Method', sort_desc=False,
+    ))
+    apy += 8
+    api_panels.append(table(
+        "Event Last Message Age",
+        [table_target(f'time() - truenas_event_last_message_timestamp_seconds{{instance=~"{I}"}}', 'A')],
+        0, apy, w=24, h=6,
+        desc="Seconds since the last message was received for each subscribed event.",
+        transforms=[
+            tf('organize', {
+                'excludeByName': {'Time': True, '__name__': True, 'instance': True, 'job': True},
+                'renameByName': {'event': 'Event', 'Value': 'Age'},
+                'indexByName': {'Event': 0, 'Age': 1},
+            }),
+            tf('sortBy', {'fields': [{'displayName': 'Age', 'desc': True}]}),
+        ],
+        overrides=[{"matcher": {"id": "byName", "options": "Age"}, "properties": [{"id": "unit", "value": "s"}]}],
+        sort_col='Age',
+    ))
+    apy += 6
     panels.append(row("Exporter + Advanced ZFS", y, collapsed=True, panels=api_panels))
     y += 1
 

@@ -1,9 +1,9 @@
 {
   "dashboard_evidence": {
-    "contract_metrics_not_referenced": 130,
-    "recursive_panel_count": 318,
+    "contract_metrics_not_referenced": 56,
+    "recursive_panel_count": 367,
     "unavailable_metrics_referenced": 0,
-    "unique_contract_metrics_referenced": 287
+    "unique_contract_metrics_referenced": 361
   },
   "event_decision_partition": {
     "excluded: high cardinality": 5,
@@ -781,18 +781,28 @@
     {
       "dashboard_usage": [
         "truenas_cpu_core_usage_percent",
+        "truenas_cpu_idle_percent",
+        "truenas_cpu_interrupt_percent",
+        "truenas_cpu_iowait_percent",
+        "truenas_cpu_system_percent",
         "truenas_cpu_temperature_celsius",
         "truenas_cpu_usage_percent",
+        "truenas_cpu_user_percent",
         "truenas_disk_busy_percent",
         "truenas_disk_read_bytes_per_second",
         "truenas_disk_read_ops_per_second",
         "truenas_disk_write_bytes_per_second",
         "truenas_disk_write_ops_per_second",
+        "truenas_interface_realtime_link_up",
+        "truenas_interface_realtime_speed_mbits",
         "truenas_memory_physical_available_bytes",
         "truenas_memory_physical_total_bytes",
         "truenas_memory_physical_used_bytes",
         "truenas_network_rx_bytes_per_second",
         "truenas_network_tx_bytes_per_second",
+        "truenas_pool_realtime_available_bytes",
+        "truenas_pool_realtime_total_bytes",
+        "truenas_pool_realtime_used_bytes",
         "truenas_zfs_arc_available_bytes",
         "truenas_zfs_arc_free_memory_bytes",
         "truenas_zfs_arc_size_bytes",
@@ -801,6 +811,7 @@
         "truenas_zfs_demand_data_hit_ratio",
         "truenas_zfs_demand_data_hits_per_second",
         "truenas_zfs_demand_data_io_hit_ratio",
+        "truenas_zfs_demand_data_io_hits_per_second",
         "truenas_zfs_demand_data_miss_ratio",
         "truenas_zfs_demand_data_misses_per_second",
         "truenas_zfs_demand_meta_hit_ratio",
@@ -808,6 +819,7 @@
         "truenas_zfs_demand_meta_misses_per_second",
         "truenas_zfs_demand_metadata_accesses_per_second",
         "truenas_zfs_demand_metadata_io_hit_ratio",
+        "truenas_zfs_demand_metadata_io_hits_per_second",
         "truenas_zfs_demand_metadata_miss_ratio",
         "truenas_zfs_l2arc_accesses_per_second",
         "truenas_zfs_l2arc_hit_ratio",
@@ -1421,7 +1433,9 @@
       "api_method_or_event": [
         "alertservice.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Alert Svcs"
+      ],
       "documented_type_unit": "alertservice.query: array of object; Prometheus unit: count",
       "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -1443,7 +1457,9 @@
       "api_method_or_event": [
         "alertservice.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Alert Services"
+      ],
       "documented_type_unit": "alertservice.query: boolean/integer/string; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -1560,7 +1576,9 @@
       "api_method_or_event": [
         "api_key.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "API Keys"
+      ],
       "documented_type_unit": "api_key.query: array of object; Prometheus unit: count",
       "fixture_test": "tests/test_t21_low_cost_metrics.py",
       "implementation_status": "active dedicated",
@@ -1582,7 +1600,9 @@
       "api_method_or_event": [
         "api_key.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "API Key Expiry"
+      ],
       "documented_type_unit": "api_key.query: array of object; Prometheus unit: Unix seconds",
       "fixture_test": "tests/test_t21_low_cost_metrics.py",
       "implementation_status": "active dedicated",
@@ -1608,7 +1628,9 @@
       "api_method_or_event": [
         "api_key.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "API Keys Revoked"
+      ],
       "documented_type_unit": "api_key.query: array of object; Prometheus unit: count",
       "fixture_test": "tests/test_t21_low_cost_metrics.py",
       "implementation_status": "active dedicated",
@@ -1919,7 +1941,9 @@
       "api_method_or_event": [
         "app.image.dockerhub_rate_limit"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "DH Window"
+      ],
       "documented_type_unit": "app.image.dockerhub_rate_limit: object; Prometheus unit: seconds",
       "fixture_test": "tests/fixtures/api_25_10_2/dockerhub_rate_limit.json; tests/test_phase1_metrics.py; tests/test_removed_source_suppression.py",
       "implementation_status": "active dedicated",
@@ -2761,7 +2785,9 @@
       "api_method_or_event": [
         "boot.get_state"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Boot Scan %"
+      ],
       "documented_type_unit": "boot.get_state: object; Prometheus unit: percent (0-100)",
       "fixture_test": "Metric-contract coverage only; no dedicated fixture/test reference found",
       "implementation_status": "active dedicated",
@@ -2783,7 +2809,9 @@
       "api_method_or_event": [
         "boot.get_state"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Boot Pool Scan State"
+      ],
       "documented_type_unit": "boot.get_state: object; Prometheus unit: dimensionless gauge",
       "fixture_test": "Metric-contract coverage only; no dedicated fixture/test reference found",
       "implementation_status": "active dedicated",
@@ -2834,7 +2862,9 @@
       "api_method_or_event": [
         "boot.get_state"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Boot Pool Status"
+      ],
       "documented_type_unit": "boot.get_state: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "Metric-contract coverage only; no dedicated fixture/test reference found",
       "implementation_status": "active dedicated",
@@ -3011,7 +3041,9 @@
       "api_method_or_event": [
         "truenas.get_chassis_hardware"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Host & Chassis Identity"
+      ],
       "documented_type_unit": "truenas.get_chassis_hardware: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "Metric-contract coverage only; no dedicated fixture/test reference found",
       "implementation_status": "active dedicated",
@@ -3060,7 +3092,9 @@
       "api_method_or_event": [
         "cloud_backup.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Cloud Bkp On"
+      ],
       "documented_type_unit": "cloud_backup.query: boolean/integer; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -3189,7 +3223,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "CPU Time Breakdown"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: percent (0-100)",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -3211,7 +3247,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "CPU Time Breakdown"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: percent (0-100)",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -3233,7 +3271,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "CPU Time Breakdown"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: percent (0-100)",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -3255,7 +3295,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "CPU Time Breakdown"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: percent (0-100)",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -3328,7 +3370,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "CPU Time Breakdown"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: percent (0-100)",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -3374,7 +3418,9 @@
       "api_method_or_event": [
         "cronjob.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Cron On"
+      ],
       "documented_type_unit": "cronjob.query: boolean/integer; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_phase1_metrics.py; tests/test_t15_duplicate_api_calls.py",
       "implementation_status": "active dedicated",
@@ -4215,7 +4261,9 @@
       "api_method_or_event": [
         "directoryservices.status"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Directory Service Type"
+      ],
       "documented_type_unit": "directoryservices.status: object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/directoryservices_status.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -4240,7 +4288,9 @@
       "api_method_or_event": [
         "directoryservices.status"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Directory Service Status"
+      ],
       "documented_type_unit": "directoryservices.status: object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/directoryservices_status.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -4367,7 +4417,9 @@
       "api_method_or_event": [
         "disk.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Disk Identity"
+      ],
       "documented_type_unit": "disk.query: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/disk_query_selected.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -4531,7 +4583,9 @@
       "api_method_or_event": [
         "disk.temperature_agg"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Aggregated Disk Temperature (~5 min)"
+      ],
       "documented_type_unit": "disk.temperature_agg: object; Prometheus unit: degrees Celsius",
       "fixture_test": "tests/test_phase1_metrics.py; tests/test_runtime_api_parity.py",
       "implementation_status": "active dedicated",
@@ -4853,7 +4907,9 @@
         "vm.query",
         "vmware.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Event Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.query: schema union/object; alert.list: schema union/object; alertservice.query: schema union/object; api_key.query: schema union/object; app.container_log_follow: schema union/object; app.image.query: schema union/object; app.query: schema union/object; app.registry.query: schema union/object; app.stats: schema union/object; certificate.query: schema union/object; cloud_backup.query: schema union/object; cloudsync.credentials.query: schema union/object; cloudsync.query: schema union/object; container.metrics: undocumented/unavailable; core.get_jobs: schema union/object; cronjob.query: schema union/object; docker.network.query: schema union/object; fc.fc_host.query: schema union/object; fcport.query: schema union/object; filesystem.acltemplate.query: schema union/object; filesystem.file_tail_follow: schema union/object; group.query: schema union/object; initshutdownscript.query: schema union/object; interface.query: schema union/object; iscsi.auth.query: schema union/object; iscsi.extent.query: schema union/object; iscsi.initiator.query: schema union/object; iscsi.portal.query: schema union/object; iscsi.target.query: schema union/object; iscsi.targetextent.query: schema union/object; jbof.query: schema union/object; kerberos.keytab.query: schema union/object; kerberos.realm.query: schema union/object; keychaincredential.query: schema union/object; nvmet.host.query: schema union/object; nvmet.host_subsys.query: schema union/object; nvmet.namespace.query: schema union/object; nvmet.port.query: schema union/object; nvmet.port_subsys.query: schema union/object; nvmet.subsys.query: schema union/object; pool.dataset.query: schema union/object; pool.query: schema union/object; pool.scrub.query: schema union/object; pool.snapshot.query: schema union/object; pool.snapshottask.query: schema union/object; privilege.query: schema union/object; replication.query: schema union/object; reporting.exporters.query: schema union/object; reporting.realtime: schema union/object; rsynctask.query: schema union/object; service.query: schema union/object; sharing.nfs.query: schema union/object; sharing.smb.query: schema union/object; staticroute.query: schema union/object; system.ntpserver.query: schema union/object; tunable.query: schema union/object; update.status: schema union/object; user.query: schema union/object; virt.instance.metrics: schema union/object; virt.instance.query: schema union/object; virt.volume.query: schema union/object; vm.device.query: schema union/object; vm.query: schema union/object; vmware.query: schema union/object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_dataset_query_selected.json; tests/fixtures/api_25_10_2/pool_query.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "generic extraction",
@@ -4943,7 +4999,9 @@
         "vm.query",
         "vmware.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Event Last Message Age"
+      ],
       "documented_type_unit": "acme.dns.authenticator.query: schema union/object; alert.list: schema union/object; alertservice.query: schema union/object; api_key.query: schema union/object; app.container_log_follow: schema union/object; app.image.query: schema union/object; app.query: schema union/object; app.registry.query: schema union/object; app.stats: schema union/object; certificate.query: schema union/object; cloud_backup.query: schema union/object; cloudsync.credentials.query: schema union/object; cloudsync.query: schema union/object; container.metrics: undocumented/unavailable; core.get_jobs: schema union/object; cronjob.query: schema union/object; docker.network.query: schema union/object; fc.fc_host.query: schema union/object; fcport.query: schema union/object; filesystem.acltemplate.query: schema union/object; filesystem.file_tail_follow: schema union/object; group.query: schema union/object; initshutdownscript.query: schema union/object; interface.query: schema union/object; iscsi.auth.query: schema union/object; iscsi.extent.query: schema union/object; iscsi.initiator.query: schema union/object; iscsi.portal.query: schema union/object; iscsi.target.query: schema union/object; iscsi.targetextent.query: schema union/object; jbof.query: schema union/object; kerberos.keytab.query: schema union/object; kerberos.realm.query: schema union/object; keychaincredential.query: schema union/object; nvmet.host.query: schema union/object; nvmet.host_subsys.query: schema union/object; nvmet.namespace.query: schema union/object; nvmet.port.query: schema union/object; nvmet.port_subsys.query: schema union/object; nvmet.subsys.query: schema union/object; pool.dataset.query: schema union/object; pool.query: schema union/object; pool.scrub.query: schema union/object; pool.snapshot.query: schema union/object; pool.snapshottask.query: schema union/object; privilege.query: schema union/object; replication.query: schema union/object; reporting.exporters.query: schema union/object; reporting.realtime: schema union/object; rsynctask.query: schema union/object; service.query: schema union/object; sharing.nfs.query: schema union/object; sharing.smb.query: schema union/object; staticroute.query: schema union/object; system.ntpserver.query: schema union/object; tunable.query: schema union/object; update.status: schema union/object; user.query: schema union/object; virt.instance.metrics: schema union/object; virt.instance.query: schema union/object; virt.volume.query: schema union/object; vm.device.query: schema union/object; vm.query: schema union/object; vmware.query: schema union/object; Prometheus unit: Unix seconds",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_dataset_query_selected.json; tests/fixtures/api_25_10_2/pool_query.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "internal/config/transport",
@@ -5031,7 +5089,9 @@
         "vm.query",
         "vmware.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Event Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.query: schema union/object; alert.list: schema union/object; alertservice.query: schema union/object; api_key.query: schema union/object; app.container_log_follow: schema union/object; app.image.query: schema union/object; app.query: schema union/object; app.registry.query: schema union/object; app.stats: schema union/object; certificate.query: schema union/object; cloud_backup.query: schema union/object; cloudsync.credentials.query: schema union/object; cloudsync.query: schema union/object; container.metrics: undocumented/unavailable; core.get_jobs: schema union/object; cronjob.query: schema union/object; docker.network.query: schema union/object; fc.fc_host.query: schema union/object; fcport.query: schema union/object; filesystem.acltemplate.query: schema union/object; filesystem.file_tail_follow: schema union/object; group.query: schema union/object; initshutdownscript.query: schema union/object; interface.query: schema union/object; iscsi.auth.query: schema union/object; iscsi.extent.query: schema union/object; iscsi.initiator.query: schema union/object; iscsi.portal.query: schema union/object; iscsi.target.query: schema union/object; iscsi.targetextent.query: schema union/object; jbof.query: schema union/object; kerberos.keytab.query: schema union/object; kerberos.realm.query: schema union/object; keychaincredential.query: schema union/object; nvmet.host.query: schema union/object; nvmet.host_subsys.query: schema union/object; nvmet.namespace.query: schema union/object; nvmet.port.query: schema union/object; nvmet.port_subsys.query: schema union/object; nvmet.subsys.query: schema union/object; pool.dataset.query: schema union/object; pool.query: schema union/object; pool.scrub.query: schema union/object; pool.snapshot.query: schema union/object; pool.snapshottask.query: schema union/object; privilege.query: schema union/object; replication.query: schema union/object; reporting.exporters.query: schema union/object; reporting.realtime: schema union/object; rsynctask.query: schema union/object; service.query: schema union/object; sharing.nfs.query: schema union/object; sharing.smb.query: schema union/object; staticroute.query: schema union/object; system.ntpserver.query: schema union/object; tunable.query: schema union/object; update.status: schema union/object; user.query: schema union/object; virt.instance.metrics: schema union/object; virt.instance.query: schema union/object; virt.volume.query: schema union/object; vm.device.query: schema union/object; vm.query: schema union/object; vmware.query: schema union/object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_dataset_query_selected.json; tests/fixtures/api_25_10_2/pool_query.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "generic extraction",
@@ -5210,7 +5270,9 @@
         "vm.query",
         "vmware.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Event Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.query: schema union/object; alert.list: schema union/object; alertservice.query: schema union/object; api_key.query: schema union/object; app.container_log_follow: schema union/object; app.image.query: schema union/object; app.query: schema union/object; app.registry.query: schema union/object; app.stats: schema union/object; certificate.query: schema union/object; cloud_backup.query: schema union/object; cloudsync.credentials.query: schema union/object; cloudsync.query: schema union/object; container.metrics: undocumented/unavailable; core.get_jobs: schema union/object; cronjob.query: schema union/object; docker.network.query: schema union/object; fc.fc_host.query: schema union/object; fcport.query: schema union/object; filesystem.acltemplate.query: schema union/object; filesystem.file_tail_follow: schema union/object; group.query: schema union/object; initshutdownscript.query: schema union/object; interface.query: schema union/object; iscsi.auth.query: schema union/object; iscsi.extent.query: schema union/object; iscsi.initiator.query: schema union/object; iscsi.portal.query: schema union/object; iscsi.target.query: schema union/object; iscsi.targetextent.query: schema union/object; jbof.query: schema union/object; kerberos.keytab.query: schema union/object; kerberos.realm.query: schema union/object; keychaincredential.query: schema union/object; nvmet.host.query: schema union/object; nvmet.host_subsys.query: schema union/object; nvmet.namespace.query: schema union/object; nvmet.port.query: schema union/object; nvmet.port_subsys.query: schema union/object; nvmet.subsys.query: schema union/object; pool.dataset.query: schema union/object; pool.query: schema union/object; pool.scrub.query: schema union/object; pool.snapshot.query: schema union/object; pool.snapshottask.query: schema union/object; privilege.query: schema union/object; replication.query: schema union/object; reporting.exporters.query: schema union/object; reporting.realtime: schema union/object; rsynctask.query: schema union/object; service.query: schema union/object; sharing.nfs.query: schema union/object; sharing.smb.query: schema union/object; staticroute.query: schema union/object; system.ntpserver.query: schema union/object; tunable.query: schema union/object; update.status: schema union/object; user.query: schema union/object; virt.instance.metrics: schema union/object; virt.instance.query: schema union/object; virt.volume.query: schema union/object; vm.device.query: schema union/object; vm.query: schema union/object; vmware.query: schema union/object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_dataset_query_selected.json; tests/fixtures/api_25_10_2/pool_query.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "generic extraction",
@@ -5300,7 +5362,9 @@
         "vm.query",
         "vmware.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Event Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.query: schema union/object; alert.list: schema union/object; alertservice.query: schema union/object; api_key.query: schema union/object; app.container_log_follow: schema union/object; app.image.query: schema union/object; app.query: schema union/object; app.registry.query: schema union/object; app.stats: schema union/object; certificate.query: schema union/object; cloud_backup.query: schema union/object; cloudsync.credentials.query: schema union/object; cloudsync.query: schema union/object; container.metrics: undocumented/unavailable; core.get_jobs: schema union/object; cronjob.query: schema union/object; docker.network.query: schema union/object; fc.fc_host.query: schema union/object; fcport.query: schema union/object; filesystem.acltemplate.query: schema union/object; filesystem.file_tail_follow: schema union/object; group.query: schema union/object; initshutdownscript.query: schema union/object; interface.query: schema union/object; iscsi.auth.query: schema union/object; iscsi.extent.query: schema union/object; iscsi.initiator.query: schema union/object; iscsi.portal.query: schema union/object; iscsi.target.query: schema union/object; iscsi.targetextent.query: schema union/object; jbof.query: schema union/object; kerberos.keytab.query: schema union/object; kerberos.realm.query: schema union/object; keychaincredential.query: schema union/object; nvmet.host.query: schema union/object; nvmet.host_subsys.query: schema union/object; nvmet.namespace.query: schema union/object; nvmet.port.query: schema union/object; nvmet.port_subsys.query: schema union/object; nvmet.subsys.query: schema union/object; pool.dataset.query: schema union/object; pool.query: schema union/object; pool.scrub.query: schema union/object; pool.snapshot.query: schema union/object; pool.snapshottask.query: schema union/object; privilege.query: schema union/object; replication.query: schema union/object; reporting.exporters.query: schema union/object; reporting.realtime: schema union/object; rsynctask.query: schema union/object; service.query: schema union/object; sharing.nfs.query: schema union/object; sharing.smb.query: schema union/object; staticroute.query: schema union/object; system.ntpserver.query: schema union/object; tunable.query: schema union/object; update.status: schema union/object; user.query: schema union/object; virt.instance.metrics: schema union/object; virt.instance.query: schema union/object; virt.volume.query: schema union/object; vm.device.query: schema union/object; vm.query: schema union/object; vmware.query: schema union/object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_dataset_query_selected.json; tests/fixtures/api_25_10_2/pool_query.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "generic extraction",
@@ -5443,7 +5507,9 @@
       "api_method_or_event": [
         "failover.disabled.reasons"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Failover Disabled Reasons"
+      ],
       "documented_type_unit": "failover.disabled.reasons: array of string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_runtime_api_parity.py",
       "implementation_status": "active dedicated",
@@ -5493,7 +5559,9 @@
       "api_method_or_event": [
         "failover.reboot.info"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Failover Node Reboot Required"
+      ],
       "documented_type_unit": "failover.reboot.info: object; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_t21_low_cost_metrics.py",
       "implementation_status": "active dedicated",
@@ -5638,7 +5706,9 @@
       "api_method_or_event": [
         "exporter-owned state"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "FS Paths"
+      ],
       "documented_type_unit": "not applicable: exporter-owned state; Prometheus unit: count",
       "fixture_test": "tests/test_runtime_api_parity.py; tests/test_runtime_lifecycle.py",
       "implementation_status": "internal/config/transport",
@@ -5783,7 +5853,9 @@
       "api_method_or_event": [
         "device.get_info"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Host & Chassis Identity"
+      ],
       "documented_type_unit": "device.get_info: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/device_get_info_gpu.json; tests/test_runtime_api_parity.py",
       "implementation_status": "active dedicated",
@@ -5865,7 +5937,9 @@
       "api_method_or_event": [
         "system.info"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Host & Chassis Identity"
+      ],
       "documented_type_unit": "system.info: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -5916,7 +5990,9 @@
         "system.info",
         "system.product_type"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Host & Chassis Identity"
+      ],
       "documented_type_unit": "system.info: string; system.product_type: enum (of string); Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -5972,7 +6048,9 @@
       "api_method_or_event": [
         "system.info"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Physical Cores"
+      ],
       "documented_type_unit": "system.info: integer; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -6018,7 +6096,9 @@
       "api_method_or_event": [
         "system.info"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Host & Chassis Identity"
+      ],
       "documented_type_unit": "system.info: object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -6070,7 +6150,9 @@
       "api_method_or_event": [
         "hardware.virtualization.variant"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Host & Chassis Identity"
+      ],
       "documented_type_unit": "hardware.virtualization.variant: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -6246,7 +6328,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Interface Realtime Link State"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -6270,7 +6354,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Interface Realtime Speed"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -6294,7 +6380,9 @@
       "api_method_or_event": [
         "interface.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Interface Types"
+      ],
       "documented_type_unit": "interface.query: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_phase1_metrics.py; tests/test_phase3_collector_mode.py",
       "implementation_status": "active dedicated",
@@ -7106,7 +7194,9 @@
       "api_method_or_event": [
         "kmip.kmip_sync_pending"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "KMIP Sync Pending"
+      ],
       "documented_type_unit": "kmip.kmip_sync_pending: boolean; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_t21_low_cost_metrics.py",
       "implementation_status": "active dedicated",
@@ -7220,7 +7310,9 @@
       "api_method_or_event": [
         "truenas.managed_by_truecommand"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Managed by TC"
+      ],
       "documented_type_unit": "truenas.managed_by_truecommand: boolean; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "Metric-contract coverage only; no dedicated fixture/test reference found",
       "implementation_status": "active dedicated",
@@ -7838,7 +7930,9 @@
         "vmware.query",
         "zfs.resource.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Method Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.authenticator_schemas: array of object; acme.dns.authenticator.get_instance: object; acme.dns.authenticator.query: array of object; alert.list: array of object; alert.list_categories: array of object; alert.list_policies: array of string; alertclasses.config: object; alertservice.get_instance: object; alertservice.query: array of object; api_key.get_instance: object; api_key.my_keys: array of object; api_key.query: array of object; app.available: array of object; app.available_space: integer; app.categories: array of string; app.certificate_choices: array of object; app.config: object; app.container_console_choices: object; app.container_ids: object; app.get_instance: object; app.gpu_choices: object; app.image.dockerhub_rate_limit: object; app.image.get_instance: object; app.image.query: array of object; app.ip_choices: object; app.ix_volume.exists: boolean; app.ix_volume.query: array of object; app.latest: array of object; app.outdated_docker_images: array of string; app.query: array of object; app.registry.get_instance: object; app.registry.query: array of object; app.rollback_versions: array of string; app.similar: array of object; app.upgrade_summary: object; app.used_host_ips: object; app.used_ports: array of integer; audit.config: object; audit.query: integer; auth.me: object; auth.mechanism_choices: array of string; auth.sessions: array of object; auth.twofactor.config: object; boot.environment.query: array of object; boot.get_disks: array of string; boot.get_state: object; catalog.apps: object; catalog.config: object; catalog.get_app_details: object; catalog.trains: array of string; certificate.acme_server_choices: object; certificate.country_choices: object; certificate.ec_curve_choices: object; certificate.extended_key_usage_choices: object; certificate.get_instance: object; certificate.query: array of object; cloud_backup.get_instance: object; cloud_backup.list_snapshot_directory: array of object; cloud_backup.list_snapshots: array of object; cloud_backup.query: array of object; cloud_backup.transfer_setting_choices: array of enum (of string); cloudsync.credentials.get_instance: object; cloudsync.credentials.query: array of object; cloudsync.get_instance: object; cloudsync.list_directory: array of object; cloudsync.providers: array of object; cloudsync.query: array of object; core.arp: object; core.get_jobs: array of object; core.get_methods: object; core.get_services: object; core.ping: const; cronjob.get_instance: object; cronjob.query: array of object; device.get_info: object; directoryservices.certificate_choices: object; directoryservices.config: object; directoryservices.status: object; disk.details: array; disk.get_instance: object; disk.get_used: array; disk.query: array of object; disk.temperature_agg: object; disk.temperature_alerts: array of object; disk.temperatures: object; dns.query: array of object; docker.config: object; docker.list_backups: object; docker.network.get_instance: object; docker.network.query: array of object; docker.nvidia_present: boolean; docker.status: object; failover.disabled.reasons: array of string; failover.reboot.info: object; fc.fc_host.get_instance: object; fc.fc_host.query: array of object; fcport.get_instance: object; fcport.port_choices: object; fcport.query: array of object; fcport.status: array; filesystem.acltemplate.by_path: array of object; filesystem.acltemplate.get_instance: object; filesystem.acltemplate.query: array of object; filesystem.get_zfs_attributes: object; filesystem.getacl: object; filesystem.listdir: array of object; filesystem.stat: object; filesystem.statfs: object; ftp.config: object; group.get_group_obj: object; group.get_instance: object; group.get_next_gid: integer; group.has_password_enabled_user: boolean; group.query: array of object; hardware.virtualization.variant: string; initshutdownscript.get_instance: object; initshutdownscript.query: array of object; interface.bridge_members_choices: object; interface.checkin_waiting: integer; interface.choices: object; interface.get_instance: object; interface.has_pending_changes: boolean; interface.ip_in_use: array of object; interface.lacpdu_rate_choices: object; interface.lag_ports_choices: object; interface.network_config_to_be_removed: array of enum (of string); interface.query: array of object; interface.services_restarted_on_sync: array of object; interface.vlan_parent_interface_choices: object; interface.websocket_interface: object; interface.websocket_local_ip: const; interface.xmit_hash_policy_choices: object; ipmi.chassis.info: object; ipmi.is_loaded: boolean; ipmi.lan.channels: array of integer; ipmi.lan.query: array of object; ipmi.sel.elist: array of object; ipmi.sel.info: object; iscsi.auth.get_instance: object; iscsi.auth.query: array of object; iscsi.extent.disk_choices: object; iscsi.extent.get_instance: object; iscsi.extent.query: array of object; iscsi.global.alua_enabled: boolean; iscsi.global.client_count: integer; iscsi.global.config: object; iscsi.global.iser_enabled: boolean; iscsi.global.sessions: array of object; iscsi.initiator.get_instance: object; iscsi.initiator.query: array of object; iscsi.portal.get_instance: object; iscsi.portal.listen_ip_choices: object; iscsi.portal.query: array of object; iscsi.target.get_instance: object; iscsi.target.query: array of object; iscsi.target.validate_name: string; iscsi.targetextent.get_instance: object; iscsi.targetextent.query: array of object; jbof.get_instance: object; jbof.licensed: integer; jbof.query: array of object; kerberos.config: object; kerberos.keytab.get_instance: object; kerberos.keytab.query: array of object; kerberos.realm.get_instance: object; kerberos.realm.query: array of object; keychaincredential.get_instance: object; keychaincredential.query: array of object; keychaincredential.used_by: array of object; kmip.config: object; kmip.kmip_sync_pending: boolean; mail.config: object; mail.local_administrator_email: string; network.configuration.activity_choices: array of array; network.configuration.config: object; network.general.summary: object; nfs.bindip_choices: object; nfs.client_count: integer; nfs.config: object; nfs.get_nfs3_clients: array of object; nfs.get_nfs4_clients: array of object; nvmet.global.config: object; nvmet.global.sessions: array of object; nvmet.host.dhchap_dhgroup_choices: array of enum (of string); nvmet.host.dhchap_hash_choices: array of enum (of string); nvmet.host.get_instance: object; nvmet.host.query: array of object; nvmet.host_subsys.get_instance: object; nvmet.host_subsys.query: array of object; nvmet.namespace.get_instance: object; nvmet.namespace.query: array of object; nvmet.port.get_instance: object; nvmet.port.query: array of object; nvmet.port.transport_address_choices: object; nvmet.port_subsys.get_instance: object; nvmet.port_subsys.query: array of object; nvmet.subsys.get_instance: object; nvmet.subsys.query: array of object; pool.attachments: array of object; pool.dataset.attachments: array of object; pool.dataset.checksum_choices: object; pool.dataset.compression_choices: object; pool.dataset.details: array of object; pool.dataset.encryption_algorithm_choices: object; pool.dataset.encryption_summary: array of object; pool.dataset.get_instance: object; pool.dataset.get_quota: array; pool.dataset.processes: array of object; pool.dataset.query: array of object; pool.dataset.recommended_zvol_blocksize: string; pool.dataset.recordsize_choices: array of string; pool.dataset.snapshot_count: integer; pool.filesystem_choices: array of string; pool.get_disks: array of string; pool.get_instance: object; pool.is_upgraded: boolean; pool.processes: array of object; pool.query: array of object; pool.resilver.config: object; pool.scrub.get_instance: object; pool.scrub.query: array of object; pool.snapshot.get_instance: object; pool.snapshot.query: array of object; pool.snapshottask.delete_will_change_retention_for: object; pool.snapshottask.get_instance: object; pool.snapshottask.max_count: integer; pool.snapshottask.max_total_count: integer; pool.snapshottask.query: array of object; pool.snapshottask.update_will_change_retention_for: object; pool.validate_name: const; privilege.get_instance: object; privilege.query: array of object; privilege.roles: array of object; replication.config.config: object; replication.count_eligible_manual_snapshots: object; replication.get_instance: object; replication.list_datasets: array of string; replication.list_naming_schemas: array of string; replication.query: array of object; replication.target_unmatched_snapshots: object; reporting.config: object; reporting.exporters.exporter_schemas: array of object; reporting.exporters.get_instance: object; reporting.exporters.query: array of object; reporting.get_data: array of object; reporting.graph: array of object; reporting.graphs: array of object; reporting.netdata_get_data: array of object; reporting.netdata_graph: array of object; reporting.netdata_graphs: array of object; route.ipv4gw_reachable: boolean; route.system_routes: array of object; rsynctask.get_instance: object; rsynctask.query: array of object; service.get_instance: object; service.query: array of object; service.started: boolean; service.started_or_enabled: boolean; sharing.nfs.get_instance: object; sharing.nfs.query: array of object; sharing.smb.get_instance: object; sharing.smb.getacl: object; sharing.smb.presets: object; sharing.smb.query: array of object; sharing.smb.share_precheck: null; smb.bindip_choices: object; smb.config: object; smb.unixcharset_choices: object; snmp.config: object; ssh.bindiface_choices: object; ssh.config: object; staticroute.get_instance: object; staticroute.query: array of object; support.attach_ticket_max_size: integer; support.config: object; support.fields: array of array; support.is_available: boolean; support.is_available_and_enabled: boolean; support.similar_issues: array of object; system.advanced.config: object; system.advanced.get_gpu_pci_choices: object; system.advanced.login_banner: string; system.advanced.sed_global_password: string; system.advanced.sed_global_password_is_set: boolean; system.advanced.serial_port_choices: object; system.advanced.syslog_certificate_authority_choices: object; system.advanced.syslog_certificate_choices: object; system.boot_id: string; system.feature_enabled: boolean; system.general.checkin_waiting: integer; system.general.config: object; system.general.country_choices: object; system.general.kbdmap_choices: object; system.general.local_url: string; system.general.timezone_choices: object; system.general.ui_address_choices: object; system.general.ui_certificate_choices: object; system.general.ui_httpsprotocols_choices: object; system.general.ui_v6address_choices: object; system.global.id: string; system.host_id: string; system.info: object; system.ntpserver.get_instance: object; system.ntpserver.query: array of object; system.product_type: enum (of string); system.ready: boolean; system.reboot.info: object; system.release_notes_url: string; system.security.config: object; system.security.info.fips_available: boolean; system.security.info.fips_enabled: boolean; system.state: enum (of string); system.version: string; system.version_short: string; systemdataset.config: object; systemdataset.pool_choices: object; tn_connect.config: object; tn_connect.get_registration_uri: string; tn_connect.ip_choices: object; truecommand.config: object; truenas.get_chassis_hardware: string; truenas.get_eula: string; truenas.is_eula_accepted: boolean; truenas.is_ix_hardware: boolean; truenas.is_production: boolean; truenas.managed_by_truecommand: boolean; tunable.get_instance: object; tunable.query: array of object; tunable.tunable_type_choices: object; update.available_versions: array of object; update.config: object; update.profile_choices: object; update.status: object; ups.config: object; ups.driver_choices: object; ups.port_choices: array of string; user.get_instance: object; user.get_next_uid: integer; user.get_user_obj: object; user.has_local_administrator_set_up: boolean; user.query: array of object; user.shell_choices: object; virt.device.disk_choices: object; virt.device.gpu_choices: object; virt.device.nic_choices: object; virt.device.pci_choices: object; virt.device.usb_choices: object; virt.global.bridge_choices: object; virt.global.config: object; virt.global.get_network: object; virt.global.pool_choices: object; virt.instance.device_list: array; virt.instance.get_instance: object; virt.instance.image_choices: object; virt.instance.query: array of object; virt.volume.get_instance: object; virt.volume.query: array of object; vm.bootloader_options: object; vm.bootloader_ovmf_choices: object; vm.cpu_model_choices: object; vm.device.bind_choices: object; vm.device.disk_choices: object; vm.device.get_instance: object; vm.device.iommu_enabled: boolean; vm.device.iotype_choices: object; vm.device.nic_attach_choices: object; vm.device.passthrough_device: object; vm.device.passthrough_device_choices: object; vm.device.pptdev_choices: object; vm.device.query: array of object; vm.device.usb_controller_choices: object; vm.device.usb_passthrough_choices: object; vm.device.usb_passthrough_device: object; vm.device.virtual_size: integer; vm.flags: object; vm.get_available_memory: integer; vm.get_display_devices: array of object; vm.get_display_web_uri: object; vm.get_instance: object; vm.get_memory_usage: integer; vm.get_vm_memory_info: object; vm.get_vmemory_in_use: object; vm.guest_architecture_and_machine_choices: object; vm.log_file_path: string; vm.maximum_supported_vcpus: integer; vm.port_wizard: object; vm.query: array of object; vm.random_mac: string; vm.resolution_choices: object; vm.status: object; vm.supports_virtualization: boolean; vm.virtualization_details: object; vmware.dataset_has_vms: boolean; vmware.get_datastores: array of string; vmware.get_instance: object; vmware.match_datastores_with_datasets: object; vmware.query: array of object; zfs.resource.query: array of object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/audit_config.json; tests/fixtures/api_25_10_2/boot_environment_query.json; tests/test_api_catalog.py; tests/test_event_stream_liveness.py",
       "implementation_status": "generic extraction",
@@ -8261,7 +8355,9 @@
         "vmware.query",
         "zfs.resource.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Method Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.authenticator_schemas: array of object; acme.dns.authenticator.get_instance: object; acme.dns.authenticator.query: array of object; alert.list: array of object; alert.list_categories: array of object; alert.list_policies: array of string; alertclasses.config: object; alertservice.get_instance: object; alertservice.query: array of object; api_key.get_instance: object; api_key.my_keys: array of object; api_key.query: array of object; app.available: array of object; app.available_space: integer; app.categories: array of string; app.certificate_choices: array of object; app.config: object; app.container_console_choices: object; app.container_ids: object; app.get_instance: object; app.gpu_choices: object; app.image.dockerhub_rate_limit: object; app.image.get_instance: object; app.image.query: array of object; app.ip_choices: object; app.ix_volume.exists: boolean; app.ix_volume.query: array of object; app.latest: array of object; app.outdated_docker_images: array of string; app.query: array of object; app.registry.get_instance: object; app.registry.query: array of object; app.rollback_versions: array of string; app.similar: array of object; app.upgrade_summary: object; app.used_host_ips: object; app.used_ports: array of integer; audit.config: object; audit.query: integer; auth.me: object; auth.mechanism_choices: array of string; auth.sessions: array of object; auth.twofactor.config: object; boot.environment.query: array of object; boot.get_disks: array of string; boot.get_state: object; catalog.apps: object; catalog.config: object; catalog.get_app_details: object; catalog.trains: array of string; certificate.acme_server_choices: object; certificate.country_choices: object; certificate.ec_curve_choices: object; certificate.extended_key_usage_choices: object; certificate.get_instance: object; certificate.query: array of object; cloud_backup.get_instance: object; cloud_backup.list_snapshot_directory: array of object; cloud_backup.list_snapshots: array of object; cloud_backup.query: array of object; cloud_backup.transfer_setting_choices: array of enum (of string); cloudsync.credentials.get_instance: object; cloudsync.credentials.query: array of object; cloudsync.get_instance: object; cloudsync.list_directory: array of object; cloudsync.providers: array of object; cloudsync.query: array of object; core.arp: object; core.get_jobs: array of object; core.get_methods: object; core.get_services: object; core.ping: const; cronjob.get_instance: object; cronjob.query: array of object; device.get_info: object; directoryservices.certificate_choices: object; directoryservices.config: object; directoryservices.status: object; disk.details: array; disk.get_instance: object; disk.get_used: array; disk.query: array of object; disk.temperature_agg: object; disk.temperature_alerts: array of object; disk.temperatures: object; dns.query: array of object; docker.config: object; docker.list_backups: object; docker.network.get_instance: object; docker.network.query: array of object; docker.nvidia_present: boolean; docker.status: object; failover.disabled.reasons: array of string; failover.reboot.info: object; fc.fc_host.get_instance: object; fc.fc_host.query: array of object; fcport.get_instance: object; fcport.port_choices: object; fcport.query: array of object; fcport.status: array; filesystem.acltemplate.by_path: array of object; filesystem.acltemplate.get_instance: object; filesystem.acltemplate.query: array of object; filesystem.get_zfs_attributes: object; filesystem.getacl: object; filesystem.listdir: array of object; filesystem.stat: object; filesystem.statfs: object; ftp.config: object; group.get_group_obj: object; group.get_instance: object; group.get_next_gid: integer; group.has_password_enabled_user: boolean; group.query: array of object; hardware.virtualization.variant: string; initshutdownscript.get_instance: object; initshutdownscript.query: array of object; interface.bridge_members_choices: object; interface.checkin_waiting: integer; interface.choices: object; interface.get_instance: object; interface.has_pending_changes: boolean; interface.ip_in_use: array of object; interface.lacpdu_rate_choices: object; interface.lag_ports_choices: object; interface.network_config_to_be_removed: array of enum (of string); interface.query: array of object; interface.services_restarted_on_sync: array of object; interface.vlan_parent_interface_choices: object; interface.websocket_interface: object; interface.websocket_local_ip: const; interface.xmit_hash_policy_choices: object; ipmi.chassis.info: object; ipmi.is_loaded: boolean; ipmi.lan.channels: array of integer; ipmi.lan.query: array of object; ipmi.sel.elist: array of object; ipmi.sel.info: object; iscsi.auth.get_instance: object; iscsi.auth.query: array of object; iscsi.extent.disk_choices: object; iscsi.extent.get_instance: object; iscsi.extent.query: array of object; iscsi.global.alua_enabled: boolean; iscsi.global.client_count: integer; iscsi.global.config: object; iscsi.global.iser_enabled: boolean; iscsi.global.sessions: array of object; iscsi.initiator.get_instance: object; iscsi.initiator.query: array of object; iscsi.portal.get_instance: object; iscsi.portal.listen_ip_choices: object; iscsi.portal.query: array of object; iscsi.target.get_instance: object; iscsi.target.query: array of object; iscsi.target.validate_name: string; iscsi.targetextent.get_instance: object; iscsi.targetextent.query: array of object; jbof.get_instance: object; jbof.licensed: integer; jbof.query: array of object; kerberos.config: object; kerberos.keytab.get_instance: object; kerberos.keytab.query: array of object; kerberos.realm.get_instance: object; kerberos.realm.query: array of object; keychaincredential.get_instance: object; keychaincredential.query: array of object; keychaincredential.used_by: array of object; kmip.config: object; kmip.kmip_sync_pending: boolean; mail.config: object; mail.local_administrator_email: string; network.configuration.activity_choices: array of array; network.configuration.config: object; network.general.summary: object; nfs.bindip_choices: object; nfs.client_count: integer; nfs.config: object; nfs.get_nfs3_clients: array of object; nfs.get_nfs4_clients: array of object; nvmet.global.config: object; nvmet.global.sessions: array of object; nvmet.host.dhchap_dhgroup_choices: array of enum (of string); nvmet.host.dhchap_hash_choices: array of enum (of string); nvmet.host.get_instance: object; nvmet.host.query: array of object; nvmet.host_subsys.get_instance: object; nvmet.host_subsys.query: array of object; nvmet.namespace.get_instance: object; nvmet.namespace.query: array of object; nvmet.port.get_instance: object; nvmet.port.query: array of object; nvmet.port.transport_address_choices: object; nvmet.port_subsys.get_instance: object; nvmet.port_subsys.query: array of object; nvmet.subsys.get_instance: object; nvmet.subsys.query: array of object; pool.attachments: array of object; pool.dataset.attachments: array of object; pool.dataset.checksum_choices: object; pool.dataset.compression_choices: object; pool.dataset.details: array of object; pool.dataset.encryption_algorithm_choices: object; pool.dataset.encryption_summary: array of object; pool.dataset.get_instance: object; pool.dataset.get_quota: array; pool.dataset.processes: array of object; pool.dataset.query: array of object; pool.dataset.recommended_zvol_blocksize: string; pool.dataset.recordsize_choices: array of string; pool.dataset.snapshot_count: integer; pool.filesystem_choices: array of string; pool.get_disks: array of string; pool.get_instance: object; pool.is_upgraded: boolean; pool.processes: array of object; pool.query: array of object; pool.resilver.config: object; pool.scrub.get_instance: object; pool.scrub.query: array of object; pool.snapshot.get_instance: object; pool.snapshot.query: array of object; pool.snapshottask.delete_will_change_retention_for: object; pool.snapshottask.get_instance: object; pool.snapshottask.max_count: integer; pool.snapshottask.max_total_count: integer; pool.snapshottask.query: array of object; pool.snapshottask.update_will_change_retention_for: object; pool.validate_name: const; privilege.get_instance: object; privilege.query: array of object; privilege.roles: array of object; replication.config.config: object; replication.count_eligible_manual_snapshots: object; replication.get_instance: object; replication.list_datasets: array of string; replication.list_naming_schemas: array of string; replication.query: array of object; replication.target_unmatched_snapshots: object; reporting.config: object; reporting.exporters.exporter_schemas: array of object; reporting.exporters.get_instance: object; reporting.exporters.query: array of object; reporting.get_data: array of object; reporting.graph: array of object; reporting.graphs: array of object; reporting.netdata_get_data: array of object; reporting.netdata_graph: array of object; reporting.netdata_graphs: array of object; route.ipv4gw_reachable: boolean; route.system_routes: array of object; rsynctask.get_instance: object; rsynctask.query: array of object; service.get_instance: object; service.query: array of object; service.started: boolean; service.started_or_enabled: boolean; sharing.nfs.get_instance: object; sharing.nfs.query: array of object; sharing.smb.get_instance: object; sharing.smb.getacl: object; sharing.smb.presets: object; sharing.smb.query: array of object; sharing.smb.share_precheck: null; smb.bindip_choices: object; smb.config: object; smb.unixcharset_choices: object; snmp.config: object; ssh.bindiface_choices: object; ssh.config: object; staticroute.get_instance: object; staticroute.query: array of object; support.attach_ticket_max_size: integer; support.config: object; support.fields: array of array; support.is_available: boolean; support.is_available_and_enabled: boolean; support.similar_issues: array of object; system.advanced.config: object; system.advanced.get_gpu_pci_choices: object; system.advanced.login_banner: string; system.advanced.sed_global_password: string; system.advanced.sed_global_password_is_set: boolean; system.advanced.serial_port_choices: object; system.advanced.syslog_certificate_authority_choices: object; system.advanced.syslog_certificate_choices: object; system.boot_id: string; system.feature_enabled: boolean; system.general.checkin_waiting: integer; system.general.config: object; system.general.country_choices: object; system.general.kbdmap_choices: object; system.general.local_url: string; system.general.timezone_choices: object; system.general.ui_address_choices: object; system.general.ui_certificate_choices: object; system.general.ui_httpsprotocols_choices: object; system.general.ui_v6address_choices: object; system.global.id: string; system.host_id: string; system.info: object; system.ntpserver.get_instance: object; system.ntpserver.query: array of object; system.product_type: enum (of string); system.ready: boolean; system.reboot.info: object; system.release_notes_url: string; system.security.config: object; system.security.info.fips_available: boolean; system.security.info.fips_enabled: boolean; system.state: enum (of string); system.version: string; system.version_short: string; systemdataset.config: object; systemdataset.pool_choices: object; tn_connect.config: object; tn_connect.get_registration_uri: string; tn_connect.ip_choices: object; truecommand.config: object; truenas.get_chassis_hardware: string; truenas.get_eula: string; truenas.is_eula_accepted: boolean; truenas.is_ix_hardware: boolean; truenas.is_production: boolean; truenas.managed_by_truecommand: boolean; tunable.get_instance: object; tunable.query: array of object; tunable.tunable_type_choices: object; update.available_versions: array of object; update.config: object; update.profile_choices: object; update.status: object; ups.config: object; ups.driver_choices: object; ups.port_choices: array of string; user.get_instance: object; user.get_next_uid: integer; user.get_user_obj: object; user.has_local_administrator_set_up: boolean; user.query: array of object; user.shell_choices: object; virt.device.disk_choices: object; virt.device.gpu_choices: object; virt.device.nic_choices: object; virt.device.pci_choices: object; virt.device.usb_choices: object; virt.global.bridge_choices: object; virt.global.config: object; virt.global.get_network: object; virt.global.pool_choices: object; virt.instance.device_list: array; virt.instance.get_instance: object; virt.instance.image_choices: object; virt.instance.query: array of object; virt.volume.get_instance: object; virt.volume.query: array of object; vm.bootloader_options: object; vm.bootloader_ovmf_choices: object; vm.cpu_model_choices: object; vm.device.bind_choices: object; vm.device.disk_choices: object; vm.device.get_instance: object; vm.device.iommu_enabled: boolean; vm.device.iotype_choices: object; vm.device.nic_attach_choices: object; vm.device.passthrough_device: object; vm.device.passthrough_device_choices: object; vm.device.pptdev_choices: object; vm.device.query: array of object; vm.device.usb_controller_choices: object; vm.device.usb_passthrough_choices: object; vm.device.usb_passthrough_device: object; vm.device.virtual_size: integer; vm.flags: object; vm.get_available_memory: integer; vm.get_display_devices: array of object; vm.get_display_web_uri: object; vm.get_instance: object; vm.get_memory_usage: integer; vm.get_vm_memory_info: object; vm.get_vmemory_in_use: object; vm.guest_architecture_and_machine_choices: object; vm.log_file_path: string; vm.maximum_supported_vcpus: integer; vm.port_wizard: object; vm.query: array of object; vm.random_mac: string; vm.resolution_choices: object; vm.status: object; vm.supports_virtualization: boolean; vm.virtualization_details: object; vmware.dataset_has_vms: boolean; vmware.get_datastores: array of string; vmware.get_instance: object; vmware.match_datastores_with_datasets: object; vmware.query: array of object; zfs.resource.query: array of object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/audit_config.json; tests/fixtures/api_25_10_2/boot_environment_query.json; tests/test_api_catalog.py; tests/test_event_stream_liveness.py",
       "implementation_status": "generic extraction",
@@ -8684,7 +8780,9 @@
         "vmware.query",
         "zfs.resource.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Method Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.authenticator_schemas: array of object; acme.dns.authenticator.get_instance: object; acme.dns.authenticator.query: array of object; alert.list: array of object; alert.list_categories: array of object; alert.list_policies: array of string; alertclasses.config: object; alertservice.get_instance: object; alertservice.query: array of object; api_key.get_instance: object; api_key.my_keys: array of object; api_key.query: array of object; app.available: array of object; app.available_space: integer; app.categories: array of string; app.certificate_choices: array of object; app.config: object; app.container_console_choices: object; app.container_ids: object; app.get_instance: object; app.gpu_choices: object; app.image.dockerhub_rate_limit: object; app.image.get_instance: object; app.image.query: array of object; app.ip_choices: object; app.ix_volume.exists: boolean; app.ix_volume.query: array of object; app.latest: array of object; app.outdated_docker_images: array of string; app.query: array of object; app.registry.get_instance: object; app.registry.query: array of object; app.rollback_versions: array of string; app.similar: array of object; app.upgrade_summary: object; app.used_host_ips: object; app.used_ports: array of integer; audit.config: object; audit.query: integer; auth.me: object; auth.mechanism_choices: array of string; auth.sessions: array of object; auth.twofactor.config: object; boot.environment.query: array of object; boot.get_disks: array of string; boot.get_state: object; catalog.apps: object; catalog.config: object; catalog.get_app_details: object; catalog.trains: array of string; certificate.acme_server_choices: object; certificate.country_choices: object; certificate.ec_curve_choices: object; certificate.extended_key_usage_choices: object; certificate.get_instance: object; certificate.query: array of object; cloud_backup.get_instance: object; cloud_backup.list_snapshot_directory: array of object; cloud_backup.list_snapshots: array of object; cloud_backup.query: array of object; cloud_backup.transfer_setting_choices: array of enum (of string); cloudsync.credentials.get_instance: object; cloudsync.credentials.query: array of object; cloudsync.get_instance: object; cloudsync.list_directory: array of object; cloudsync.providers: array of object; cloudsync.query: array of object; core.arp: object; core.get_jobs: array of object; core.get_methods: object; core.get_services: object; core.ping: const; cronjob.get_instance: object; cronjob.query: array of object; device.get_info: object; directoryservices.certificate_choices: object; directoryservices.config: object; directoryservices.status: object; disk.details: array; disk.get_instance: object; disk.get_used: array; disk.query: array of object; disk.temperature_agg: object; disk.temperature_alerts: array of object; disk.temperatures: object; dns.query: array of object; docker.config: object; docker.list_backups: object; docker.network.get_instance: object; docker.network.query: array of object; docker.nvidia_present: boolean; docker.status: object; failover.disabled.reasons: array of string; failover.reboot.info: object; fc.fc_host.get_instance: object; fc.fc_host.query: array of object; fcport.get_instance: object; fcport.port_choices: object; fcport.query: array of object; fcport.status: array; filesystem.acltemplate.by_path: array of object; filesystem.acltemplate.get_instance: object; filesystem.acltemplate.query: array of object; filesystem.get_zfs_attributes: object; filesystem.getacl: object; filesystem.listdir: array of object; filesystem.stat: object; filesystem.statfs: object; ftp.config: object; group.get_group_obj: object; group.get_instance: object; group.get_next_gid: integer; group.has_password_enabled_user: boolean; group.query: array of object; hardware.virtualization.variant: string; initshutdownscript.get_instance: object; initshutdownscript.query: array of object; interface.bridge_members_choices: object; interface.checkin_waiting: integer; interface.choices: object; interface.get_instance: object; interface.has_pending_changes: boolean; interface.ip_in_use: array of object; interface.lacpdu_rate_choices: object; interface.lag_ports_choices: object; interface.network_config_to_be_removed: array of enum (of string); interface.query: array of object; interface.services_restarted_on_sync: array of object; interface.vlan_parent_interface_choices: object; interface.websocket_interface: object; interface.websocket_local_ip: const; interface.xmit_hash_policy_choices: object; ipmi.chassis.info: object; ipmi.is_loaded: boolean; ipmi.lan.channels: array of integer; ipmi.lan.query: array of object; ipmi.sel.elist: array of object; ipmi.sel.info: object; iscsi.auth.get_instance: object; iscsi.auth.query: array of object; iscsi.extent.disk_choices: object; iscsi.extent.get_instance: object; iscsi.extent.query: array of object; iscsi.global.alua_enabled: boolean; iscsi.global.client_count: integer; iscsi.global.config: object; iscsi.global.iser_enabled: boolean; iscsi.global.sessions: array of object; iscsi.initiator.get_instance: object; iscsi.initiator.query: array of object; iscsi.portal.get_instance: object; iscsi.portal.listen_ip_choices: object; iscsi.portal.query: array of object; iscsi.target.get_instance: object; iscsi.target.query: array of object; iscsi.target.validate_name: string; iscsi.targetextent.get_instance: object; iscsi.targetextent.query: array of object; jbof.get_instance: object; jbof.licensed: integer; jbof.query: array of object; kerberos.config: object; kerberos.keytab.get_instance: object; kerberos.keytab.query: array of object; kerberos.realm.get_instance: object; kerberos.realm.query: array of object; keychaincredential.get_instance: object; keychaincredential.query: array of object; keychaincredential.used_by: array of object; kmip.config: object; kmip.kmip_sync_pending: boolean; mail.config: object; mail.local_administrator_email: string; network.configuration.activity_choices: array of array; network.configuration.config: object; network.general.summary: object; nfs.bindip_choices: object; nfs.client_count: integer; nfs.config: object; nfs.get_nfs3_clients: array of object; nfs.get_nfs4_clients: array of object; nvmet.global.config: object; nvmet.global.sessions: array of object; nvmet.host.dhchap_dhgroup_choices: array of enum (of string); nvmet.host.dhchap_hash_choices: array of enum (of string); nvmet.host.get_instance: object; nvmet.host.query: array of object; nvmet.host_subsys.get_instance: object; nvmet.host_subsys.query: array of object; nvmet.namespace.get_instance: object; nvmet.namespace.query: array of object; nvmet.port.get_instance: object; nvmet.port.query: array of object; nvmet.port.transport_address_choices: object; nvmet.port_subsys.get_instance: object; nvmet.port_subsys.query: array of object; nvmet.subsys.get_instance: object; nvmet.subsys.query: array of object; pool.attachments: array of object; pool.dataset.attachments: array of object; pool.dataset.checksum_choices: object; pool.dataset.compression_choices: object; pool.dataset.details: array of object; pool.dataset.encryption_algorithm_choices: object; pool.dataset.encryption_summary: array of object; pool.dataset.get_instance: object; pool.dataset.get_quota: array; pool.dataset.processes: array of object; pool.dataset.query: array of object; pool.dataset.recommended_zvol_blocksize: string; pool.dataset.recordsize_choices: array of string; pool.dataset.snapshot_count: integer; pool.filesystem_choices: array of string; pool.get_disks: array of string; pool.get_instance: object; pool.is_upgraded: boolean; pool.processes: array of object; pool.query: array of object; pool.resilver.config: object; pool.scrub.get_instance: object; pool.scrub.query: array of object; pool.snapshot.get_instance: object; pool.snapshot.query: array of object; pool.snapshottask.delete_will_change_retention_for: object; pool.snapshottask.get_instance: object; pool.snapshottask.max_count: integer; pool.snapshottask.max_total_count: integer; pool.snapshottask.query: array of object; pool.snapshottask.update_will_change_retention_for: object; pool.validate_name: const; privilege.get_instance: object; privilege.query: array of object; privilege.roles: array of object; replication.config.config: object; replication.count_eligible_manual_snapshots: object; replication.get_instance: object; replication.list_datasets: array of string; replication.list_naming_schemas: array of string; replication.query: array of object; replication.target_unmatched_snapshots: object; reporting.config: object; reporting.exporters.exporter_schemas: array of object; reporting.exporters.get_instance: object; reporting.exporters.query: array of object; reporting.get_data: array of object; reporting.graph: array of object; reporting.graphs: array of object; reporting.netdata_get_data: array of object; reporting.netdata_graph: array of object; reporting.netdata_graphs: array of object; route.ipv4gw_reachable: boolean; route.system_routes: array of object; rsynctask.get_instance: object; rsynctask.query: array of object; service.get_instance: object; service.query: array of object; service.started: boolean; service.started_or_enabled: boolean; sharing.nfs.get_instance: object; sharing.nfs.query: array of object; sharing.smb.get_instance: object; sharing.smb.getacl: object; sharing.smb.presets: object; sharing.smb.query: array of object; sharing.smb.share_precheck: null; smb.bindip_choices: object; smb.config: object; smb.unixcharset_choices: object; snmp.config: object; ssh.bindiface_choices: object; ssh.config: object; staticroute.get_instance: object; staticroute.query: array of object; support.attach_ticket_max_size: integer; support.config: object; support.fields: array of array; support.is_available: boolean; support.is_available_and_enabled: boolean; support.similar_issues: array of object; system.advanced.config: object; system.advanced.get_gpu_pci_choices: object; system.advanced.login_banner: string; system.advanced.sed_global_password: string; system.advanced.sed_global_password_is_set: boolean; system.advanced.serial_port_choices: object; system.advanced.syslog_certificate_authority_choices: object; system.advanced.syslog_certificate_choices: object; system.boot_id: string; system.feature_enabled: boolean; system.general.checkin_waiting: integer; system.general.config: object; system.general.country_choices: object; system.general.kbdmap_choices: object; system.general.local_url: string; system.general.timezone_choices: object; system.general.ui_address_choices: object; system.general.ui_certificate_choices: object; system.general.ui_httpsprotocols_choices: object; system.general.ui_v6address_choices: object; system.global.id: string; system.host_id: string; system.info: object; system.ntpserver.get_instance: object; system.ntpserver.query: array of object; system.product_type: enum (of string); system.ready: boolean; system.reboot.info: object; system.release_notes_url: string; system.security.config: object; system.security.info.fips_available: boolean; system.security.info.fips_enabled: boolean; system.state: enum (of string); system.version: string; system.version_short: string; systemdataset.config: object; systemdataset.pool_choices: object; tn_connect.config: object; tn_connect.get_registration_uri: string; tn_connect.ip_choices: object; truecommand.config: object; truenas.get_chassis_hardware: string; truenas.get_eula: string; truenas.is_eula_accepted: boolean; truenas.is_ix_hardware: boolean; truenas.is_production: boolean; truenas.managed_by_truecommand: boolean; tunable.get_instance: object; tunable.query: array of object; tunable.tunable_type_choices: object; update.available_versions: array of object; update.config: object; update.profile_choices: object; update.status: object; ups.config: object; ups.driver_choices: object; ups.port_choices: array of string; user.get_instance: object; user.get_next_uid: integer; user.get_user_obj: object; user.has_local_administrator_set_up: boolean; user.query: array of object; user.shell_choices: object; virt.device.disk_choices: object; virt.device.gpu_choices: object; virt.device.nic_choices: object; virt.device.pci_choices: object; virt.device.usb_choices: object; virt.global.bridge_choices: object; virt.global.config: object; virt.global.get_network: object; virt.global.pool_choices: object; virt.instance.device_list: array; virt.instance.get_instance: object; virt.instance.image_choices: object; virt.instance.query: array of object; virt.volume.get_instance: object; virt.volume.query: array of object; vm.bootloader_options: object; vm.bootloader_ovmf_choices: object; vm.cpu_model_choices: object; vm.device.bind_choices: object; vm.device.disk_choices: object; vm.device.get_instance: object; vm.device.iommu_enabled: boolean; vm.device.iotype_choices: object; vm.device.nic_attach_choices: object; vm.device.passthrough_device: object; vm.device.passthrough_device_choices: object; vm.device.pptdev_choices: object; vm.device.query: array of object; vm.device.usb_controller_choices: object; vm.device.usb_passthrough_choices: object; vm.device.usb_passthrough_device: object; vm.device.virtual_size: integer; vm.flags: object; vm.get_available_memory: integer; vm.get_display_devices: array of object; vm.get_display_web_uri: object; vm.get_instance: object; vm.get_memory_usage: integer; vm.get_vm_memory_info: object; vm.get_vmemory_in_use: object; vm.guest_architecture_and_machine_choices: object; vm.log_file_path: string; vm.maximum_supported_vcpus: integer; vm.port_wizard: object; vm.query: array of object; vm.random_mac: string; vm.resolution_choices: object; vm.status: object; vm.supports_virtualization: boolean; vm.virtualization_details: object; vmware.dataset_has_vms: boolean; vmware.get_datastores: array of string; vmware.get_instance: object; vmware.match_datastores_with_datasets: object; vmware.query: array of object; zfs.resource.query: array of object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/audit_config.json; tests/fixtures/api_25_10_2/boot_environment_query.json; tests/test_api_catalog.py; tests/test_event_stream_liveness.py",
       "implementation_status": "generic extraction",
@@ -9108,7 +9206,9 @@
         "vmware.query",
         "zfs.resource.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Generic Method Field Extraction"
+      ],
       "documented_type_unit": "acme.dns.authenticator.authenticator_schemas: array of object; acme.dns.authenticator.get_instance: object; acme.dns.authenticator.query: array of object; alert.list: array of object; alert.list_categories: array of object; alert.list_policies: array of string; alertclasses.config: object; alertservice.get_instance: object; alertservice.query: array of object; api_key.get_instance: object; api_key.my_keys: array of object; api_key.query: array of object; app.available: array of object; app.available_space: integer; app.categories: array of string; app.certificate_choices: array of object; app.config: object; app.container_console_choices: object; app.container_ids: object; app.get_instance: object; app.gpu_choices: object; app.image.dockerhub_rate_limit: object; app.image.get_instance: object; app.image.query: array of object; app.ip_choices: object; app.ix_volume.exists: boolean; app.ix_volume.query: array of object; app.latest: array of object; app.outdated_docker_images: array of string; app.query: array of object; app.registry.get_instance: object; app.registry.query: array of object; app.rollback_versions: array of string; app.similar: array of object; app.upgrade_summary: object; app.used_host_ips: object; app.used_ports: array of integer; audit.config: object; audit.query: integer; auth.me: object; auth.mechanism_choices: array of string; auth.sessions: array of object; auth.twofactor.config: object; boot.environment.query: array of object; boot.get_disks: array of string; boot.get_state: object; catalog.apps: object; catalog.config: object; catalog.get_app_details: object; catalog.trains: array of string; certificate.acme_server_choices: object; certificate.country_choices: object; certificate.ec_curve_choices: object; certificate.extended_key_usage_choices: object; certificate.get_instance: object; certificate.query: array of object; cloud_backup.get_instance: object; cloud_backup.list_snapshot_directory: array of object; cloud_backup.list_snapshots: array of object; cloud_backup.query: array of object; cloud_backup.transfer_setting_choices: array of enum (of string); cloudsync.credentials.get_instance: object; cloudsync.credentials.query: array of object; cloudsync.get_instance: object; cloudsync.list_directory: array of object; cloudsync.providers: array of object; cloudsync.query: array of object; core.arp: object; core.get_jobs: array of object; core.get_methods: object; core.get_services: object; core.ping: const; cronjob.get_instance: object; cronjob.query: array of object; device.get_info: object; directoryservices.certificate_choices: object; directoryservices.config: object; directoryservices.status: object; disk.details: array; disk.get_instance: object; disk.get_used: array; disk.query: array of object; disk.temperature_agg: object; disk.temperature_alerts: array of object; disk.temperatures: object; dns.query: array of object; docker.config: object; docker.list_backups: object; docker.network.get_instance: object; docker.network.query: array of object; docker.nvidia_present: boolean; docker.status: object; failover.disabled.reasons: array of string; failover.reboot.info: object; fc.fc_host.get_instance: object; fc.fc_host.query: array of object; fcport.get_instance: object; fcport.port_choices: object; fcport.query: array of object; fcport.status: array; filesystem.acltemplate.by_path: array of object; filesystem.acltemplate.get_instance: object; filesystem.acltemplate.query: array of object; filesystem.get_zfs_attributes: object; filesystem.getacl: object; filesystem.listdir: array of object; filesystem.stat: object; filesystem.statfs: object; ftp.config: object; group.get_group_obj: object; group.get_instance: object; group.get_next_gid: integer; group.has_password_enabled_user: boolean; group.query: array of object; hardware.virtualization.variant: string; initshutdownscript.get_instance: object; initshutdownscript.query: array of object; interface.bridge_members_choices: object; interface.checkin_waiting: integer; interface.choices: object; interface.get_instance: object; interface.has_pending_changes: boolean; interface.ip_in_use: array of object; interface.lacpdu_rate_choices: object; interface.lag_ports_choices: object; interface.network_config_to_be_removed: array of enum (of string); interface.query: array of object; interface.services_restarted_on_sync: array of object; interface.vlan_parent_interface_choices: object; interface.websocket_interface: object; interface.websocket_local_ip: const; interface.xmit_hash_policy_choices: object; ipmi.chassis.info: object; ipmi.is_loaded: boolean; ipmi.lan.channels: array of integer; ipmi.lan.query: array of object; ipmi.sel.elist: array of object; ipmi.sel.info: object; iscsi.auth.get_instance: object; iscsi.auth.query: array of object; iscsi.extent.disk_choices: object; iscsi.extent.get_instance: object; iscsi.extent.query: array of object; iscsi.global.alua_enabled: boolean; iscsi.global.client_count: integer; iscsi.global.config: object; iscsi.global.iser_enabled: boolean; iscsi.global.sessions: array of object; iscsi.initiator.get_instance: object; iscsi.initiator.query: array of object; iscsi.portal.get_instance: object; iscsi.portal.listen_ip_choices: object; iscsi.portal.query: array of object; iscsi.target.get_instance: object; iscsi.target.query: array of object; iscsi.target.validate_name: string; iscsi.targetextent.get_instance: object; iscsi.targetextent.query: array of object; jbof.get_instance: object; jbof.licensed: integer; jbof.query: array of object; kerberos.config: object; kerberos.keytab.get_instance: object; kerberos.keytab.query: array of object; kerberos.realm.get_instance: object; kerberos.realm.query: array of object; keychaincredential.get_instance: object; keychaincredential.query: array of object; keychaincredential.used_by: array of object; kmip.config: object; kmip.kmip_sync_pending: boolean; mail.config: object; mail.local_administrator_email: string; network.configuration.activity_choices: array of array; network.configuration.config: object; network.general.summary: object; nfs.bindip_choices: object; nfs.client_count: integer; nfs.config: object; nfs.get_nfs3_clients: array of object; nfs.get_nfs4_clients: array of object; nvmet.global.config: object; nvmet.global.sessions: array of object; nvmet.host.dhchap_dhgroup_choices: array of enum (of string); nvmet.host.dhchap_hash_choices: array of enum (of string); nvmet.host.get_instance: object; nvmet.host.query: array of object; nvmet.host_subsys.get_instance: object; nvmet.host_subsys.query: array of object; nvmet.namespace.get_instance: object; nvmet.namespace.query: array of object; nvmet.port.get_instance: object; nvmet.port.query: array of object; nvmet.port.transport_address_choices: object; nvmet.port_subsys.get_instance: object; nvmet.port_subsys.query: array of object; nvmet.subsys.get_instance: object; nvmet.subsys.query: array of object; pool.attachments: array of object; pool.dataset.attachments: array of object; pool.dataset.checksum_choices: object; pool.dataset.compression_choices: object; pool.dataset.details: array of object; pool.dataset.encryption_algorithm_choices: object; pool.dataset.encryption_summary: array of object; pool.dataset.get_instance: object; pool.dataset.get_quota: array; pool.dataset.processes: array of object; pool.dataset.query: array of object; pool.dataset.recommended_zvol_blocksize: string; pool.dataset.recordsize_choices: array of string; pool.dataset.snapshot_count: integer; pool.filesystem_choices: array of string; pool.get_disks: array of string; pool.get_instance: object; pool.is_upgraded: boolean; pool.processes: array of object; pool.query: array of object; pool.resilver.config: object; pool.scrub.get_instance: object; pool.scrub.query: array of object; pool.snapshot.get_instance: object; pool.snapshot.query: array of object; pool.snapshottask.delete_will_change_retention_for: object; pool.snapshottask.get_instance: object; pool.snapshottask.max_count: integer; pool.snapshottask.max_total_count: integer; pool.snapshottask.query: array of object; pool.snapshottask.update_will_change_retention_for: object; pool.validate_name: const; privilege.get_instance: object; privilege.query: array of object; privilege.roles: array of object; replication.config.config: object; replication.count_eligible_manual_snapshots: object; replication.get_instance: object; replication.list_datasets: array of string; replication.list_naming_schemas: array of string; replication.query: array of object; replication.target_unmatched_snapshots: object; reporting.config: object; reporting.exporters.exporter_schemas: array of object; reporting.exporters.get_instance: object; reporting.exporters.query: array of object; reporting.get_data: array of object; reporting.graph: array of object; reporting.graphs: array of object; reporting.netdata_get_data: array of object; reporting.netdata_graph: array of object; reporting.netdata_graphs: array of object; route.ipv4gw_reachable: boolean; route.system_routes: array of object; rsynctask.get_instance: object; rsynctask.query: array of object; service.get_instance: object; service.query: array of object; service.started: boolean; service.started_or_enabled: boolean; sharing.nfs.get_instance: object; sharing.nfs.query: array of object; sharing.smb.get_instance: object; sharing.smb.getacl: object; sharing.smb.presets: object; sharing.smb.query: array of object; sharing.smb.share_precheck: null; smb.bindip_choices: object; smb.config: object; smb.unixcharset_choices: object; snmp.config: object; ssh.bindiface_choices: object; ssh.config: object; staticroute.get_instance: object; staticroute.query: array of object; support.attach_ticket_max_size: integer; support.config: object; support.fields: array of array; support.is_available: boolean; support.is_available_and_enabled: boolean; support.similar_issues: array of object; system.advanced.config: object; system.advanced.get_gpu_pci_choices: object; system.advanced.login_banner: string; system.advanced.sed_global_password: string; system.advanced.sed_global_password_is_set: boolean; system.advanced.serial_port_choices: object; system.advanced.syslog_certificate_authority_choices: object; system.advanced.syslog_certificate_choices: object; system.boot_id: string; system.feature_enabled: boolean; system.general.checkin_waiting: integer; system.general.config: object; system.general.country_choices: object; system.general.kbdmap_choices: object; system.general.local_url: string; system.general.timezone_choices: object; system.general.ui_address_choices: object; system.general.ui_certificate_choices: object; system.general.ui_httpsprotocols_choices: object; system.general.ui_v6address_choices: object; system.global.id: string; system.host_id: string; system.info: object; system.ntpserver.get_instance: object; system.ntpserver.query: array of object; system.product_type: enum (of string); system.ready: boolean; system.reboot.info: object; system.release_notes_url: string; system.security.config: object; system.security.info.fips_available: boolean; system.security.info.fips_enabled: boolean; system.state: enum (of string); system.version: string; system.version_short: string; systemdataset.config: object; systemdataset.pool_choices: object; tn_connect.config: object; tn_connect.get_registration_uri: string; tn_connect.ip_choices: object; truecommand.config: object; truenas.get_chassis_hardware: string; truenas.get_eula: string; truenas.is_eula_accepted: boolean; truenas.is_ix_hardware: boolean; truenas.is_production: boolean; truenas.managed_by_truecommand: boolean; tunable.get_instance: object; tunable.query: array of object; tunable.tunable_type_choices: object; update.available_versions: array of object; update.config: object; update.profile_choices: object; update.status: object; ups.config: object; ups.driver_choices: object; ups.port_choices: array of string; user.get_instance: object; user.get_next_uid: integer; user.get_user_obj: object; user.has_local_administrator_set_up: boolean; user.query: array of object; user.shell_choices: object; virt.device.disk_choices: object; virt.device.gpu_choices: object; virt.device.nic_choices: object; virt.device.pci_choices: object; virt.device.usb_choices: object; virt.global.bridge_choices: object; virt.global.config: object; virt.global.get_network: object; virt.global.pool_choices: object; virt.instance.device_list: array; virt.instance.get_instance: object; virt.instance.image_choices: object; virt.instance.query: array of object; virt.volume.get_instance: object; virt.volume.query: array of object; vm.bootloader_options: object; vm.bootloader_ovmf_choices: object; vm.cpu_model_choices: object; vm.device.bind_choices: object; vm.device.disk_choices: object; vm.device.get_instance: object; vm.device.iommu_enabled: boolean; vm.device.iotype_choices: object; vm.device.nic_attach_choices: object; vm.device.passthrough_device: object; vm.device.passthrough_device_choices: object; vm.device.pptdev_choices: object; vm.device.query: array of object; vm.device.usb_controller_choices: object; vm.device.usb_passthrough_choices: object; vm.device.usb_passthrough_device: object; vm.device.virtual_size: integer; vm.flags: object; vm.get_available_memory: integer; vm.get_display_devices: array of object; vm.get_display_web_uri: object; vm.get_instance: object; vm.get_memory_usage: integer; vm.get_vm_memory_info: object; vm.get_vmemory_in_use: object; vm.guest_architecture_and_machine_choices: object; vm.log_file_path: string; vm.maximum_supported_vcpus: integer; vm.port_wizard: object; vm.query: array of object; vm.random_mac: string; vm.resolution_choices: object; vm.status: object; vm.supports_virtualization: boolean; vm.virtualization_details: object; vmware.dataset_has_vms: boolean; vmware.get_datastores: array of string; vmware.get_instance: object; vmware.match_datastores_with_datasets: object; vmware.query: array of object; zfs.resource.query: array of object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/audit_config.json; tests/fixtures/api_25_10_2/boot_environment_query.json; tests/test_api_catalog.py; tests/test_event_stream_liveness.py",
       "implementation_status": "generic extraction",
@@ -9630,7 +9730,9 @@
       "api_method_or_event": [
         "system.ntpserver.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "NTP Prefer"
+      ],
       "documented_type_unit": "system.ntpserver.query: boolean; Prometheus unit: count",
       "fixture_test": "tests/fixtures/api_25_10_2/system_ntpserver_query.json; tests/test_phase1_metrics.py; tests/test_runtime_api_parity.py",
       "implementation_status": "active dedicated",
@@ -10113,7 +10215,10 @@
       "api_method_or_event": [
         "pool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Oldest Scan",
+        "Pool Status & Scrub Detail"
+      ],
       "documented_type_unit": "pool.query: array of object; Prometheus unit: Unix seconds",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -10138,7 +10243,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Realtime Capacity"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: bytes",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -10188,7 +10295,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Realtime Capacity"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: bytes",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -10212,7 +10321,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Realtime Capacity"
+      ],
       "documented_type_unit": "reporting.realtime: schema union/object; Prometheus unit: bytes",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -10286,7 +10397,9 @@
       "api_method_or_event": [
         "pool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Scan Bytes Progress"
+      ],
       "documented_type_unit": "pool.query: array of object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -10311,7 +10424,9 @@
       "api_method_or_event": [
         "pool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Scan Bytes Progress"
+      ],
       "documented_type_unit": "pool.query: array of object; Prometheus unit: bytes",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -10336,7 +10451,9 @@
       "api_method_or_event": [
         "pool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Scan Errors"
+      ],
       "documented_type_unit": "pool.query: array of object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -10388,7 +10505,10 @@
       "api_method_or_event": [
         "pool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Scan ETA",
+        "Scanning Now"
+      ],
       "documented_type_unit": "pool.query: array of object; Prometheus unit: seconds",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -10461,7 +10581,10 @@
       "api_method_or_event": [
         "pool.scrub.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Status & Scrub Detail",
+        "Scrub Enabled"
+      ],
       "documented_type_unit": "pool.scrub.query: boolean/string; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -10543,7 +10666,9 @@
       "api_method_or_event": [
         "pool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Status & Scrub Detail"
+      ],
       "documented_type_unit": "pool.query: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -10569,7 +10694,9 @@
       "api_method_or_event": [
         "zpool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Status & Scrub Detail"
+      ],
       "documented_type_unit": "zpool.query (v26-only; docs/truenas-api-v26/methods/zpool/query.md): string/null; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_t21_low_cost_metrics.py",
       "implementation_status": "active dedicated",
@@ -10674,7 +10801,10 @@
       "api_method_or_event": [
         "pool.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pool Status & Scrub Detail",
+        "Pools Warning"
+      ],
       "documented_type_unit": "pool.query: boolean; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -11280,7 +11410,9 @@
       "api_method_or_event": [
         "pool.snapshottask.max_count"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Snap Task Max"
+      ],
       "documented_type_unit": "pool.snapshottask.max_count: integer; Prometheus unit: count",
       "fixture_test": "tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -11302,7 +11434,9 @@
       "api_method_or_event": [
         "pool.snapshottask.max_total_count"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Snap Task Max Total"
+      ],
       "documented_type_unit": "pool.snapshottask.max_total_count: integer; Prometheus unit: count",
       "fixture_test": "tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -11418,7 +11552,9 @@
       "api_method_or_event": [
         "support.is_available"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Support Avail"
+      ],
       "documented_type_unit": "support.is_available: boolean; Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -11484,7 +11620,9 @@
       "api_method_or_event": [
         "system.boot_id"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Boot Changes"
+      ],
       "documented_type_unit": "system.boot_id: string; Prometheus unit: monotonic count",
       "fixture_test": "Metric-contract coverage only; no dedicated fixture/test reference found",
       "implementation_status": "active dedicated",
@@ -11506,7 +11644,9 @@
       "api_method_or_event": [
         "system.global.id"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "System Identity"
+      ],
       "documented_type_unit": "system.global.id: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_runtime_api_parity.py",
       "implementation_status": "active dedicated",
@@ -11531,7 +11671,9 @@
       "api_method_or_event": [
         "system.host_id"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "System Identity"
+      ],
       "documented_type_unit": "system.host_id: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "Metric-contract coverage only; no dedicated fixture/test reference found",
       "implementation_status": "active dedicated",
@@ -11557,7 +11699,9 @@
       "api_method_or_event": [
         "system.product_type"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "System Identity"
+      ],
       "documented_type_unit": "system.product_type: enum (of string); Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_runtime_api_parity.py",
       "implementation_status": "active dedicated",
@@ -11607,7 +11751,10 @@
       "api_method_or_event": [
         "system.reboot.info"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Reboot Reason",
+        "Update & Reboot Status"
+      ],
       "documented_type_unit": "system.reboot.info: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/system_reboot_info.json; tests/test_api_catalog.py; tests/test_runtime_api_parity.py",
       "implementation_status": "active dedicated",
@@ -11754,7 +11901,9 @@
       "api_method_or_event": [
         "system.security.config"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Pwd Min Age"
+      ],
       "documented_type_unit": "system.security.config: object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/system_security_config.json; tests/test_api_catalog.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -11820,7 +11969,9 @@
       "api_method_or_event": [
         "system.state"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "System Identity"
+      ],
       "documented_type_unit": "system.state: enum (of string); Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_phase1_metrics.py; tests/test_phase3_collector_mode.py",
       "implementation_status": "active dedicated",
@@ -11845,7 +11996,9 @@
       "api_method_or_event": [
         "system.version_short"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "System Identity"
+      ],
       "documented_type_unit": "system.version_short: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_event_stream_liveness.py; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -11871,7 +12024,9 @@
       "api_method_or_event": [
         "systemdataset.config"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "System Identity"
+      ],
       "documented_type_unit": "systemdataset.config: string; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -12269,7 +12424,9 @@
       "api_method_or_event": [
         "update.status"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Update & Reboot Status"
+      ],
       "documented_type_unit": "update.status: enum (of string); Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/update_status_error.json; tests/fixtures/api_25_10_2/update_status_normal.json; tests/test_phase1_metrics.py; tests/test_phase3_collector_mode.py",
       "implementation_status": "active dedicated",
@@ -12294,7 +12451,10 @@
       "api_method_or_event": [
         "update.available_versions"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Update & Reboot Status",
+        "Update Avail"
+      ],
       "documented_type_unit": "update.available_versions: array of object; Prometheus unit: dimensionless gauge",
       "fixture_test": "tests/fixtures/api_25_10_2/update_available_versions.json; tests/test_phase1_metrics.py",
       "implementation_status": "active dedicated",
@@ -12465,7 +12625,9 @@
       "api_method_or_event": [
         "virt.instance.query"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Incus Instance Running State"
+      ],
       "documented_type_unit": "virt.instance.query: enum (of string); Prometheus unit: boolean gauge (1/0)",
       "fixture_test": "tests/test_api_catalog.py; tests/test_removed_source_suppression.py",
       "implementation_status": "active dedicated",
@@ -13181,7 +13343,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Demand Data & Metadata Rates"
+      ],
       "documented_type_unit": "reporting.realtime: integer; Prometheus unit: operations/second",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -13376,7 +13540,9 @@
       "api_method_or_event": [
         "reporting.realtime"
       ],
-      "dashboard_usage": [],
+      "dashboard_usage": [
+        "Demand Data & Metadata Rates"
+      ],
       "documented_type_unit": "reporting.realtime: integer; Prometheus unit: operations/second",
       "fixture_test": "tests/fixtures/api_25_10_2/reporting_realtime_full.json; tests/fixtures/api_25_10_2/reporting_realtime_malformed.json; tests/conftest.py; tests/test_api_catalog.py",
       "implementation_status": "active dedicated",
@@ -23955,7 +24121,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_alertservice_count, truenas_alertservice_enabled",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_alertservice_count, truenas_alertservice_enabled",
       "Documented operation/type": "CRUD read/query",
@@ -24053,7 +24219,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_api_key_count, truenas_api_key_expiry_timestamp_seconds, truenas_api_key_revoked_count",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_api_key_count, truenas_api_key_expiry_timestamp_seconds, truenas_api_key_revoked_count",
       "Documented operation/type": "CRUD read/query",
@@ -24263,7 +24429,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_app_dockerhub_pull_limit_remaining, truenas_app_dockerhub_pull_limit_remaining_window_seconds, truenas_app_dockerhub_pull_limit_total, truenas_app_dockerhub_rate_limit_error_present, truenas_webshare_enabled",
+      "Dashboard usage": "truenas_app_dockerhub_pull_limit_remaining, truenas_app_dockerhub_pull_limit_remaining_window_seconds, truenas_app_dockerhub_pull_limit_total, truenas_app_dockerhub_pull_limit_window_seconds, truenas_app_dockerhub_rate_limit_error_present, truenas_webshare_enabled",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_app_dockerhub_pull_limit_remaining, truenas_app_dockerhub_pull_limit_remaining_window_seconds, truenas_app_dockerhub_pull_limit_total, truenas_app_dockerhub_pull_limit_window_seconds, truenas_app_dockerhub_rate_limit_error_present, truenas_webshare_enabled",
       "Documented operation/type": "read/status/inventory",
@@ -25047,7 +25213,7 @@
       "Response fields used": "row count"
     },
     {
-      "Dashboard usage": "truenas_boot_pool_allocated_bytes, truenas_boot_pool_free_bytes, truenas_boot_pool_healthy, truenas_boot_pool_size_bytes",
+      "Dashboard usage": "truenas_boot_pool_allocated_bytes, truenas_boot_pool_free_bytes, truenas_boot_pool_healthy, truenas_boot_pool_scan_percent, truenas_boot_pool_scan_state, truenas_boot_pool_size_bytes, truenas_boot_pool_status",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_boot_pool_allocated_bytes, truenas_boot_pool_free_bytes, truenas_boot_pool_healthy, truenas_boot_pool_scan_percent, truenas_boot_pool_scan_state, truenas_boot_pool_size_bytes, truenas_boot_pool_status",
       "Documented operation/type": "read/status/inventory",
@@ -25411,7 +25577,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_cloud_backup_task_count",
+      "Dashboard usage": "truenas_cloud_backup_task_count, truenas_cloud_backup_task_enabled",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_cloud_backup_task_count, truenas_cloud_backup_task_enabled",
       "Documented operation/type": "CRUD read/query",
@@ -26069,7 +26235,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_cronjob_count",
+      "Dashboard usage": "truenas_cronjob_count, truenas_cronjob_enabled",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_cronjob_count, truenas_cronjob_enabled",
       "Documented operation/type": "CRUD read/query",
@@ -26111,7 +26277,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_gpu_available_to_host, truenas_gpu_count, truenas_gpu_uses_system_critical_devices",
+      "Dashboard usage": "truenas_gpu_available_to_host, truenas_gpu_count, truenas_gpu_info, truenas_gpu_uses_system_critical_devices",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_gpu_available_to_host, truenas_gpu_count, truenas_gpu_info, truenas_gpu_uses_system_critical_devices",
       "Documented operation/type": "read/status/inventory",
@@ -26181,7 +26347,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_directoryservices_config_enabled, truenas_directoryservices_fault_present, truenas_directoryservices_healthy",
+      "Dashboard usage": "truenas_directoryservices_config_enabled, truenas_directoryservices_fault_present, truenas_directoryservices_healthy, truenas_directoryservices_service_type, truenas_directoryservices_status",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_directoryservices_config_enabled, truenas_directoryservices_fault_present, truenas_directoryservices_fault_reason, truenas_directoryservices_healthy, truenas_directoryservices_service_type, truenas_directoryservices_status",
       "Documented operation/type": "read/status/inventory",
@@ -26265,7 +26431,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_disk_count, truenas_disk_in_use, truenas_disk_rotational, truenas_disk_size_bytes",
+      "Dashboard usage": "truenas_disk_count, truenas_disk_in_use, truenas_disk_info, truenas_disk_rotational, truenas_disk_size_bytes",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_disk_count, truenas_disk_in_use, truenas_disk_info, truenas_disk_rotational, truenas_disk_size_bytes",
       "Documented operation/type": "CRUD read/query",
@@ -26279,7 +26445,7 @@
       "Response fields used": "name/model/bus; serial deliberately redacted, pool, rotationrate/type, row count, size"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_disk_temperature_agg_celsius",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_disk_temperature_agg_celsius",
       "Documented operation/type": "read/status/inventory",
@@ -26531,7 +26697,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_failover_disabled_reason_count",
+      "Dashboard usage": "truenas_failover_disabled_reason, truenas_failover_disabled_reason_count",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_failover_disabled_reason, truenas_failover_disabled_reason_count",
       "Documented operation/type": "read/status/inventory",
@@ -26545,7 +26711,7 @@
       "Response fields used": "result items, result length"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_failover_node_reboot_required",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_failover_node_reboot_required",
       "Documented operation/type": "read/status/inventory",
@@ -27133,7 +27299,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_hw_virt_variant",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_hw_virt_variant",
       "Documented operation/type": "read/status/inventory",
@@ -27427,7 +27593,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_interface_count, truenas_interface_link_up, truenas_interface_mtu",
+      "Dashboard usage": "truenas_interface_count, truenas_interface_link_up, truenas_interface_mtu, truenas_interface_type",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_interface_count, truenas_interface_link_up, truenas_interface_mtu, truenas_interface_type",
       "Documented operation/type": "CRUD read/query",
@@ -28659,7 +28825,7 @@
       "Response fields used": "no reachable producer; retained compatibility declarations: truenas_kmip_enabled"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_kmip_sync_pending",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_kmip_sync_pending",
       "Documented operation/type": "read/status/inventory",
@@ -30031,7 +30197,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_pool_allocated_bytes, truenas_pool_autotrim_enabled, truenas_pool_count, truenas_pool_dedup_table_size_bytes, truenas_pool_expand_percent, truenas_pool_expand_reflowed_bytes, truenas_pool_expand_to_reflow_bytes, truenas_pool_fragmentation_percent, truenas_pool_free_bytes, truenas_pool_healthy, truenas_pool_scan_percent, truenas_pool_size_bytes",
+      "Dashboard usage": "truenas_pool_allocated_bytes, truenas_pool_autotrim_enabled, truenas_pool_count, truenas_pool_dedup_table_size_bytes, truenas_pool_expand_percent, truenas_pool_expand_reflowed_bytes, truenas_pool_expand_to_reflow_bytes, truenas_pool_fragmentation_percent, truenas_pool_free_bytes, truenas_pool_healthy, truenas_pool_last_scan_timestamp_seconds, truenas_pool_scan_bytes_processed, truenas_pool_scan_bytes_total, truenas_pool_scan_errors, truenas_pool_scan_percent, truenas_pool_scan_seconds_remaining, truenas_pool_size_bytes, truenas_pool_status, truenas_pool_warning",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_pool_allocated_bytes, truenas_pool_autotrim_enabled, truenas_pool_count, truenas_pool_dedup_ratio, truenas_pool_dedup_table_size_bytes, truenas_pool_expand_percent, truenas_pool_expand_reflowed_bytes, truenas_pool_expand_size_bytes, truenas_pool_expand_to_reflow_bytes, truenas_pool_fragmentation_percent, truenas_pool_free_bytes, truenas_pool_healthy, truenas_pool_last_scan_timestamp_seconds, truenas_pool_scan_bytes_processed, truenas_pool_scan_bytes_total, truenas_pool_scan_errors, truenas_pool_scan_percent, truenas_pool_scan_seconds_remaining, truenas_pool_size_bytes, truenas_pool_status, truenas_pool_vdev_checksum_errors, truenas_pool_vdev_read_errors, truenas_pool_vdev_write_errors, truenas_pool_warning",
       "Documented operation/type": "CRUD read/query",
@@ -30143,7 +30309,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_pool_scrub_task_count",
+      "Dashboard usage": "truenas_pool_scrub_task_count, truenas_pool_scrub_task_enabled",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_pool_scrub_task_count, truenas_pool_scrub_task_enabled",
       "Documented operation/type": "CRUD read/query",
@@ -30395,7 +30561,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_snapshot_task_max_count",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_snapshot_task_max_count",
       "Documented operation/type": "read/status/inventory",
@@ -30409,7 +30575,7 @@
       "Response fields used": "result"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_snapshot_task_max_total_count",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_snapshot_task_max_total_count",
       "Documented operation/type": "read/status/inventory",
@@ -31711,7 +31877,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_support_available",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_support_available",
       "Documented operation/type": "read/status/inventory",
@@ -31921,7 +32087,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_system_boot_changes_total",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_system_boot_changes_total",
       "Documented operation/type": "read/status/inventory",
@@ -32145,7 +32311,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_system_global_id",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_system_global_id",
       "Documented operation/type": "read/status/inventory",
@@ -32159,7 +32325,7 @@
       "Response fields used": "result"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_system_host_id",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_system_host_id",
       "Documented operation/type": "read/status/inventory",
@@ -32173,7 +32339,7 @@
       "Response fields used": "result"
     },
     {
-      "Dashboard usage": "truenas_host_cpu_cores, truenas_host_ecc_memory, truenas_host_load_average, truenas_host_physical_memory_bytes, truenas_host_uptime_seconds",
+      "Dashboard usage": "truenas_host_cpu_cores, truenas_host_cpu_info, truenas_host_ecc_memory, truenas_host_info, truenas_host_load_average, truenas_host_physical_cpu_cores, truenas_host_physical_memory_bytes, truenas_host_system_info, truenas_host_uptime_seconds",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_host_cpu_cores, truenas_host_cpu_info, truenas_host_ecc_memory, truenas_host_info, truenas_host_load_average, truenas_host_physical_cpu_cores, truenas_host_physical_memory_bytes, truenas_host_system_info, truenas_host_uptime_seconds",
       "Documented operation/type": "read/status/inventory",
@@ -32243,7 +32409,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_ntp_server_burst_count, truenas_ntp_server_count, truenas_ntp_server_iburst_count, truenas_ntp_server_max_poll_minutes, truenas_ntp_server_min_poll_minutes",
+      "Dashboard usage": "truenas_ntp_server_burst_count, truenas_ntp_server_count, truenas_ntp_server_iburst_count, truenas_ntp_server_max_poll_minutes, truenas_ntp_server_min_poll_minutes, truenas_ntp_server_prefer_count",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_ntp_server_burst_count, truenas_ntp_server_count, truenas_ntp_server_iburst_count, truenas_ntp_server_max_poll_minutes, truenas_ntp_server_min_poll_minutes, truenas_ntp_server_prefer_count",
       "Documented operation/type": "CRUD read/query",
@@ -32271,7 +32437,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_host_info, truenas_system_product_type",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_host_info, truenas_system_product_type",
       "Documented operation/type": "read/status/inventory",
@@ -32299,7 +32465,7 @@
       "Response fields used": "result"
     },
     {
-      "Dashboard usage": "truenas_system_reboot_required",
+      "Dashboard usage": "truenas_system_reboot_reason, truenas_system_reboot_required",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_system_reboot_reason, truenas_system_reboot_required",
       "Documented operation/type": "read/status/inventory",
@@ -32327,7 +32493,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_system_security_fips_configured, truenas_system_security_gpos_stig, truenas_system_security_password_history_count, truenas_system_security_password_max_age_days, truenas_system_security_password_min_length",
+      "Dashboard usage": "truenas_system_security_fips_configured, truenas_system_security_gpos_stig, truenas_system_security_password_history_count, truenas_system_security_password_max_age_days, truenas_system_security_password_min_age_days, truenas_system_security_password_min_length",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_system_security_fips_configured, truenas_system_security_gpos_stig, truenas_system_security_password_history_count, truenas_system_security_password_max_age_days, truenas_system_security_password_min_age_days, truenas_system_security_password_min_length",
       "Documented operation/type": "singleton configuration read",
@@ -32397,7 +32563,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_system_state",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_system_state",
       "Documented operation/type": "read/status/inventory",
@@ -32425,7 +32591,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_system_version",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_system_version",
       "Documented operation/type": "read/status/inventory",
@@ -32439,7 +32605,7 @@
       "Response fields used": "result"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_systemdataset_pool",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_systemdataset_pool",
       "Documented operation/type": "singleton configuration read",
@@ -32593,7 +32759,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_chassis_hardware",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_chassis_hardware",
       "Documented operation/type": "read/status/inventory",
@@ -32663,7 +32829,7 @@
       "Response fields used": "result"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_managed_by_truecommand",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_managed_by_truecommand",
       "Documented operation/type": "read/status/inventory",
@@ -32775,7 +32941,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "none",
+      "Dashboard usage": "truenas_update_version_available",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_update_version_available",
       "Documented operation/type": "read/status/inventory",
@@ -32873,7 +33039,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_update_available, truenas_update_download_progress_percent",
+      "Dashboard usage": "truenas_update_available, truenas_update_download_progress_percent, truenas_update_status",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_update_available, truenas_update_download_progress_percent, truenas_update_status",
       "Documented operation/type": "read/status/inventory",
@@ -33419,7 +33585,7 @@
       "Response fields used": "none in an owned dedicated collector"
     },
     {
-      "Dashboard usage": "truenas_virt_instance_count",
+      "Dashboard usage": "truenas_virt_instance_count, truenas_virt_instance_running",
       "Decision": "exported through dedicated metric",
       "Dedicated metrics": "truenas_virt_instance_count, truenas_virt_instance_running",
       "Documented operation/type": "CRUD read/query",
