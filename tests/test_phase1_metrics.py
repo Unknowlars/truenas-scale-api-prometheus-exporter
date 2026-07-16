@@ -260,7 +260,9 @@ def test_oldest_snapshot_timestamp_uses_reduced_cadence_cache(monkeypatch):
     assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000001
     assert len(oldest_calls) == 1
 
-    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES):
+    # R06: refresh happens every SNAPSHOT_OLDEST_REFRESH_CYCLES cycles (a full
+    # 10-cycle gap from the initial fetch at cycle 1 to the next at cycle 11).
+    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1):
         exporter._reset_poll_metrics()
         exporter._collect_snapshot_metrics(object(), {})
         assert gauge_value(exporter_module.SNAPSHOT_TOTAL_COUNT) == 321
@@ -297,7 +299,8 @@ def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
         collector="snapshots"
     )._value.get()
     fail_oldest = True
-    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1):
+    # R06: the retry attempt now lands one cycle later (cycle 11, not 10).
+    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 2):
         exporter._reset_poll_metrics()
         exporter._collect_snapshot_metrics(object(), {})
 
@@ -308,7 +311,7 @@ def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
     )
 
     for _ in range(
-        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1,
+        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 2,
         exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES
         * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
         + 2,
@@ -1927,7 +1930,9 @@ def test_disk_temperature_agg_uses_reduced_cadence_cache(monkeypatch):
     assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
     assert len(temp_calls) == 1
 
-    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES):
+    # R06: refresh happens every DISK_TEMP_AGG_REFRESH_CYCLES cycles (a full
+    # 10-cycle gap from the initial fetch at cycle 1 to the next at cycle 11).
+    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1):
         exporter._reset_poll_metrics()
         exporter._collect_disk_temperature_agg(object(), ["sda"])
         assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
@@ -1958,7 +1963,8 @@ def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypa
         collector="disks"
     )._value.get()
     fail_agg = True
-    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1):
+    # R06: the retry attempt now lands one cycle later (cycle 11, not 10).
+    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 2):
         exporter._reset_poll_metrics()
         exporter._collect_disk_temperature_agg(object(), ["sda"])
 
@@ -1969,7 +1975,7 @@ def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypa
     )
 
     for _ in range(
-        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1,
+        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 2,
         exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES
         * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
         + 2,

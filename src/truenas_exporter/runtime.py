@@ -4461,7 +4461,7 @@ class TrueNASExporter:
         should_refresh = (
             disk_list_changed
             or last_attempt is None
-            or current_cycle - last_attempt >= DISK_TEMP_AGG_REFRESH_CYCLES - 1
+            or current_cycle - last_attempt >= DISK_TEMP_AGG_REFRESH_CYCLES
         )
 
         if should_refresh:
@@ -4783,7 +4783,7 @@ class TrueNASExporter:
         last_attempt = self._snapshot_oldest_last_attempt_cycle
         should_refresh = (
             last_attempt is None
-            or current_cycle - last_attempt >= SNAPSHOT_OLDEST_REFRESH_CYCLES - 1
+            or current_cycle - last_attempt >= SNAPSHOT_OLDEST_REFRESH_CYCLES
         )
 
         if should_refresh:
