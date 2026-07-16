@@ -22,7 +22,7 @@ Rules (same program conventions as `docs/remediation/`):
 | R05 | `EXPORTER_BIND_ADDRESS` rejects IPv6 literals: `_bind_address_env` (`config.py:77-81`) rejects any value containing `:`, so `::1`/`fd00::…` cannot be configured, and README:219 does not state the limitation. | config/security (T18) | Low | Preferred: try `ipaddress.ip_address(raw)` first — accept valid IPv4/IPv6 literals as-is; keep the `:`-and-whitespace rejection only for values that are not valid IP literals (catches `host:port`). Verify `wsgiref.make_server` binds v6 (it uses `AF_INET` by default — if v6 binding is not feasible, instead document "IPv4/hostname only" in README + `.env.example` + the ValueError message). Add config tests for `::1` (accepted or clearly rejected per chosen path) and `host:9108` (rejected). | done |
 | R06 | Heavy-query refresh cadence off-by-one: `current_cycle - last_attempt >= REFRESH_CYCLES - 1` (`runtime.py:4429-4433` disk temp agg; `runtime.py:4752-4755` snapshot oldest) refreshes every 9 cycles (~4.5 min at 30 s interval) while constants/comments/HELP say "every 10 cycles ≈ 5 minutes"; stale-expiry factor (3×10) is computed against the constant, not actual cadence. | performance/docs (T16) | Low | Pick one: (a) drop the `- 1` in both `should_refresh` computations and update the two cadence tests in `tests/test_phase1_metrics.py` that pin cycle-10 refetch; or (b) keep behavior and fix the comment at `runtime.py:522-526` + the `~5 minutes` HELP suffixes to say ~4.5 minutes, regenerating contract/parity. Option (a) matches the documented contract with the smaller doc churn. | done |
 | R07 | Heavy-query failure accounting bypasses `_collector_error`: `runtime.py:4440` (temp-agg refresh), `runtime.py:4777` (snapshot-oldest refresh), `runtime.py:4737` (snapshot count) increment `COLLECTOR_ERRORS_TOTAL` directly, so the internal `self._collector_errors` diagnostics map is not updated, unlike every sibling collector. | conventions (T16) | Low | Replace the three direct `COLLECTOR_ERRORS_TOTAL.labels(...).inc()` + `LOG.debug` pairs with `self._collector_error("disks"/"snapshots", "<message>")`. Behavior-neutral for Prometheus output (same counter label); extend an existing T16 failure test to assert `exporter._collector_errors` gained the entry. | done |
-| R08 | Parity row for `truenas_pool_status_code` is misleading (`docs/api-exporter-parity.md:1262`): cites 25.10 fixture `tests/fixtures/api_25_10_2/pool_query.json` for a v26-only `zpool.query` metric, says "undocumented/unavailable" although `docs/truenas-api-v26/methods/zpool/query.md` documents `status_code`, and omits the v26-only/profile-gated caveat while claiming "active dedicated". | generated artifacts (T21) | Low | In `scripts/generate_api_exporter_parity.py`, fix the hand-maintained override for `POOL_STATUS_CODE`: evidence should reference `tests/test_t21_low_cost_metrics.py` (not the pool_query fixture), and the note should state "v26-only zpool.query, profile-gated via V26_ADDED_METHODS; absent on 25.10/unknown; status_code documented in the v26 corpus". Regenerate `docs/api-exporter-parity.{md,json}` and confirm `--check` passes. | todo |
+| R08 | Parity row for `truenas_pool_status_code` is misleading (`docs/api-exporter-parity.md:1262`): cites 25.10 fixture `tests/fixtures/api_25_10_2/pool_query.json` for a v26-only `zpool.query` metric, says "undocumented/unavailable" although `docs/truenas-api-v26/methods/zpool/query.md` documents `status_code`, and omits the v26-only/profile-gated caveat while claiming "active dedicated". | generated artifacts (T21) | Low | In `scripts/generate_api_exporter_parity.py`, fix the hand-maintained override for `POOL_STATUS_CODE`: evidence should reference `tests/test_t21_low_cost_metrics.py` (not the pool_query fixture), and the note should state "v26-only zpool.query, profile-gated via V26_ADDED_METHODS; absent on 25.10/unknown; status_code documented in the v26 corpus". Regenerate `docs/api-exporter-parity.{md,json}` and confirm `--check` passes. | done |
 | R09 | Auto-skip amnesty permanently disabled on missing timestamp: in `_safe_call_auto` (`runtime.py:1473-1478`), a method in `_auto_skipped_methods` with no `_auto_skipped_at` entry hits `skipped_at is None → return None` forever — the exact permanence T14 removed, chosen as the defensive default. | reliability (T14) | Low | Treat a missing timestamp as expired: when `skipped_at is None`, discard the method from the skip set and retry immediately (fall through to the call). Add a regression test that seeds `_auto_skipped_methods` without a timestamp and asserts the method is attempted on the next `_safe_call_auto`. | todo |
 
 ## Notes for the fixing agent
@@ -34,3 +34,21 @@ Rules (same program conventions as `docs/remediation/`):
   (without `--check`) and commit their output alongside the source change.
 - Nothing here changes metric names, types, or label sets; R02/R06 touch HELP
   text only, which is a permitted correction per `docs/VERSIONING.md`.
+
+## Discovered
+
+- `scripts/generate_api_exporter_parity.py`'s `_test_fixture_evidence` matches
+  fixture/test evidence by plain substring search over every file under
+  `tests/` (source name → fixture stem, and needle-in-file-text for test
+  citations), capped to the first 2 hits in corpus order (alphabetical by
+  path). This is fragile beyond the R08 `POOL_STATUS_CODE` case fixed here:
+  adding *any* new test file whose raw text happens to contain another
+  metric's source-method substring (e.g. a docstring mentioning `pool.query`)
+  can silently steal that metric's evidence citation if the new file sorts
+  before the legitimate one alphabetically — discovered firsthand while
+  writing `tests/test_generate_api_exporter_parity.py` for R08, where an
+  earlier draft's docstring text pulled evidence away from ~20 unrelated
+  `pool.query`-sourced rows before the wording was reworked to avoid literal
+  method-name substrings. Not fixed here (out of R08's scope): worth a
+  follow-up to make the matcher word-boundary-aware or require an explicit
+  per-file allowlist of which metrics it's evidence for.

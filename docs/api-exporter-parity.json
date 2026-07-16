@@ -10570,15 +10570,15 @@
         "zpool.query"
       ],
       "dashboard_usage": [],
-      "documented_type_unit": "zpool.query: undocumented/unavailable; Prometheus unit: dimensionless gauge",
-      "fixture_test": "tests/fixtures/api_25_10_2/pool_query.json; tests/test_t21_low_cost_metrics.py",
+      "documented_type_unit": "zpool.query (v26-only; docs/truenas-api-v26/methods/zpool/query.md): string/null; Prometheus unit: dimensionless gauge",
+      "fixture_test": "tests/test_t21_low_cost_metrics.py",
       "implementation_status": "active dedicated",
       "labels": [
         "pool",
         "status_code"
       ],
       "metric_type": "gauge",
-      "notes": "Named source is absent from the pinned method/event leaves or deliberately not called.",
+      "notes": "v26-only zpool.query, profile-gated via V26_ADDED_METHODS; absent on 25.10/unknown; status_code documented in the v26 corpus.",
       "parser_conversion": "Bounded enum normalization to uppercase label with sample value 1",
       "prometheus_metric": "truenas_pool_status_code",
       "response_field": [

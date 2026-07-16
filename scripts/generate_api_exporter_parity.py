@@ -1434,10 +1434,35 @@ DOCUMENTED_TYPE_UNIT_OVERRIDES: dict[str, str] = {
     "APP_BLKIO_READ_BYTES": "app.stats: integer cumulative bytes; Prometheus unit: bytes",
     "APP_BLKIO_WRITE_BYTES": "app.stats: integer cumulative bytes; Prometheus unit: bytes",
     "NETWORK_GATEWAY_REACHABLE": "route.system_routes: array of object; Prometheus unit: boolean gauge (1/0)",
+    # zpool.query is v26-only (V26_ADDED_METHODS) and absent from the pinned
+    # 25.10.2 doc corpus this table audits by default, so the generic lookup
+    # cannot resolve it; documented directly from the v26 corpus instead (R08).
+    "POOL_STATUS_CODE": (
+        "zpool.query (v26-only; docs/truenas-api-v26/methods/zpool/query.md): "
+        "string/null; Prometheus unit: dimensionless gauge"
+    ),
 }
 
 PARSER_CONVERSION_OVERRIDES: dict[str, str] = {
     "NETWORK_GATEWAY_REACHABLE": "_as_optional_bool accepts documented booleans/0/1 and omits malformed values",
+}
+
+# Hand-maintained per-metric overrides for rows whose generic evidence/note
+# derivation is misleading because the source method is version-gated outside
+# the default 25.10.2 doc corpus this table audits (see AGENTS.md rule 6).
+FIXTURE_TEST_EVIDENCE_OVERRIDES: dict[str, str] = {
+    # The generic fixture matcher does substring matching on the source name
+    # ("zpool.query" -> "zpool_query") against fixture file stems, and
+    # "pool_query" (the unrelated 25.10 pool.query fixture) is a substring of
+    # "zpool_query" — citing the wrong fixture for a v26-only method (R08).
+    "POOL_STATUS_CODE": "tests/test_t21_low_cost_metrics.py",
+}
+
+NOTES_OVERRIDES: dict[str, str] = {
+    "POOL_STATUS_CODE": (
+        "v26-only zpool.query, profile-gated via V26_ADDED_METHODS; absent on "
+        "25.10/unknown; status_code documented in the v26 corpus."
+    ),
 }
 
 
@@ -2224,13 +2249,17 @@ def build_metric_mappings(
             "prometheus_metric": metric["name"],
             "metric_type": metric["type"],
             "labels": list(metric["labels"]),
-            "fixture_test": _test_fixture_evidence(metric, sources, status, analysis),
+            "fixture_test": FIXTURE_TEST_EVIDENCE_OVERRIDES.get(
+                variable,
+                _test_fixture_evidence(metric, sources, status, analysis),
+            ),
             "implementation_status": status,
             "dashboard_usage": list(dashboard_refs.get(metric["name"], ())),
             "runtime_evidence": [
                 f"src/truenas_exporter/runtime.py:{line}" for line in analysis.metric_lines.get(variable, ())[:4]
             ],
-            "notes": " ".join(notes)
+            "notes": NOTES_OVERRIDES.get(variable)
+            or " ".join(notes)
             or "Owned metric mapping; absent/null/malformed values fail closed by omitting the sample.",
         }
         mappings.append(mapping)
