@@ -106,9 +106,9 @@ def load_config() -> Config:
 
     event_interval_seconds = _int_env("EVENT_INTERVAL_SECONDS", "2", 1)
     event_stale_after_seconds = _int_env("EVENT_STALE_AFTER_SECONDS", "15", 1)
-    if event_stale_after_seconds < event_interval_seconds:
+    if event_stale_after_seconds < 2 * event_interval_seconds:
         raise ValueError(
-            "EVENT_STALE_AFTER_SECONDS must be >= EVENT_INTERVAL_SECONDS"
+            "EVENT_STALE_AFTER_SECONDS must be >= 2 * EVENT_INTERVAL_SECONDS"
         )
 
     event_subscriptions = _list_env(

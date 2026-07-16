@@ -101,8 +101,22 @@ def test_load_config_rejects_event_ttl_shorter_than_interval(monkeypatch):
     monkeypatch.setenv("TRUENAS_API_KEY", "secret")
     monkeypatch.setenv("EVENT_INTERVAL_SECONDS", "30")
     monkeypatch.setenv("EVENT_STALE_AFTER_SECONDS", "15")
-    with pytest.raises(ValueError, match="must be >="):
+    with pytest.raises(ValueError, match="must be >= 2 \\* EVENT_INTERVAL_SECONDS"):
         exporter_module._load_config()
+
+
+def test_load_config_rejects_event_ttl_below_twice_the_interval(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+    monkeypatch.setenv("EVENT_INTERVAL_SECONDS", "10")
+    # Exactly 2x is required; one second short must still be rejected so an event
+    # arriving right at the expiry boundary can't flap present/absent.
+    monkeypatch.setenv("EVENT_STALE_AFTER_SECONDS", "19")
+    with pytest.raises(ValueError, match="must be >= 2 \\* EVENT_INTERVAL_SECONDS"):
+        exporter_module._load_config()
+
+    monkeypatch.setenv("EVENT_STALE_AFTER_SECONDS", "20")
+    exporter_module._load_config()
 
 
 @pytest.mark.parametrize(

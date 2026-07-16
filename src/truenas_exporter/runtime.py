@@ -2043,17 +2043,25 @@ class TrueNASExporter:
                         raise RuntimeError("No event subscriptions succeeded")
 
                     backoff = 2  # reset backoff on successful connection
+                    last_message_monotonic = time.monotonic()
 
                     try:
                         while not self._stop_event.is_set():
                             try:
                                 msg = client.recv_json()
                             except WebSocketTimeoutException:
+                                idle_seconds = time.monotonic() - last_message_monotonic
+                                if idle_seconds >= self.config.event_read_timeout_seconds:
+                                    raise RuntimeError(
+                                        f"No event stream messages received for "
+                                        f"{idle_seconds:.0f}s; assuming dead connection"
+                                    ) from None
                                 with self._lock:
                                     self._expire_stale_events()
                                 continue
                             if msg.get("method") != "collection_update":
                                 continue
+                            last_message_monotonic = time.monotonic()
                             params = msg.get("params")
                             if not isinstance(params, dict):
                                 continue
