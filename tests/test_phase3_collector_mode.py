@@ -1,4 +1,5 @@
 import sys
+import threading
 
 from conftest import make_config
 
@@ -258,6 +259,74 @@ def test_legacy_event_dispatch_republishes_metrics_snapshot(monkeypatch):
     assert len(timer_delays) == 1
     assert 0 <= timer_delays[0] <= 1
     assert b'truenas_pool_realtime_used_bytes{pool="tank"} 123.0' in body
+    exporter_module.POOL_REALTIME_USED_BYTES.clear()
+
+
+def test_snapshot_publish_timer_target_acquires_scrape_lock(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    captured_timers = []
+
+    class RecordingTimer:
+        daemon = False
+
+        def __init__(self, delay, callback):
+            self.delay = delay
+            self.callback = callback
+            captured_timers.append(self)
+
+        def is_alive(self):
+            return False
+
+        def cancel(self):
+            return None
+
+        def start(self):
+            return None
+
+    monkeypatch.setattr(runtime.threading, "Timer", RecordingTimer)
+
+    exporter._publish_metric_snapshot()  # baseline publish so elapsed starts near zero
+    exporter._publish_metric_snapshot_throttled()
+
+    assert len(captured_timers) == 1
+    # The scheduled callback must be the lock-acquiring wrapper, not the raw
+    # publish (which would run REGISTRY.collect() without exporter._lock).
+    assert captured_timers[0].callback == exporter._publish_metric_snapshot_locked
+
+
+def test_timer_fired_snapshot_publish_waits_for_scrape_lock(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    exporter_module.POOL_REALTIME_USED_BYTES.clear()
+    exporter._publish_metric_snapshot()
+    before = exporter.metric_snapshot()
+
+    started = threading.Event()
+    exporter._lock.acquire()
+    try:
+        # Simulate scrape_once having wiped/partially refilled the registry
+        # while holding the lock.
+        exporter_module.POOL_REALTIME_USED_BYTES.labels(pool="tank").set(999)
+
+        def fire():
+            started.set()
+            exporter._publish_metric_snapshot_locked()
+
+        publish_thread = threading.Thread(target=fire)
+        publish_thread.start()
+        assert started.wait(timeout=1)
+        publish_thread.join(timeout=0.3)
+
+        # The timer-fired publish must block on the scrape lock rather than
+        # racing ahead and storing the partially-updated registry.
+        assert publish_thread.is_alive()
+        assert exporter.metric_snapshot() == before
+    finally:
+        exporter._lock.release()
+
+    publish_thread.join(timeout=2)
+    assert not publish_thread.is_alive()
+    after = exporter.metric_snapshot()
+    assert after != before
     exporter_module.POOL_REALTIME_USED_BYTES.clear()
 
 

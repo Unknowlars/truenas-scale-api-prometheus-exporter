@@ -860,6 +860,18 @@ class TrueNASExporter:
             self._last_metric_snapshot_publish_monotonic = time.monotonic()
             self._metric_snapshot_publish_timer = None
 
+    def _publish_metric_snapshot_locked(self) -> None:
+        """Timer-fired publish target: must acquire the scrape lock itself.
+
+        Unlike the other publish call sites (scrape tail, event dispatch),
+        which already run inside ``self._lock``, a ``threading.Timer`` fires
+        on its own thread with no lock held. Without acquiring ``self._lock``
+        here, the timer can race a concurrent ``scrape_once`` that has wiped
+        the registry mid-cycle and publish a partial snapshot as "complete".
+        """
+        with self._lock:
+            self._publish_metric_snapshot()
+
     def _publish_metric_snapshot_throttled(self, minimum_interval_seconds: float = 1.0) -> None:
         now = time.monotonic()
         publish_now = False
@@ -877,7 +889,7 @@ class TrueNASExporter:
             ):
                 timer = threading.Timer(
                     minimum_interval_seconds - elapsed,
-                    self._publish_metric_snapshot,
+                    self._publish_metric_snapshot_locked,
                 )
                 timer.daemon = True
                 self._metric_snapshot_publish_timer = timer
