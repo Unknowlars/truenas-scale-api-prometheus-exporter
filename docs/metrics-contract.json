@@ -2171,6 +2171,15 @@
       "variable": "POOL_LAST_SCAN_TS"
     },
     {
+      "help": "Pool available bytes from the reporting.realtime event stream",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_available_bytes",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_AVAILABLE_BYTES"
+    },
+    {
       "help": "Pool read throughput in bytes/sec (instantaneous snapshot from realtime API)",
       "labels": [
         "pool"
@@ -2178,6 +2187,24 @@
       "name": "truenas_pool_realtime_read_bytes_per_second",
       "type": "gauge",
       "variable": "POOL_REALTIME_READ_BYTES"
+    },
+    {
+      "help": "Pool total bytes from the reporting.realtime event stream",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_total_bytes",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_TOTAL_BYTES"
+    },
+    {
+      "help": "Pool used bytes from the reporting.realtime event stream",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_realtime_used_bytes",
+      "type": "gauge",
+      "variable": "POOL_REALTIME_USED_BYTES"
     },
     {
       "help": "Pool write throughput in bytes/sec (instantaneous snapshot from realtime API)",

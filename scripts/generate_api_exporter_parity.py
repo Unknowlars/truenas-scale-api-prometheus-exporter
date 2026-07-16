@@ -1404,6 +1404,9 @@ EVENT_SOURCE_OVERRIDES: dict[str, str] = {
             "ZFS_L2ARC_MISS_RATIO",
             "POOL_REALTIME_READ_BYTES",
             "POOL_REALTIME_WRITE_BYTES",
+            "POOL_REALTIME_USED_BYTES",
+            "POOL_REALTIME_AVAILABLE_BYTES",
+            "POOL_REALTIME_TOTAL_BYTES",
         }
     },
     **{
@@ -1920,8 +1923,11 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
             "ZFS_L2ARC_MISS_RATIO": "zfs.l2arc_miss_percentage / 100",
             "ZFS_L2ARC_READ_BYTES_RATE": "zfs.bytes_read_per_second_from_the_l2arc",
             "ZFS_L2ARC_WRITE_BYTES_RATE": "zfs.bytes_written_per_second_to_the_l2arc",
-            "POOL_REALTIME_READ_BYTES": "schema opaque; compatibility parser key pools.read_bytes",
-            "POOL_REALTIME_WRITE_BYTES": "schema opaque; compatibility parser key pools.write_bytes",
+            "POOL_REALTIME_READ_BYTES": "opportunistic parser key pools.<pool>.read_bytes/read_bytes_per_second; documented and observed payload carries pools.<pool>.used/available/total space stats, not rates",
+            "POOL_REALTIME_WRITE_BYTES": "opportunistic parser key pools.<pool>.write_bytes/write_bytes_per_second; documented and observed payload carries pools.<pool>.used/available/total space stats, not rates",
+            "POOL_REALTIME_USED_BYTES": "pools.<pool>.used",
+            "POOL_REALTIME_AVAILABLE_BYTES": "pools.<pool>.available",
+            "POOL_REALTIME_TOTAL_BYTES": "pools.<pool>.total",
         }
         if variable in event_fields:
             return (event_fields[variable],)
@@ -2112,6 +2118,10 @@ def build_metric_mappings(
         "TASK_LAST_RUN_TS",
         "TASK_STATE",
     }
+    opportunistic_dedicated = {
+        "POOL_REALTIME_READ_BYTES",
+        "POOL_REALTIME_WRITE_BYTES",
+    }
     mappings: list[dict[str, Any]] = []
     for metric in metrics:
         variable = metric["variable"]
@@ -2124,6 +2134,8 @@ def build_metric_mappings(
             status = "deprecated compatibility"
         elif variable in forced_unavailable or variable not in analysis.functional_metric_variables:
             status = "unavailable: no reachable 25.10.2 producer"
+        elif variable in opportunistic_dedicated:
+            status = "opportunistic dedicated"
         else:
             status = "active dedicated"
 

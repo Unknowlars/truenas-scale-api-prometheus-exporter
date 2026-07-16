@@ -533,7 +533,10 @@ from .metrics import (
     POOL_FREE_BYTES,
     POOL_HEALTHY,
     POOL_LAST_SCAN_TS,
+    POOL_REALTIME_AVAILABLE_BYTES,
     POOL_REALTIME_READ_BYTES,
+    POOL_REALTIME_TOTAL_BYTES,
+    POOL_REALTIME_USED_BYTES,
     POOL_REALTIME_WRITE_BYTES,
     POOL_RESILVER_ENABLED,
     POOL_SCAN_BYTES_PROCESSED,
@@ -1908,6 +1911,9 @@ class TrueNASExporter:
         pools_rt = payload.get("pools")
         pool_read: dict[tuple[str, ...], float] = {}
         pool_write: dict[tuple[str, ...], float] = {}
+        pool_used: dict[tuple[str, ...], float] = {}
+        pool_available: dict[tuple[str, ...], float] = {}
+        pool_total: dict[tuple[str, ...], float] = {}
         if isinstance(pools_rt, dict):
             for pool_name, pool_stats in pools_rt.items():
                 if not isinstance(pool_stats, dict):
@@ -1915,13 +1921,25 @@ class TrueNASExporter:
                 pn = _str_label(pool_name)
                 read_bytes = _as_float(_first_not_none(pool_stats.get("read_bytes"), pool_stats.get("read_bytes_per_second")))
                 write_bytes = _as_float(_first_not_none(pool_stats.get("write_bytes"), pool_stats.get("write_bytes_per_second")))
+                used = _as_float(pool_stats.get("used"))
+                available = _as_float(pool_stats.get("available"))
+                total = _as_float(pool_stats.get("total"))
                 if read_bytes is not None:
                     pool_read[(pn,)] = read_bytes
                 if write_bytes is not None:
                     pool_write[(pn,)] = write_bytes
+                if used is not None:
+                    pool_used[(pn,)] = used
+                if available is not None:
+                    pool_available[(pn,)] = available
+                if total is not None:
+                    pool_total[(pn,)] = total
 
         self._collector_event_series[metric_name(POOL_REALTIME_READ_BYTES)] = pool_read
         self._collector_event_series[metric_name(POOL_REALTIME_WRITE_BYTES)] = pool_write
+        self._collector_event_series[metric_name(POOL_REALTIME_USED_BYTES)] = pool_used
+        self._collector_event_series[metric_name(POOL_REALTIME_AVAILABLE_BYTES)] = pool_available
+        self._collector_event_series[metric_name(POOL_REALTIME_TOTAL_BYTES)] = pool_total
 
     def _dispatch_event(self, collection: str, payload: Any) -> None:
         # v25 virt.instance.metrics and v26 container.metrics are the same source

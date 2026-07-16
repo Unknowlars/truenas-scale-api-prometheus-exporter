@@ -87,4 +87,24 @@ Read the regenerated parity rows for all five metrics and confirm they now tell 
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16.
+
+- Added `truenas_pool_realtime_used_bytes{pool}`,
+  `truenas_pool_realtime_available_bytes{pool}`, and
+  `truenas_pool_realtime_total_bytes{pool}` from
+  `reporting.realtime` `pools.<pool>.used/available/total`.
+- Preserved the existing opportunistic read/write rate probes; regenerated
+  parity now marks them `opportunistic dedicated` and notes that documented and
+  observed payloads carry pool space stats, not rates.
+- Registered the new gauges as `reporting.realtime` event-owned metrics so poll
+  reset exclusion, freshness expiry, and default-registry publishing all use the
+  event ownership path.
+- Added fixture, stale-expiry, poll-reset survival, and malformed-payload
+  regression coverage in `tests/test_phase2_events.py`.
+- Verification passed:
+  `python3 -m pytest tests/test_phase2_events.py tests/test_phase3_collector_mode.py tests/test_reliability.py -q`
+  (`43 passed`); regenerated metric contract, API parity, and dashboard
+  artifacts; confirmed all five realtime pool parity rows; `./scripts/validate.sh`
+  exited 0 with `194 passed`, 90.64% coverage, `dashboard_ok panels=318
+  metric_references=287`, `public_release_audit_ok`, Docker build/version
+  smoke `5.2.0`, and `validation_ok`.

@@ -6,6 +6,8 @@ import pytest
 from conftest import make_config
 
 import truenas_exporter as exporter_module
+from truenas_exporter.events import _EVENT_SOURCE_BY_METRIC_NAME
+from truenas_exporter.metrics import metric_name
 
 REALTIME_FIXTURE = Path(__file__).parent / "fixtures" / "realtime" / "reporting_realtime_25_10_shape.json"
 
@@ -44,6 +46,9 @@ def reset_phase2_metrics():
         exporter_module.NETWORK_TX_BYTES_RATE,
         exporter_module.POOL_REALTIME_READ_BYTES,
         exporter_module.POOL_REALTIME_WRITE_BYTES,
+        exporter_module.POOL_REALTIME_USED_BYTES,
+        exporter_module.POOL_REALTIME_AVAILABLE_BYTES,
+        exporter_module.POOL_REALTIME_TOTAL_BYTES,
     ):
         reset_metric(metric)
 
@@ -171,7 +176,7 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
                 "eth0": {"received_bytes": 100, "sent_bytes": 200},
             },
             "pools": {
-                "tank": {"read_bytes": 300, "write_bytes": 400},
+                "tank": {"read_bytes": 300, "write_bytes": 400, "used": 500, "available": 600, "total": 1100},
             },
         }
     )
@@ -180,6 +185,7 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
     assert labeled_value(exporter_module.DISK_READ_BYTES_RATE, "sda") == 1.0
     assert labeled_value(exporter_module.NETWORK_RX_BYTES_RATE, "eth0") == 100.0
     assert labeled_value(exporter_module.POOL_REALTIME_READ_BYTES, "tank") == 300.0
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "tank") == 500.0
 
     exporter._dispatch_event("reporting.realtime", 
         {
@@ -192,7 +198,7 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
                 "eth1": {"received_bytes_rate": 500, "sent_bytes_rate": 600},
             },
             "pools": {
-                "fast": {"read_bytes_per_second": 700, "write_bytes_per_second": 800},
+                "fast": {"read_bytes_per_second": 700, "write_bytes_per_second": 800, "used": 900, "available": 1000, "total": 1900},
             },
         }
     )
@@ -205,7 +211,9 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
     assert ("eth0",) not in exporter_module.NETWORK_RX_BYTES_RATE._metrics
     assert labeled_value(exporter_module.NETWORK_TX_BYTES_RATE, "eth1") == 600.0
     assert ("tank",) not in exporter_module.POOL_REALTIME_READ_BYTES._metrics
+    assert ("tank",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
     assert labeled_value(exporter_module.POOL_REALTIME_WRITE_BYTES, "fast") == 800.0
+    assert labeled_value(exporter_module.POOL_REALTIME_AVAILABLE_BYTES, "fast") == 1000.0
 
 
 def test_realtime_event_accepts_alternative_cpu_core_and_temperature_shapes():
@@ -258,3 +266,61 @@ def test_realtime_event_parses_25_10_sibling_cores_and_aggregate_rates():
 
     assert ("big_data",) not in exporter_module.POOL_REALTIME_READ_BYTES._metrics
     assert ("big_data",) not in exporter_module.POOL_REALTIME_WRITE_BYTES._metrics
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "big_data") == 8690991542272.0
+    assert labeled_value(exporter_module.POOL_REALTIME_AVAILABLE_BYTES, "big_data") == 3188529774592.0
+    assert labeled_value(exporter_module.POOL_REALTIME_TOTAL_BYTES, "big_data") == 11879521316864.0
+
+
+def test_realtime_pool_space_metrics_expire_when_event_is_stale(monkeypatch):
+    now = 1000.0
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now)
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy", event_stale_after_seconds=5))
+    payload = json.loads(REALTIME_FIXTURE.read_text(encoding="utf-8"))
+
+    exporter._dispatch_event("reporting.realtime", payload)
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "big_data") == 8690991542272.0
+
+    now = 1006.0
+    exporter._publish_cached_events_to_default_registry()
+
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_AVAILABLE_BYTES._metrics
+    assert ("big_data",) not in exporter_module.POOL_REALTIME_TOTAL_BYTES._metrics
+
+
+def test_realtime_pool_space_metrics_are_event_owned_and_survive_poll_reset():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    payload = json.loads(REALTIME_FIXTURE.read_text(encoding="utf-8"))
+
+    exporter._dispatch_event("reporting.realtime", payload)
+    for metric in (
+        exporter_module.POOL_REALTIME_USED_BYTES,
+        exporter_module.POOL_REALTIME_AVAILABLE_BYTES,
+        exporter_module.POOL_REALTIME_TOTAL_BYTES,
+    ):
+        assert _EVENT_SOURCE_BY_METRIC_NAME[metric_name(metric)] == "reporting.realtime"
+
+    exporter._reset_poll_metrics()
+
+    assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "big_data") == 8690991542272.0
+    assert labeled_value(exporter_module.POOL_REALTIME_AVAILABLE_BYTES, "big_data") == 3188529774592.0
+    assert labeled_value(exporter_module.POOL_REALTIME_TOTAL_BYTES, "big_data") == 11879521316864.0
+
+
+def test_realtime_pool_space_metrics_ignore_malformed_entries():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+
+    exporter._dispatch_event(
+        "reporting.realtime",
+        {
+            "pools": {
+                "bad_entry": "not a dict",
+                "bad_values": {"used": "bad", "available": None, "total": {}},
+            }
+        },
+    )
+
+    assert ("bad_entry",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
+    assert ("bad_values",) not in exporter_module.POOL_REALTIME_USED_BYTES._metrics
+    assert ("bad_values",) not in exporter_module.POOL_REALTIME_AVAILABLE_BYTES._metrics
+    assert ("bad_values",) not in exporter_module.POOL_REALTIME_TOTAL_BYTES._metrics

@@ -52,6 +52,26 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T04 remediation: added
+  `truenas_pool_realtime_used_bytes`,
+  `truenas_pool_realtime_available_bytes`, and
+  `truenas_pool_realtime_total_bytes` from the `reporting.realtime`
+  `pools.<pool>.used/available/total` byte fields. The existing read/write
+  rate probes remain, but regenerated API parity marks them
+  `opportunistic dedicated` and notes that documented/observed payloads carry
+  space stats, not rates. Focused verification passed:
+  `python3 -m pytest tests/test_phase2_events.py tests/test_phase3_collector_mode.py tests/test_reliability.py -q`
+  (`43 passed`). Regenerated required artifacts with
+  `python3 scripts/generate_metric_contract.py`,
+  `python3 scripts/generate_api_exporter_parity.py`, and
+  `python3 scripts/generate_truenas_dashboard.py`; confirmed all five realtime
+  pool parity rows. Required full validation passed: `./scripts/validate.sh`
+  completed ruff, mypy, `194 passed`, 90.64% coverage, dashboard validation
+  (`dashboard_ok panels=318 metric_references=287`), generated checks,
+  `public_release_audit_ok`, Docker image build, container version smoke
+  `5.2.0`, and `validation_ok`. Optional live smoke was skipped because no
+  read-only live TrueNAS target/key was provided.
+
 - 2026-07-16 T03 remediation: stopped exporting `pool.query.dedup_table_size`
   bytes through the ratio-named `truenas_pool_dedup_ratio` metric. The ratio
   metric remains declared for one compatibility release with HELP text and API

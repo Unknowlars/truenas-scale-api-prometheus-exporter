@@ -19,7 +19,7 @@ Rules for updating:
 | [T01](tasks/T01-event-stream-dead-connection.md) | Event stream: detect dead connections, reconnect, honest `event_stream_up` | reliability | M | — | done | 2026-07-16 | |
 | [T02](tasks/T02-cpu-user-idle-fabrication.md) | Stop fabricating `cpu_user_percent` / `cpu_idle_percent` | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T03](tasks/T03-pool-dedup-ratio.md) | `pool_dedup_ratio` reports bytes under a ratio name | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
-| [T04](tasks/T04-realtime-pool-metrics.md) | Realtime `pools` section: retire dead read/write rates, emit used/available/total bytes | metric value + gap | M | — | todo | | |
+| [T04](tasks/T04-realtime-pool-metrics.md) | Realtime `pools` section: retire dead read/write rates, emit used/available/total bytes | metric value + gap | M | — | done | 2026-07-16 | minor-version-worthy |
 | [T05](tasks/T05-network-rate-fallback.md) | Remove cumulative-bytes fallback in network rx/tx rate gauges | metric value | S | — | todo | | |
 | [T06](tasks/T06-fabricated-zeros.md) | Eliminate fabricated zeros on partial failure (job flags, reporting_enabled) | metric value | S | — | todo | | |
 | [T07](tasks/T07-dataset-snapshot-count.md) | Make `dataset_snapshot_count` actually emit | metric gap | S | — | todo | | |
@@ -69,3 +69,6 @@ Move a one-line summary here when a task reaches `done`:
   — pending commit
 - T03 — 2026-07-16 — `truenas_pool_dedup_ratio` remains declared but intentionally absent;
   DDT bytes continue through `truenas_pool_dedup_table_size_bytes` — pending commit
+- T04 — 2026-07-16 — realtime pool used/available/total byte gauges now emit from
+  `reporting.realtime` while read/write rate probes are documented as opportunistic —
+  local commit; minor-version-worthy

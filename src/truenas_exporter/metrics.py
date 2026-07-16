@@ -637,6 +637,9 @@ ZFS_L2ARC_MISS_RATIO = declare_gauge("ZFS_L2ARC_MISS_RATIO", "truenas_zfs_l2arc_
 # Pool real-time I/O (from reporting.realtime pools section — v25+)
 POOL_REALTIME_READ_BYTES = declare_gauge("POOL_REALTIME_READ_BYTES", "truenas_pool_realtime_read_bytes_per_second", "Pool read throughput in bytes/sec (instantaneous snapshot from realtime API)", ["pool"])
 POOL_REALTIME_WRITE_BYTES = declare_gauge("POOL_REALTIME_WRITE_BYTES", "truenas_pool_realtime_write_bytes_per_second", "Pool write throughput in bytes/sec (instantaneous snapshot from realtime API)", ["pool"])
+POOL_REALTIME_USED_BYTES = declare_gauge("POOL_REALTIME_USED_BYTES", "truenas_pool_realtime_used_bytes", "Pool used bytes from the reporting.realtime event stream", ["pool"])
+POOL_REALTIME_AVAILABLE_BYTES = declare_gauge("POOL_REALTIME_AVAILABLE_BYTES", "truenas_pool_realtime_available_bytes", "Pool available bytes from the reporting.realtime event stream", ["pool"])
+POOL_REALTIME_TOTAL_BYTES = declare_gauge("POOL_REALTIME_TOTAL_BYTES", "truenas_pool_realtime_total_bytes", "Pool total bytes from the reporting.realtime event stream", ["pool"])
 
 # App/Container stats (from app.stats event in v25)
 APP_CPU_PERCENT = declare_gauge("APP_CPU_PERCENT", "truenas_app_cpu_percent", "App container CPU usage percent (0 to 100)", ["app"])
