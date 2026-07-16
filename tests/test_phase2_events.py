@@ -183,7 +183,8 @@ def test_realtime_event_removes_stale_disk_interface_pool_and_core_series():
 
     assert labeled_value(exporter_module.CPU_CORE_USAGE_PERCENT, "1") == 20.0
     assert labeled_value(exporter_module.DISK_READ_BYTES_RATE, "sda") == 1.0
-    assert labeled_value(exporter_module.NETWORK_RX_BYTES_RATE, "eth0") == 100.0
+    assert ("eth0",) not in exporter_module.NETWORK_RX_BYTES_RATE._metrics
+    assert ("eth0",) not in exporter_module.NETWORK_TX_BYTES_RATE._metrics
     assert labeled_value(exporter_module.POOL_REALTIME_READ_BYTES, "tank") == 300.0
     assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "tank") == 500.0
 
@@ -269,6 +270,25 @@ def test_realtime_event_parses_25_10_sibling_cores_and_aggregate_rates():
     assert labeled_value(exporter_module.POOL_REALTIME_USED_BYTES, "big_data") == 8690991542272.0
     assert labeled_value(exporter_module.POOL_REALTIME_AVAILABLE_BYTES, "big_data") == 3188529774592.0
     assert labeled_value(exporter_module.POOL_REALTIME_TOTAL_BYTES, "big_data") == 11879521316864.0
+
+
+def test_realtime_network_rate_metrics_ignore_cumulative_byte_fields():
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+
+    exporter._dispatch_event(
+        "reporting.realtime",
+        {
+            "interfaces": {
+                "eth0": {
+                    "received_bytes": 123456789,
+                    "sent_bytes": 987654321,
+                }
+            }
+        },
+    )
+
+    assert ("eth0",) not in exporter_module.NETWORK_RX_BYTES_RATE._metrics
+    assert ("eth0",) not in exporter_module.NETWORK_TX_BYTES_RATE._metrics
 
 
 def test_realtime_pool_space_metrics_expire_when_event_is_stale(monkeypatch):

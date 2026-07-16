@@ -1899,8 +1899,8 @@ class TrueNASExporter:
                 if not isinstance(iface_data, dict):
                     continue
                 iface = _str_label(iface_name)
-                rx = _as_float(_first_not_none(iface_data.get("received_bytes_rate"), iface_data.get("received_bytes")))
-                tx = _as_float(_first_not_none(iface_data.get("sent_bytes_rate"), iface_data.get("sent_bytes")))
+                rx = _as_float(iface_data.get("received_bytes_rate"))
+                tx = _as_float(iface_data.get("sent_bytes_rate"))
                 if rx is not None:
                     network_rx[(iface,)] = rx
                 if tx is not None:

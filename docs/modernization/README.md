@@ -52,6 +52,21 @@ validation on this host.
 
 ## Verification evidence
 
+- 2026-07-16 T05 remediation: removed the `received_bytes` /
+  `sent_bytes` fallback from `truenas_network_rx_bytes_per_second` and
+  `truenas_network_tx_bytes_per_second`, so cumulative-only
+  `reporting.realtime` interface payloads leave the `_per_second` samples
+  absent instead of reporting byte totals as rates. Focused verification passed:
+  `python3 -m pytest tests/test_phase2_events.py tests/test_reliability.py -q`
+  (`37 passed`). Regenerated metric contract, API parity, and dashboard
+  artifacts; they produced no file changes. Required full validation passed:
+  `./scripts/validate.sh` completed ruff, mypy, `195 passed`, 90.67%
+  coverage, dashboard validation (`dashboard_ok panels=318
+  metric_references=287`), generated checks, `public_release_audit_ok`,
+  Docker image build, container version smoke `5.2.0`, and `validation_ok`.
+  Optional live smoke was skipped because no read-only live TrueNAS target/key
+  was provided.
+
 - 2026-07-16 T04 remediation: added
   `truenas_pool_realtime_used_bytes`,
   `truenas_pool_realtime_available_bytes`, and

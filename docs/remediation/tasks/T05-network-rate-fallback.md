@@ -70,4 +70,22 @@ python3 -m pytest tests/test_phase2_events.py tests/test_reliability.py -q
 
 ## Outcome
 
-_(fill in when done)_
+Completed 2026-07-16.
+
+- Removed the `received_bytes` / `sent_bytes` fallbacks from
+  `truenas_network_rx_bytes_per_second{interface}` and
+  `truenas_network_tx_bytes_per_second{interface}`. The rate gauges now read
+  only `received_bytes_rate` / `sent_bytes_rate`; cumulative-only payloads
+  leave the samples absent.
+- Skipped optional cumulative network byte metrics for this patch-worthy fix and
+  recorded the possible honest non-rate metrics as a T21 follow-up in
+  `TASKS.md`.
+- Added regression coverage for cumulative-only interface payloads and kept
+  fixture coverage for rate-key payloads.
+- Verification passed:
+  `python3 -m pytest tests/test_phase2_events.py tests/test_reliability.py -q`
+  (`37 passed`). Regenerated metric contract, API parity, and dashboard
+  artifacts; they produced no file changes. `./scripts/validate.sh` exited 0
+  with `195 passed`, 90.67% coverage, `dashboard_ok panels=318
+  metric_references=287`, `public_release_audit_ok`, Docker build/version smoke
+  `5.2.0`, and `validation_ok`.

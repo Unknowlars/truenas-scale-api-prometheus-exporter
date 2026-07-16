@@ -20,7 +20,7 @@ Rules for updating:
 | [T02](tasks/T02-cpu-user-idle-fabrication.md) | Stop fabricating `cpu_user_percent` / `cpu_idle_percent` | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T03](tasks/T03-pool-dedup-ratio.md) | `pool_dedup_ratio` reports bytes under a ratio name | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T04](tasks/T04-realtime-pool-metrics.md) | Realtime `pools` section: retire dead read/write rates, emit used/available/total bytes | metric value + gap | M | — | done | 2026-07-16 | minor-version-worthy |
-| [T05](tasks/T05-network-rate-fallback.md) | Remove cumulative-bytes fallback in network rx/tx rate gauges | metric value | S | — | todo | | |
+| [T05](tasks/T05-network-rate-fallback.md) | Remove cumulative-bytes fallback in network rx/tx rate gauges | metric value | S | — | done | 2026-07-16 | patch-worthy behavior fix |
 | [T06](tasks/T06-fabricated-zeros.md) | Eliminate fabricated zeros on partial failure (job flags, reporting_enabled) | metric value | S | — | todo | | |
 | [T07](tasks/T07-dataset-snapshot-count.md) | Make `dataset_snapshot_count` actually emit | metric gap | S | — | todo | | |
 | [T08](tasks/T08-task-outcome-metrics.md) | Emit replication/cloudsync/rsync/snapshottask outcome state + last-run | metric gap | L | — | todo | | Biggest operational blind spot |
@@ -53,7 +53,9 @@ Rules for updating:
 Add findings here that you noticed but that are out of scope for your current task. Include
 file:line and one sentence. Do not fix them.
 
-- (empty)
+- T05 optional follow-up: `reporting.realtime` interface `received_bytes`/`sent_bytes`
+  cumulative or interval byte fields are not exported under honest non-rate metric names;
+  consider a T21 metric if operators need them.
 
 ## Completed log
 
@@ -72,3 +74,6 @@ Move a one-line summary here when a task reaches `done`:
 - T04 — 2026-07-16 — realtime pool used/available/total byte gauges now emit from
   `reporting.realtime` while read/write rate probes are documented as opportunistic —
   local commit; minor-version-worthy
+- T05 — 2026-07-16 — network rx/tx `_per_second` gauges now ignore cumulative-only
+  `received_bytes`/`sent_bytes` payloads and emit only from explicit rate fields —
+  local commit; patch-worthy
