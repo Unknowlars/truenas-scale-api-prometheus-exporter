@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 *.pyd
 .git/
+api
 .venv/
 venv/
 node_modules/

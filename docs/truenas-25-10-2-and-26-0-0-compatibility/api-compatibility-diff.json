@@ -4019,6 +4019,48 @@
     {
       "changed_signature_fields": [],
       "kind": "method",
+      "name": "auth.login_ex",
+      "status": "present in v26 with unchanged parsed signature",
+      "v25_path": "methods/auth/login_ex.md",
+      "v25_signature": {
+        "event_shapes": [
+          "Call parameters",
+          "Return value"
+        ],
+        "fields": {},
+        "job": false,
+        "parameters": [
+          [
+            1,
+            "login_data"
+          ]
+        ],
+        "return_schema": "Result",
+        "return_type": "",
+        "roles": []
+      },
+      "v26_path": "methods/auth/login_ex.md",
+      "v26_signature": {
+        "event_shapes": [
+          "Call parameters",
+          "Return value"
+        ],
+        "fields": {},
+        "job": false,
+        "parameters": [
+          [
+            1,
+            "login_data"
+          ]
+        ],
+        "return_schema": "Result",
+        "return_type": "",
+        "roles": []
+      }
+    },
+    {
+      "changed_signature_fields": [],
+      "kind": "method",
       "name": "auth.login_with_api_key",
       "status": "present in v26 with unchanged parsed signature",
       "v25_path": "methods/auth/login_with_api_key.md",
@@ -25900,7 +25942,7 @@
   ],
   "current_exporter_summary": {
     "absent in v26": 8,
-    "present in v26 with unchanged parsed signature": 133,
+    "present in v26 with unchanged parsed signature": 134,
     "schema changed in v26": 97
   },
   "generator": "scripts/generate_api_exporter_parity.py --compat-diff",

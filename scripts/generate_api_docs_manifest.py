@@ -51,6 +51,13 @@ def collect_files(docs_root: Path) -> tuple[list[dict[str, object]], str]:
 def build_manifest(target: ApiDocsTarget) -> dict[str, object]:
     docs_root = docs_root_for(target)
     files, aggregate_sha256 = collect_files(docs_root)
+    if target.version == "27.0.0":
+        output = output_path_for(target)
+        if not output.exists():
+            raise SystemExit("Generate the versioned snapshot with the converter first; provenance cannot be invented")
+        manifest = json.loads(output.read_text(encoding="utf-8"))
+        manifest.update(files=files, file_count=len(files), aggregate_sha256=aggregate_sha256)
+        return manifest
     if target.version == TRUENAS_API_VERSION:
         return {
             "schema_version": 1,
@@ -93,7 +100,7 @@ def main() -> None:
     parser.add_argument(
         "--target",
         default=DEFAULT_TARGET,
-        help="TrueNAS API documentation target to manifest: 25.10.2 (default) or 26.0.0.",
+        help="TrueNAS API documentation target to manifest: 25.10.2 (default), 26.0.0, 27 or 27-official.",
     )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()

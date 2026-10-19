@@ -1,0 +1,42 @@
+---
+title: vm.random_mac
+kind: method
+source_rst: _sources/api_methods_vm.random_mac.rst.txt
+source_html: api_methods_vm.random_mac.html
+required_roles:
+  - VM_READ
+---
+
+# vm.random_mac
+
+## Summary
+
+Create a random mac address.
+
+## Required Roles
+
+- `VM_READ`
+
+## Schema
+
+- Type: object
+
+<a id="headingCall_parameters"></a>
+<a id="Call_parameters"></a>
+### Call parameters
+
+- Type: array
+- No Additional Items
+
+<a id="headingReturn_value"></a>
+<a id="Return_value"></a>
+### Return value
+
+- Schema name: `Result`
+- Type: string
+
+Randomly generated MAC address suitable for virtual machine network interfaces.
+
+## Related Docs
+
+- JSON-RPC transport: [JSON-RPC 2.0 over WebSocket API](../../shared/jsonrpc.md)

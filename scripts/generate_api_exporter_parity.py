@@ -305,6 +305,8 @@ GENERIC_EVENT_VARIABLES = frozenset(
 )
 INTERNAL_VARIABLES = frozenset(
     {
+        "GENERIC_SERIES",
+        "GENERIC_SERIES_LIMIT_HITS",
         "SCRAPE_SUCCESS",
         "LAST_SCRAPE_TS",
         "SCRAPE_DURATION",
@@ -1056,6 +1058,7 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
             "POOL_SIZE_BYTES",
             "POOL_ALLOCATED_BYTES",
             "POOL_FREE_BYTES",
+            "POOL_FREEING_BYTES",
             "POOL_SCAN_PERCENT",
             "POOL_FRAGMENTATION",
             "POOL_AUTOTRIM_ENABLED",
@@ -1597,6 +1600,7 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
         "POOL_SIZE_BYTES": ("size",),
         "POOL_ALLOCATED_BYTES": ("allocated",),
         "POOL_FREE_BYTES": ("free",),
+        "POOL_FREEING_BYTES": ("freeing (26.0/27.0 only)",),
         "POOL_SCAN_PERCENT": ("scan.percentage",),
         "POOL_FRAGMENTATION": ("fragmentation",),
         "POOL_AUTOTRIM_ENABLED": ("autotrim.value",),

@@ -1,0 +1,146 @@
+---
+title: truecommand.config
+kind: method
+source_rst: _sources/api_methods_truecommand.config.rst.txt
+source_html: api_methods_truecommand.config.html
+required_roles:
+  - TRUECOMMAND_READ
+---
+
+# truecommand.config
+
+## Required Roles
+
+- `TRUECOMMAND_READ`
+
+## Schema
+
+- Type: object
+
+<a id="headingCall_parameters"></a>
+<a id="Call_parameters"></a>
+### Call parameters
+
+- Type: array
+- No Additional Items
+
+<a id="headingReturn_value"></a>
+<a id="Return_value"></a>
+### Return value
+
+- Schema name: `TruecommandEntry`
+- Type: object
+- No Additional Properties
+<a id="headingReturn_value_id"></a>
+<a id="Return_value_id"></a>
+#### id (required)
+
+- Schema name: `Id`
+- Type: integer
+
+Unique identifier for the TrueCommand configuration.
+
+<a id="headingReturn_value_api_key"></a>
+<a id="Return_value_api_key"></a>
+#### api_key (required)
+
+- Schema name: `Api Key`
+
+API key for authenticating with TrueCommand services. `null` if not configured.
+<a id="Return_value_api_key_anyOf"></a>
+##### Any of
+
+<a id="tab-pane_Return_value_api_key_anyOf_i0"></a>
+###### [Option 1](#tab-pane_Return_value_api_key_anyOf_i0)
+
+- Type: string
+
+<a id="tab-pane_Return_value_api_key_anyOf_i1"></a>
+###### [Option 2](#tab-pane_Return_value_api_key_anyOf_i1)
+
+- Type: null
+
+<a id="headingReturn_value_status"></a>
+<a id="Return_value_status"></a>
+#### status (required)
+
+- Schema name: `Status`
+- Type: enum (of string)
+
+Current connection status with TrueCommand service.
+##### Must be one of:
+
+- "CONNECTED"
+- "CONNECTING"
+- "DISABLED"
+- "FAILED"
+
+<a id="headingReturn_value_status_reason"></a>
+<a id="Return_value_status_reason"></a>
+#### status_reason (required)
+
+- Schema name: `Status Reason`
+- Type: enum (of string)
+
+Explanation of the current TrueCommand connection status.
+##### Must be one of:
+
+- "Truecommand service is connected."
+- "Pending Confirmation From iX Portal for Truecommand API Key."
+- "Truecommand service is disabled."
+- "Truecommand API Key Disabled by iX Portal."
+- "Waiting for connection from Truecommand."
+- "Truecommand service is disabled on standby controller"
+
+<a id="headingReturn_value_remote_url"></a>
+<a id="Return_value_remote_url"></a>
+#### remote_url (required)
+
+- Schema name: `Remote Url`
+
+URL of the connected TrueCommand instance. `null` if not connected.
+<a id="Return_value_remote_url_anyOf"></a>
+##### Any of
+
+<a id="tab-pane_Return_value_remote_url_anyOf_i0"></a>
+###### [Option 1](#tab-pane_Return_value_remote_url_anyOf_i0)
+
+- Type: string
+
+<a id="tab-pane_Return_value_remote_url_anyOf_i1"></a>
+###### [Option 2](#tab-pane_Return_value_remote_url_anyOf_i1)
+
+- Type: null
+
+<a id="headingReturn_value_remote_ip_address"></a>
+<a id="Return_value_remote_ip_address"></a>
+#### remote_ip_address (required)
+
+- Schema name: `Remote Ip Address`
+
+IP address of the connected TrueCommand instance. `null` if not connected.
+<a id="Return_value_remote_ip_address_anyOf"></a>
+##### Any of
+
+<a id="tab-pane_Return_value_remote_ip_address_anyOf_i0"></a>
+###### [Option 1](#tab-pane_Return_value_remote_ip_address_anyOf_i0)
+
+- Type: string
+
+<a id="tab-pane_Return_value_remote_ip_address_anyOf_i1"></a>
+###### [Option 2](#tab-pane_Return_value_remote_ip_address_anyOf_i1)
+
+- Type: null
+
+<a id="headingReturn_value_enabled"></a>
+<a id="Return_value_enabled"></a>
+#### enabled (required)
+
+- Schema name: `Enabled`
+- Type: boolean
+
+Whether TrueCommand integration is enabled.
+
+## Related Docs
+
+- JSON-RPC transport: [JSON-RPC 2.0 over WebSocket API](../../shared/jsonrpc.md)

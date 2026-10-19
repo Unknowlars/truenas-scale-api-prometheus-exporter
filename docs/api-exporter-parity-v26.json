@@ -12193,8 +12193,8 @@
   ],
   "generator": "scripts/generate_api_exporter_parity.py --target 26.0.0",
   "method_decision_partition": {
-    "common documented method; no current exporter ownership": 490,
-    "current exporter surface; requires COMPAT-02 profile review before v26 use": 228,
+    "common documented method; no current exporter ownership": 489,
+    "current exporter surface; requires COMPAT-02 profile review before v26 use": 229,
     "v26-only method; inventory only, no first-release metric mapping approved": 87
   },
   "methods": [
@@ -13782,8 +13782,8 @@
       "roles": []
     },
     {
-      "current_exporter_surface": false,
-      "decision": "common documented method; no current exporter ownership",
+      "current_exporter_surface": true,
+      "decision": "current exporter surface; requires COMPAT-02 profile review before v26 use",
       "documentation_path": "methods/auth/login_ex.md",
       "field_count": 0,
       "method": "auth.login_ex",
