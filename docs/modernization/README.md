@@ -793,3 +793,17 @@ validation on this host.
   event-stream recovery, discovery safety, generic extraction, HTTP readiness,
   and collector/legacy startup branches have fixture-based regressions. Live
   smoke remains optional and was not run without a read-only key.
+
+- 2026-10-19 TrueNAS 27 / 5.2.0rc1 verification (mocked and offline evidence
+  only): `./scripts/validate.sh` passed end to end, including 306 tests at
+  91.40% branch coverage, Ruff, mypy, all generated-asset checks (metric
+  contract, parity, API docs manifests for 26.0.0, 27 and 27-official,
+  TrueNAS 27 review inventory), both dashboard validators, Compose checks, the
+  Docker build and the version smoke test. `./scripts/release.sh` ran in
+  dry-run mode only. The metric contract preserved all 417 existing contracts
+  (none removed or changed) and added `truenas_generic_series`,
+  `truenas_generic_series_limit_hits_total` and `truenas_pool_freeing_bytes`.
+- Not verified: live TrueNAS 27 behavior, the Python 3.13/3.14 test matrix and
+  dependency/image audits in this session, Prometheus/PromQL validation in
+  local containers, and Grafana browser rendering. No read-only live API key
+  was available. These remain release blockers for a final 5.2.0.

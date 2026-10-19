@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented here.
 
+## 5.2.0rc1 — TrueNAS 27 candidate
+
+- Add an explicit 27.0 compatibility profile, suppressing historical methods
+  absent from the pinned local or official API 27.0.0 documentation.
+- Support `auth.login_ex(API_KEY_PLAIN)` with optional `TRUENAS_USERNAME`;
+  require explicit success and never downgrade after rejection. Keep legacy
+  key-only authentication for existing configurations.
+- Enforce scrape deadlines before connect/send/receive, isolate required source
+  failures, and limit query fallbacks to invalid-parameter responses.
+- Enforce event freshness during snapshot exposition even while polling blocks;
+  retain both realtime disk-map input spellings.
+- Bound optional generic extraction with `MAX_GENERIC_SERIES` and add
+  `truenas_generic_series` and `truenas_generic_series_limit_hits_total` diagnostics.
+- Preserve all pre-existing metric names, types, HELP and labels. Unknown or
+  unsupported sources remain absent/NaN rather than fabricated values.
+- Preserve both dashboards, make Mission Control generation offline/repeatable,
+  validate both formats and show generic-budget diagnostics.
+- Add pinned local/official API Markdown, exhaustive compatibility/metric
+  inventories, architecture and baseline reviews, and a reusable Codex/Claude skill.
+- Keep publication local and explicit; prereleases never update `latest`.
+
+Live server acceptance is pending valid read-only authentication. Local API docs
+identify 27.0.0; that is not proof of the appliance's exact installed release.
+See `docs/reviews/` and `docs/modernization/README.md` for evidence and limitations.
+
 ## Unreleased - 5.2.0
 
 ### Fixed

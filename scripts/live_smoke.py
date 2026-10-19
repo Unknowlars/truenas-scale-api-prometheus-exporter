@@ -49,7 +49,7 @@ def main() -> None:
         config.verify_tls,
         ca_file=config.ca_file,
     ) as client:
-        client.authenticate(config.api_key)
+        client.authenticate(config.api_key, username=config.username)
         for method in READ_ONLY_METHODS:
             params = [[], {"limit": 5}] if method.endswith(".query") else []
             print(json.dumps(summarize(method, client.call(method, params)), sort_keys=True))

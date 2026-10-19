@@ -20,6 +20,14 @@ API_DOCS_TARGETS = {
         docs_dir="truenas-api",
         source="offline TrueNAS API documentation snapshot (not redistributed)",
     ),
+    "27.0.0": ApiDocsTarget(
+        version="27.0.0", docs_dir="api/truenas-27",
+        source="local appliance API documentation snapshot",
+    ),
+    "27.0.0-official": ApiDocsTarget(
+        version="27.0.0", docs_dir="api/truenas-27-official",
+        source="official TrueNAS API documentation snapshot",
+    ),
     "26.0.0": ApiDocsTarget(
         version="26.0.0",
         docs_dir="truenas-api-v26",
@@ -45,6 +53,13 @@ API_DOCS_TARGET_ALIASES = {
     "25.10.2": "25.10.2",
     "v25": "25.10.2",
     "v25.10.2": "25.10.2",
+    "27": "27.0.0",
+    "27.0": "27.0.0",
+    "27.0.0": "27.0.0",
+    "v27": "27.0.0",
+    "v27.0.0": "27.0.0",
+    "27-official": "27.0.0-official",
+    "27.0.0-official": "27.0.0-official",
     "26": "26.0.0",
     "26.0": "26.0.0",
     "26.0.0": "26.0.0",

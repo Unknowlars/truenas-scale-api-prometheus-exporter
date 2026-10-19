@@ -10,6 +10,13 @@
   New replacements require a compatibility alias and a documented deprecation.
 - Never commit API keys, `.env` files, captured credentials, or unredacted live
   API responses.
+- The owner authorizes using the real TrueNAS SCALE server and real data when
+  needed to confirm API behavior, schemas, permissions, metric correctness, or
+  performance. Keep these operations read-only and bounded; this authorization
+  does not permit configuration/storage changes or disruptive calls. Keep
+  credentials private, inspect responses locally, and retain only sanitized
+  fixtures or non-sensitive verification summaries. Distinguish live results
+  from mocked tests and documentation evidence.
 
 ## Verification
 

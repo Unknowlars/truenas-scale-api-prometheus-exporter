@@ -24,9 +24,13 @@ cmd=(docker buildx build
   --platform linux/amd64,linux/arm64
   --build-arg PYTHON_VERSION=3.14.6
   --tag "${image}:${version}"
-  --tag "${image}:latest"
   --sbom=true
   --provenance=mode=max)
+
+# Prereleases never replace the stable channel.
+if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  cmd+=(--tag "${image}:latest")
+fi
 
 if [[ "$publish" == false ]]; then
   printf 'DRY RUN: '

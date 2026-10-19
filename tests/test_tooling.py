@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.convert_truenas_api_docs_to_markdown import convert
+from scripts.public_release_audit import is_forbidden_path, scan_text
 from scripts.validate_dashboard import (
     DEPRECATED_DASHBOARD_METRICS,
     UNAVAILABLE_DASHBOARD_METRICS,
@@ -15,6 +16,23 @@ from scripts.validate_dashboard import (
 
 def test_live_smoke_imports_from_source_checkout():
     runpy.run_path("scripts/live_smoke.py", run_name="live_smoke_import_test")
+
+
+def test_secret_and_claude_paths_remain_protected():
+    assert is_forbidden_path(Path("api"))
+    assert is_forbidden_path(Path(".claude/settings.local.json"))
+    assert is_forbidden_path(Path(".claude/skills/other/SKILL.md"))
+    assert is_forbidden_path(Path(".claude/skills/truenas-prometheus-exporter/SKILL.md")) is None
+
+
+def test_public_claude_skill_bridge_still_undergoes_secret_scanning(tmp_path, monkeypatch):
+    import scripts.public_release_audit as audit
+
+    monkeypatch.setattr(audit, "REPO_ROOT", tmp_path)
+    bridge = Path(".claude/skills/truenas-prometheus-exporter/SKILL.md")
+    (tmp_path / bridge).parent.mkdir(parents=True)
+    (tmp_path / bridge).write_text("ghp_" + "a" * 40)
+    assert scan_text(bridge)
 
 
 def test_compose_forwards_documented_environment_keys():

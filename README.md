@@ -22,7 +22,7 @@ This exporter connects to a TrueNAS SCALE system over its JSON-RPC WebSocket API
 - **Read-only by design.** Every API method is checked against a documentation-derived allow-list and a mutating-verb deny-list *before* the call is made. The exporter cannot create, modify, or delete anything on your NAS.
 - **No agent on TrueNAS.** Nothing is installed on the NAS itself; you only need a read-only API key.
 - **Broad coverage.** 400+ metrics spanning pools, datasets, snapshots, disks and temperatures, ZFS ARC, CPU/memory/network, SMB/NFS/iSCSI, apps and Docker, VMs, tasks, alerts, certificates, and UPS.
-- **Version-aware.** Detects TrueNAS SCALE `25.10.x` and `26.0.x` from `system.version_short` and selects the correct compatibility profile automatically — no manual toggle.
+- **Version-aware.** Detects TrueNAS `25.10.x`, `26.0.x`, and `27.0.x` from `system.version_short` and selects a reviewed compatibility profile automatically.
 - **Bundled dashboards.** Two importable Grafana dashboards are included.
 - **Hardened defaults.** Ships as a read-only container (`cap_drop: ALL`, `no-new-privileges`) with conservative, low-cardinality collection defaults.
 
@@ -189,6 +189,8 @@ To import: in Grafana, go to **Dashboards → New → Import**, upload one of th
 <details>
 <summary>Rebuilding and pushing the Mission Control dashboard</summary>
 
+Mission Control generation is offline and deterministic by default. Optional `--metric-names /private/names.json` uses a local names-only JSON list for private layout customization. The previous implicit live lookup and names cache are no longer used.
+
 The Mission Control dashboard is generated code. Edit and re-run `grafana-dashboard/build_mission_control.py` (Python 3, no extra dependencies) rather than hand-editing the JSON. It harvests panel queries from the classic Operations Center dashboard, so query fixes should land there first.
 
 Push it via the Grafana App Platform API:
@@ -211,6 +213,9 @@ Every option is documented with inline comments in [`.env.example`](.env.example
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `TRUENAS_WS_URL` | yes | — | TrueNAS WebSocket URL, e.g. `wss://192.168.1.50/api/current` |
+| `TRUENAS_USERNAME` | no | unset | API-key owner's username; selects `auth.login_ex` with explicit success checking. Unset preserves legacy key-only login. |
+| `TRUENAS_API_KEY_FILE` | alternative | unset | Local mounted key-file path; used when `TRUENAS_API_KEY` is empty. Never commit this file. |
+| `MAX_GENERIC_SERIES` | no | `10000` | Separate hard limits for polling generic series and all retained generic event series. Dedicated metrics are unaffected. |
 | `TRUENAS_API_KEY` | yes* | — | Read-only API key (*or provide `TRUENAS_API_KEY_FILE`) |
 | `TRUENAS_API_KEY_FILE` | no | — | Path to a mounted file containing the API key (Docker/Kubernetes secrets) |
 | `TRUENAS_VERIFY_TLS` | no | `true` | Set `false` only on a trusted LAN with a self-signed certificate |
@@ -226,6 +231,16 @@ Every option is documented with inline comments in [`.env.example`](.env.example
 
 > [!NOTE]
 > Defaults are intentionally conservative and low-cardinality. The high-cardinality options (`ENABLE_GENERIC_METHOD_METRICS`, `ENABLE_GENERIC_EVENT_METRICS`, `AUTO_DISCOVER_METHODS`, `SCRAPE_ALL_METRICS`) are disabled by default and cannot bypass the read-only method policy. See [How it works](#how-it-works) before enabling them.
+
+## TrueNAS 27 release candidate
+
+The 5.2.0rc1 candidate targets API 27.0.0 while retaining tested 25.10/26.0
+profiles. Read the [migration notes](docs/truenas27-migration.md),
+[compatibility matrix](docs/reviews/truenas27-api-compatibility.md), and
+[metric inventory](docs/reviews/truenas27-metric-coverage.md). Documentation
+and mocked tests are separate from live acceptance; see the evidence ledger
+for current limitations. Real server data may be used for bounded read-only
+verification under the project agent rules.
 
 ## Metric coverage
 

@@ -18,9 +18,16 @@ python3 -m pytest -q -p no:cacheprovider \
   --cov-fail-under=85
 python3 scripts/generate_metric_contract.py --check
 python3 scripts/generate_truenas_dashboard.py --check
+python3 grafana-dashboard/build_mission_control.py --check
 python3 scripts/validate_dashboard.py
 python3 scripts/generate_api_docs_manifest.py --check
+python3 scripts/generate_api_docs_manifest.py --target 26.0.0 --check
+python3 scripts/generate_api_docs_manifest.py --target 27 --check
+python3 scripts/generate_api_docs_manifest.py --target 27-official --check
 python3 scripts/generate_api_exporter_parity.py --check
+python3 scripts/generate_api_exporter_parity.py --target 26.0.0 --check
+python3 scripts/generate_api_exporter_parity.py --compat-diff --check
+python3 scripts/generate_truenas27_review.py --check
 python3 scripts/public_release_audit.py
 docker compose --env-file .env.example config --no-env-resolution --quiet
 docker compose --file deploy/prometheus/docker-compose.prometheus.yml --env-file .env.example config --no-env-resolution --quiet
