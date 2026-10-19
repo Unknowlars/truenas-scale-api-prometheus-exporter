@@ -27,6 +27,7 @@ BINARY_SUFFIXES = {
 }
 
 FORBIDDEN_EXACT_PATHS = {
+    "api",
     ".coverage",
     "CLAUDE.md",
     "TrueNAS - newest dashboard.json",
@@ -92,6 +93,10 @@ def tracked_files() -> list[Path]:
 
 def is_forbidden_path(path: Path) -> str | None:
     name = path.as_posix()
+    # The reusable skill's Claude discovery bridge is public project guidance,
+    # not local Claude configuration. Its contents still undergo secret scans.
+    if name == ".claude/skills/truenas-prometheus-exporter/SKILL.md":
+        return None
     if name in FORBIDDEN_EXACT_PATHS:
         return "local/scratch artifact"
     if name == ".env" or (name.startswith(".env.") and name != ".env.example"):

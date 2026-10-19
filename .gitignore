@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 venv/
 .env
+/api
 .env.*
 !.env.example
 *.log
@@ -16,6 +17,11 @@ htmlcov/
 dist/
 build/
 .claude/
+!.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/truenas-prometheus-exporter/
 .agent/
 .opencode/
 .sisyphus/
