@@ -48,6 +48,8 @@ class Config:
     scrape_budget_seconds: int = 25
     event_stale_after_seconds: int = 15
     ca_file: str | None = None
+    username: str | None = None
+    max_generic_series: int = 10000
 
 
 def _bool_env(name: str, default: str = "true") -> bool:
@@ -142,6 +144,8 @@ def load_config() -> Config:
         )
 
     return Config(
+        username=os.getenv("TRUENAS_USERNAME", "").strip() or None,
+        max_generic_series=_int_env("MAX_GENERIC_SERIES", "10000", 1),
         ws_url=ws_url,
         api_key=api_key,
         interval_seconds=_int_env("SCRAPE_INTERVAL_SECONDS", "30", 1),

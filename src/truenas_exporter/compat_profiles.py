@@ -13,7 +13,7 @@ from .api_catalog import (
     TELEMETRY_CANDIDATE_METHOD_ALLOWLIST,
 )
 
-ProfileName = Literal["25.10", "26.0", "unknown"]
+ProfileName = Literal["25.10", "26.0", "27.0", "unknown"]
 
 V26_REMOVED_METHODS: frozenset[str] = frozenset(
     {
@@ -55,6 +55,7 @@ PROFILE_PROHIBITED_METHODS: frozenset[str] = frozenset(
 TRANSPORT_METHOD_ALLOWLIST: frozenset[str] = frozenset(
     {
         "auth.login_with_api_key",
+        "auth.login_ex",
         "core.subscribe",
         "core.unsubscribe",
         "system.version_short",
@@ -160,6 +161,28 @@ PROFILE_26_0 = CompatibilityProfile(
     query_limit_methods=QUERY_LIMIT_METHODS - V26_REMOVED_METHODS,
     unit_conversions=_V26_UNIT_CONVERSIONS,
 )
+# Reviewed historical reads absent from at least one of the two pinned27
+# inventories. Do not issue them on27 merely because a previous profile did.
+V27_REMOVED_METHODS = V26_REMOVED_METHODS | frozenset({
+    "pool.dataset.encryption_algorithm_choices",
+    "virt.device.disk_choices", "virt.device.gpu_choices", "virt.device.nic_choices",
+    "virt.device.pci_choices", "virt.device.usb_choices", "virt.global.bridge_choices",
+    "virt.global.pool_choices", "virt.instance.device_list", "virt.instance.get_instance",
+    "virt.instance.image_choices", "virt.volume.get_instance", "vm.device.pptdev_choices",
+    "disk.get_instance", "tn_connect.ip_choices",
+})
+PROFILE_27_0 = CompatibilityProfile(
+    name="27.0", target_version="27.0.0",
+    reviewed_methods=_V26_METHODS - V27_REMOVED_METHODS,
+    telemetry_methods=_V26_TELEMETRY_METHODS - V27_REMOVED_METHODS,
+    reviewed_events=_V26_EVENTS,
+    default_event_subscriptions=PROFILE_26_0.default_event_subscriptions,
+    removed_methods=V27_REMOVED_METHODS,
+    removed_events=V26_REMOVED_EVENTS,
+    query_limit_methods=QUERY_LIMIT_METHODS - V27_REMOVED_METHODS,
+    unit_conversions=_V26_UNIT_CONVERSIONS,
+)
+
 PROFILE_UNKNOWN = CompatibilityProfile(
     name="unknown",
     target_version="common-intersection",
@@ -179,6 +202,7 @@ PROFILES: MappingProxyType[ProfileName, CompatibilityProfile] = MappingProxyType
     {
         "25.10": PROFILE_25_10,
         "26.0": PROFILE_26_0,
+        "27.0": PROFILE_27_0,
         "unknown": PROFILE_UNKNOWN,
     }
 )

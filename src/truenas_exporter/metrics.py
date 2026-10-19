@@ -1070,3 +1070,9 @@ SYSTEM_GLOBAL_ID = declare_gauge("SYSTEM_GLOBAL_ID", "truenas_system_global_id",
 
 # Update download status (update.status)
 UPDATE_DOWNLOAD_PROGRESS_PERCENT = declare_gauge("UPDATE_DOWNLOAD_PROGRESS_PERCENT", "truenas_update_download_progress_percent", "Current update download completion percentage (0 to 100)")
+
+# Bounded diagnostic labels: source is always "method" or "event".
+GENERIC_SERIES = declare_gauge("GENERIC_SERIES", "truenas_generic_series", "Current generic series retained within the configured budget", ["source"])
+GENERIC_SERIES_LIMIT_HITS = declare_counter("GENERIC_SERIES_LIMIT_HITS", "truenas_generic_series_limit_hits_total", "Generic extraction branches omitted after reaching the series budget", ["source"])
+
+POOL_FREEING_BYTES = declare_gauge("POOL_FREEING_BYTES", "truenas_pool_freeing_bytes", "Bytes being freed by ongoing pool operations when available", ["pool"])

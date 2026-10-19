@@ -14,7 +14,9 @@ changelogs; this module documents only current behavior.
 
 from __future__ import annotations
 
+import copy
 import logging
+import math
 import os
 import re
 import signal
@@ -22,6 +24,8 @@ import sys
 import threading
 import time
 import traceback
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, cast
 from urllib.parse import urlparse
 
@@ -220,6 +224,8 @@ from .metrics import (
     FIPS_AVAILABLE,
     FIPS_ENABLED,
     FTP_ENABLED,
+    GENERIC_SERIES,
+    GENERIC_SERIES_LIMIT_HITS,
     GPU_AVAILABLE_TO_HOST,
     GPU_COUNT,
     GPU_INFO,
@@ -319,6 +325,7 @@ from .metrics import (
     POOL_EXPAND_TO_REFLOW_BYTES,
     POOL_FRAGMENTATION,
     POOL_FREE_BYTES,
+    POOL_FREEING_BYTES,
     POOL_HEALTHY,
     POOL_LAST_SCAN_TS,
     POOL_REALTIME_AVAILABLE_BYTES,
@@ -506,6 +513,7 @@ _SENSITIVE_METRIC_PATH_RE = re.compile(
 )
 
 _POLL_RESET_EXCLUDED_NAMES = {
+    "truenas_generic_series",
     "truenas_up",
     "truenas_last_scrape_timestamp_seconds",
     "truenas_scrape_duration_seconds",
@@ -567,6 +575,8 @@ class TrueNASExporter:
         self._snapshot_lock = threading.Lock()
         self._last_metric_snapshot_publish_monotonic = 0.0
         self._metric_snapshot_publish_timer: threading.Timer | None = None
+        self._generic_method_keys: set[tuple[str, ...]] = set()
+        self._generic_event_sizes: dict[str, int] = {}
         self._reset_poll_metrics()
         # Event-owned realtime scalar gauges are excluded from _reset_poll_metrics
         # (the event stream owns their lifecycle), so before the first event they
@@ -577,6 +587,7 @@ class TrueNASExporter:
         for event_scalar in _REALTIME_EVENT_SCALAR_METRICS:
             event_scalar.set(float("nan"))
         self._metric_snapshot = tuple(REGISTRY.collect())
+        self._snapshot_event_times: dict[str, float] = {}
         self._scrape_thread: threading.Thread | None = None
         # Tracks the last-seen boot ID so we can increment the reboot counter
         # when it changes, rather than exposing a UUID-valued label.
@@ -614,6 +625,8 @@ class TrueNASExporter:
         until their documented source successfully produces a value.  Event-owned
         telemetry and cumulative counters have independent lifetime rules.
         """
+        self._generic_method_keys.clear()
+        GENERIC_SERIES.labels(source="method").set(0)
         for spec in METRIC_SPECS:
             if spec.metric_type != "gauge" or spec.name in _POLL_RESET_EXCLUDED_NAMES:
                 continue
@@ -721,6 +734,8 @@ class TrueNASExporter:
         HOST_SYSTEM_INFO.clear()
         HW_VIRT_VARIANT.clear()
         CHASSIS_HARDWARE.clear()
+        self._generic_method_keys.clear()
+        GENERIC_SERIES.labels(source="method").set(0)
         METHOD_NUMERIC_VALUE.clear()
         METHOD_BOOLEAN_VALUE.clear()
         METHOD_STATUS_VALUE.clear()
@@ -780,6 +795,8 @@ class TrueNASExporter:
             self._collector_event_series.pop(name, None)
 
     def _clear_generic_event_metrics(self, event: str) -> None:
+        self._generic_event_sizes.pop(event, None)
+        GENERIC_SERIES.labels(source="event").set(sum(self._generic_event_sizes.values()))
         if not self.config.enable_generic_event_metrics or self._is_collector_mode():
             return
         for metric in (
@@ -849,14 +866,39 @@ class TrueNASExporter:
         self._stop_event.set()
 
     def metric_snapshot(self) -> tuple[Any, ...]:
-        """Return the last complete immutable-by-convention metric snapshot."""
+        """Project freshness without taking the polling lock or modifying snapshots."""
         with self._snapshot_lock:
-            return self._metric_snapshot
+            families = self._metric_snapshot
+            event_times = self._snapshot_event_times
+        now = time.monotonic()
+        projected = []
+        generic_names = {metric_name(m) for m in (
+            EVENT_NUMERIC_VALUE, EVENT_BOOLEAN_VALUE, EVENT_STATUS_VALUE, EVENT_LIST_LENGTH,
+        )}
+        for family in families:
+            source = _EVENT_SOURCE_BY_METRIC_NAME.get(family.name)
+            if source is None and family.name not in generic_names:
+                projected.append(family)
+                continue
+            samples = []
+            for sample in family.samples:
+                event = source or sample.labels.get("event", "")
+                event = INSTANCE_METRICS_EVENT if event in INSTANCE_METRICS_WIRE_ALIASES else event
+                updated = event_times.get(event)
+                if updated is not None and now - updated <= self.config.event_stale_after_seconds:
+                    samples.append(sample)
+                elif not sample.labels:
+                    samples.append(sample._replace(value=math.nan))
+            fresh = copy.copy(family)
+            fresh.samples = samples
+            projected.append(fresh)
+        return tuple(projected)
 
     def _publish_metric_snapshot(self) -> None:
         families = tuple(REGISTRY.collect())
         with self._snapshot_lock:
             self._metric_snapshot = families
+            self._snapshot_event_times = dict(self._event_last_monotonic)
             self._last_metric_snapshot_publish_monotonic = time.monotonic()
             self._metric_snapshot_publish_timer = None
 
@@ -923,10 +965,13 @@ class TrueNASExporter:
         normalized = version.strip()
         if normalized.startswith("TrueNAS-SCALE-"):
             normalized = normalized.removeprefix("TrueNAS-SCALE-")
+        normalized = normalized.removeprefix("TrueNAS-")
         if normalized.startswith("25.10."):
             return get_profile("25.10")
         if normalized.startswith("26.0."):
             return get_profile("26.0")
+        if normalized.startswith("27.0."):
+            return get_profile("27.0")
         return get_profile("unknown")
 
     def _note_profile(self, detected_profile: CompatibilityProfile) -> None:
@@ -937,7 +982,7 @@ class TrueNASExporter:
             if detected_profile.name == "unknown":
                 if (
                     self._has_detected_concrete_profile
-                    and current_profile.name in {"25.10", "26.0"}
+                    and current_profile.name in {"25.10", "26.0", "27.0"}
                 ):
                     return
                 if current_profile is not detected_profile or current_profile.name != detected_profile.name:
@@ -972,6 +1017,7 @@ class TrueNASExporter:
         client.authenticate(
             self.config.api_key,
             call=lambda method, params: self._call(client, method, params),
+            **({"username": self.config.username} if self.config.username else {}),
         )
         try:
             version_short = self._call(client, "system.version_short", [])
@@ -1090,8 +1136,8 @@ class TrueNASExporter:
     ) -> Any:
         try:
             return self._call(client, method, [[], preferred_options])
-        except Exception:
-            if not allow_bare_fallback:
+        except JsonRpcError as exc:
+            if not allow_bare_fallback or exc.code != -32602:
                 raise
             LOG.debug("Falling back to bare call for %s", method)
             return self._call(client, method, [])
@@ -1112,7 +1158,7 @@ class TrueNASExporter:
         if type(result) is not int or result < 0:
             raise TypeError(
                 f"{method} count query returned invalid nonnegative integer: "
-                f"{result!r} ({type(result).__name__})"
+                f"{type(result).__name__}"
             )
         return result
 
@@ -1138,17 +1184,17 @@ class TrueNASExporter:
                 f"Suppressed removed method {method!r} for {self.compatibility_profile.name} profile",
                 exc_info=False,
             )
-            raise RuntimeError(
+            raise JsonRpcError(
                 f"method {method!r} was removed and is outside the "
-                f"{self.compatibility_profile.name} compatibility profile"
+                f"{self.compatibility_profile.name} compatibility profile", code=-32601,
             )
         self._collector_error(
             "profile_method_blocked",
             f"Blocked method {method!r} outside {self.compatibility_profile.name} profile",
             exc_info=False,
         )
-        raise RuntimeError(
-            f"method {method!r} is outside the {self.compatibility_profile.name} compatibility profile"
+        raise JsonRpcError(
+            f"method {method!r} is outside the {self.compatibility_profile.name} compatibility profile", code=-32601,
         )
 
     def _extract_snapshot_creation_timestamp(self, snapshot: Any) -> float | None:
@@ -1537,35 +1583,54 @@ class TrueNASExporter:
     def _extract_generic_metrics(self, method: str, value: Any, path: str, depth: int) -> None:
         if depth > self.config.max_depth or _SENSITIVE_METRIC_PATH_RE.search(path):
             return
+        if len(self._generic_method_keys) >= self.config.max_generic_series:
+            GENERIC_SERIES_LIMIT_HITS.labels(source="method").inc()
+            return
         metric_path = self._normalize_path(path)
 
         if isinstance(value, bool):
+            self._generic_method_keys.add(("METHOD_BOOLEAN_VALUE", method, metric_path))
+            GENERIC_SERIES.labels(source="method").set(len(self._generic_method_keys))
             METHOD_BOOLEAN_VALUE.labels(method=method, path=metric_path).set(1 if value else 0)
             return
 
         numeric_value = _as_float(value)
         if numeric_value is not None and not isinstance(value, str):
+            self._generic_method_keys.add(("METHOD_NUMERIC_VALUE", method, metric_path))
+            GENERIC_SERIES.labels(source="method").set(len(self._generic_method_keys))
             METHOD_NUMERIC_VALUE.labels(method=method, path=metric_path).set(numeric_value)
             return
 
         if isinstance(value, str):
             float_value = _as_float(value)
             if float_value is not None:
+                self._generic_method_keys.add(("METHOD_NUMERIC_VALUE", method, metric_path))
+                GENERIC_SERIES.labels(source="method").set(len(self._generic_method_keys))
                 METHOD_NUMERIC_VALUE.labels(method=method, path=metric_path).set(float_value)
                 return
             status_value = value.strip().upper()[:60]
             if self._status_like(status_value):
+                self._generic_method_keys.add(("METHOD_STATUS_VALUE", method, metric_path, status_value))
+                GENERIC_SERIES.labels(source="method").set(len(self._generic_method_keys))
                 METHOD_STATUS_VALUE.labels(method=method, path=metric_path, status=status_value).set(1)
             return
 
         if isinstance(value, list):
+            self._generic_method_keys.add(("METHOD_LIST_LENGTH", method, metric_path))
+            GENERIC_SERIES.labels(source="method").set(len(self._generic_method_keys))
             METHOD_LIST_LENGTH.labels(method=method, path=metric_path).set(len(value))
             for index, item in enumerate(value[: self.config.max_list_items]):
+                if len(self._generic_method_keys) >= self.config.max_generic_series:
+                    GENERIC_SERIES_LIMIT_HITS.labels(source="method").inc()
+                    break
                 self._extract_generic_metrics(method, item, f"{path}[{index}]", depth + 1)
             return
 
         if isinstance(value, dict):
             for key, item in value.items():
+                if len(self._generic_method_keys) >= self.config.max_generic_series:
+                    GENERIC_SERIES_LIMIT_HITS.labels(source="method").inc()
+                    break
                 key_str = _str_label(key, "key")
                 self._extract_generic_metrics(method, item, f"{path}.{key_str}", depth + 1)
 
@@ -1581,6 +1646,9 @@ class TrueNASExporter:
         list_length_series: dict[tuple[str, ...], float],
     ) -> None:
         if depth > self.config.max_depth or _SENSITIVE_METRIC_PATH_RE.search(path):
+            return
+        if sum(self._generic_event_sizes.values()) + len(numeric_series) + len(boolean_series) + len(status_series) + len(list_length_series) >= self.config.max_generic_series:
+            GENERIC_SERIES_LIMIT_HITS.labels(source="event").inc()
             return
         metric_path = self._normalize_path(path)
 
@@ -1606,6 +1674,9 @@ class TrueNASExporter:
         if isinstance(value, list):
             list_length_series[(event, metric_path)] = float(len(value))
             for index, item in enumerate(value[: self.config.max_list_items]):
+                if sum(self._generic_event_sizes.values()) + len(numeric_series) + len(boolean_series) + len(status_series) + len(list_length_series) >= self.config.max_generic_series:
+                    GENERIC_SERIES_LIMIT_HITS.labels(source="event").inc()
+                    break
                 self._collect_event_metric_series(
                     event,
                     item,
@@ -1620,6 +1691,9 @@ class TrueNASExporter:
 
         if isinstance(value, dict):
             for key, item in value.items():
+                if sum(self._generic_event_sizes.values()) + len(numeric_series) + len(boolean_series) + len(status_series) + len(list_length_series) >= self.config.max_generic_series:
+                    GENERIC_SERIES_LIMIT_HITS.labels(source="event").inc()
+                    break
                 key_str = _str_label(key, "key")
                 self._collect_event_metric_series(
                     event,
@@ -1633,6 +1707,7 @@ class TrueNASExporter:
                 )
 
     def _replace_generic_event_metrics(self, event: str, payload: Any) -> None:
+        self._generic_event_sizes.pop(event, None)
         numeric_series: dict[tuple[str, ...], float] = {}
         boolean_series: dict[tuple[str, ...], float] = {}
         status_series: dict[tuple[str, ...], float] = {}
@@ -1648,6 +1723,9 @@ class TrueNASExporter:
             status_series,
             list_length_series,
         )
+
+        self._generic_event_sizes[event] = sum(map(len, (numeric_series, boolean_series, status_series, list_length_series)))
+        GENERIC_SERIES.labels(source="event").set(sum(self._generic_event_sizes.values()))
 
         self._replace_event_metric_series(
             EVENT_NUMERIC_VALUE,
@@ -2025,7 +2103,7 @@ class TrueNASExporter:
         if collection == "reporting.realtime":
             valid_payload = isinstance(payload, dict) and any(
                 key in payload
-                for key in ("cpu", "disls", "interfaces", "memory", "zfs", "pools")
+                for key in ("cpu", "disls", "disks", "interfaces", "memory", "zfs", "pools")
             )
         elif collection == "app.stats":
             valid_payload = isinstance(payload, dict) and isinstance(
@@ -3450,11 +3528,23 @@ class TrueNASExporter:
                 self.config.ws_url,
             )
 
+    @contextmanager
+    def _source_scope(self, source: str) -> Iterator[None]:
+        """Keep documented source/data failures local; transport failures escape."""
+        try:
+            yield
+        except (JsonRpcError, TypeError, ValueError, KeyError) as exc:
+            if isinstance(exc, JsonRpcError) and exc.code not in {-32601, -32602, -32001}:
+                raise
+            self._required_source_failed = True
+            self._collector_error(source, f"Source unavailable or malformed: {source}", exc_info=False)
+
     def scrape_once(self) -> None:
         LAST_SCRAPE_TS.set(time.time())
         self._last_scrape_attempt_monotonic = time.monotonic()
         success = False
         reset_done = False
+        self._required_source_failed = False
         deadline = time.monotonic() + self.config.scrape_budget_seconds
 
         with self._lock:
@@ -3526,50 +3616,53 @@ class TrueNASExporter:
                     # Legacy SMART test-result gauges intentionally remain unavailable:
                     # 25.10.2 exposes no documented safe RPC for that source.
 
-                    # --- System state (use cache if already fetched) ---
-                    state_raw = result_cache.get("system.state")
-                    if state_raw is None:
-                        state_raw = self._call(client, "system.state", [])
-                    if isinstance(state_raw, str) and state_raw:
-                        SYSTEM_STATE.labels(state=state_raw.upper()).set(1)
-                    ready_raw = result_cache.get("system.ready")
-                    if ready_raw is None:
-                        ready_raw = self._call(client, "system.ready", [])
-                    _set_optional_bool_gauge(SYSTEM_READY, ready_raw)
+                    with self._source_scope("system_state"):
+                        # --- System state (use cache if already fetched) ---
+                        state_raw = result_cache.get("system.state")
+                        if state_raw is None:
+                            state_raw = self._call(client, "system.state", [])
+                        if isinstance(state_raw, str) and state_raw:
+                            SYSTEM_STATE.labels(state=state_raw.upper()).set(1)
+                        ready_raw = result_cache.get("system.ready")
+                        if ready_raw is None:
+                            ready_raw = self._call(client, "system.ready", [])
+                        _set_optional_bool_gauge(SYSTEM_READY, ready_raw)
 
-                    # --- Host info (use cache if already fetched) ---
-                    info = result_cache.get("system.info")
-                    if info is None:
-                        info = self._call(client, "system.info", [])
-                    product_type = result_cache.get("system.product_type")
-                    if product_type is None:
-                        product_type = self._call(client, "system.product_type", [])
-                        result_cache["system.product_type"] = product_type
-                    self._export_host_metrics(info, product_type)
+                    with self._source_scope("host"):
+                        # --- Host info (use cache if already fetched) ---
+                        info = result_cache.get("system.info")
+                        if info is None:
+                            info = self._call(client, "system.info", [])
+                        product_type = result_cache.get("system.product_type")
+                        if product_type is None:
+                            product_type = self._call(client, "system.product_type", [])
+                            result_cache["system.product_type"] = product_type
+                        self._export_host_metrics(info, product_type)
 
-                    # --- VM memory (use cache) ---
-                    vm_available = result_cache.get("vm.get_available_memory")
-                    if vm_available is None:
-                        vm_available = self._call(client, "vm.get_available_memory", [False])
-                    vm_av_val = self._profile_normalized_bytes(
-                        "vm.get_available_memory", vm_available
-                    )
-                    if vm_av_val is not None:
-                        VM_AVAILABLE_MEMORY_BYTES.set(vm_av_val)
+                    with self._source_scope("vm_memory"):
+                        # --- VM memory (use cache) ---
+                        vm_available = result_cache.get("vm.get_available_memory")
+                        if vm_available is None:
+                            vm_available = self._call(client, "vm.get_available_memory", [False])
+                        vm_av_val = self._profile_normalized_bytes(
+                            "vm.get_available_memory", vm_available
+                        )
+                        if vm_av_val is not None:
+                            VM_AVAILABLE_MEMORY_BYTES.set(vm_av_val)
 
-                    vm_vmemory = result_cache.get("vm.get_vmemory_in_use")
-                    if vm_vmemory is None:
-                        vm_vmemory = self._safe_call_auto(client, "vm.get_vmemory_in_use")
-                    if isinstance(vm_vmemory, dict):
-                        for state_name in ("RNP", "PRD", "RPRD"):
-                            state_value = vm_vmemory.get(state_name)
-                            numeric = self._profile_normalized_bytes(
-                                "vm.get_vmemory_in_use", state_value
-                            )
-                            if numeric is not None:
-                                VM_VMEMORY_IN_USE_BYTES.labels(
-                                    state=state_name
-                                ).set(numeric)
+                        vm_vmemory = result_cache.get("vm.get_vmemory_in_use")
+                        if vm_vmemory is None:
+                            vm_vmemory = self._safe_call_auto(client, "vm.get_vmemory_in_use")
+                        if isinstance(vm_vmemory, dict):
+                            for state_name in ("RNP", "PRD", "RPRD"):
+                                state_value = vm_vmemory.get(state_name)
+                                numeric = self._profile_normalized_bytes(
+                                    "vm.get_vmemory_in_use", state_value
+                                )
+                                if numeric is not None:
+                                    VM_VMEMORY_IN_USE_BYTES.labels(
+                                        state=state_name
+                                    ).set(numeric)
 
                     # --- Network summary (use cache) ---
                     network_summary = result_cache.get("network.general.summary")
@@ -3647,313 +3740,333 @@ class TrueNASExporter:
                     except Exception:
                         LOG.debug("iscsi.global.client_count failed", exc_info=True)
 
-                    # --- Pools ---
-                    # Use a fresh call with rich select params rather than the generic
-                    # cache entry (which may have been fetched with no select).
-                    pools = self._call_query_with_fallback(
-                        client, "pool.query",
-                        {
-                            "select": [
-                                "name",
-                                "healthy",
-                                "warning",
-                                "status",
-                                "size",
-                                "allocated",
-                                "free",
-                                "scan",
-                                "fragmentation",
-                                "autotrim",
-                                "dedup_table_size",
-                                "expand",
-                                "topology",
-                            ]
-                        },
-                    )
-                    pool_list = pools if isinstance(pools, list) else []
-                    POOL_COUNT.set(len(pool_list))
-                    for pool in pool_list:
-                        if not isinstance(pool, dict):
-                            continue
-                        raw_pool_name = pool.get("name")
-                        if not isinstance(raw_pool_name, str) or not raw_pool_name:
-                            continue
-                        pool_name = raw_pool_name
-                        _set_optional_bool_gauge(
-                            POOL_HEALTHY.labels(pool=pool_name), pool.get("healthy")
-                        )
-                        _set_optional_bool_gauge(
-                            POOL_WARNING.labels(pool=pool_name), pool.get("warning")
-                        )
-                        pool_status = pool.get("status")
-                        if isinstance(pool_status, str) and pool_status:
-                            POOL_STATUS.labels(
-                                pool=pool_name, status=pool_status.upper()
-                            ).set(1)
-                        for gauge, field in (
-                            (POOL_SIZE_BYTES, "size"),
-                            (POOL_ALLOCATED_BYTES, "allocated"),
-                            (POOL_FREE_BYTES, "free"),
-                        ):
-                            val = _as_float(self._response_field(pool, field))
-                            if val is not None:
-                                gauge.labels(pool=pool_name).set(val)
-
-                        frag = _as_percent(self._response_field(pool, "fragmentation"))
-                        if frag is not None:
-                            POOL_FRAGMENTATION.labels(pool=pool_name).set(frag)
-
-                        # Autotrim (v5 addition)
-                        autotrim = pool.get("autotrim")
-                        if isinstance(autotrim, dict):
-                            _set_optional_bool_gauge(
-                                POOL_AUTOTRIM_ENABLED.labels(pool=pool_name),
-                                autotrim.get("value"),
-                            )
-                        elif autotrim is not None:
-                            _set_optional_bool_gauge(
-                                POOL_AUTOTRIM_ENABLED.labels(pool=pool_name), autotrim
-                            )
-
-                        dedup = _as_float(
-                            self._response_field(pool, "dedup_table_size", "dedup_table_quota")
-                        )
-                        if dedup is not None:
-                            POOL_DEDUP_TABLE_SIZE_BYTES.labels(pool=pool_name).set(dedup)
-
-                        expand = pool.get("expand")
-                        if isinstance(expand, dict):
-                            reflowed = _as_float(
-                                self._response_field(expand, "bytes_reflowed", "reflowed")
-                            )
-                            total = _as_float(
-                                self._response_field(expand, "bytes_to_reflow", "to_reflow")
-                            )
-                            percent = _as_percent(self._response_field(expand, "percentage"))
-                            if reflowed is not None:
-                                POOL_EXPAND_REFLOWED_BYTES.labels(pool=pool_name).set(reflowed)
-                            if total is not None:
-                                POOL_EXPAND_TO_REFLOW_BYTES.labels(pool=pool_name).set(total)
-                                POOL_EXPAND_SIZE_BYTES.labels(pool=pool_name).set(total)
-                            if percent is not None:
-                                POOL_EXPAND_PERCENT.labels(pool=pool_name).set(percent)
-
-                        scan = pool.get("scan")
-                        if isinstance(scan, dict):
-                            pct = _as_float(self._response_field(scan, "percentage", "percent"))
-                            if pct is not None:
-                                POOL_SCAN_PERCENT.labels(pool=pool_name).set(pct)
-                            # Detailed scan stats (v3 addition)
-                            errors = _as_float(self._response_field(scan, "errors"))
-                            if errors is not None:
-                                POOL_SCAN_ERRORS.labels(pool=pool_name).set(errors)
-                            bytes_proc = _as_float(
-                                self._response_field(scan, "bytes_processed", "processed_bytes")
-                            )
-                            if bytes_proc is not None:
-                                POOL_SCAN_BYTES_PROCESSED.labels(pool=pool_name).set(bytes_proc)
-                            bytes_tot = _as_float(
-                                self._response_field(scan, "bytes_to_process", "total_bytes")
-                            )
-                            if bytes_tot is not None:
-                                POOL_SCAN_BYTES_TOTAL.labels(pool=pool_name).set(bytes_tot)
-                            secs_remaining = _as_float(
-                                self._response_field(scan, "total_secs_left", "seconds_remaining")
-                            )
-                            if secs_remaining is not None:
-                                POOL_SCAN_SECONDS_REMAINING.labels(pool=pool_name).set(secs_remaining)
-                            end_ts = scan.get("end_time")
-                            if end_ts is not None:
-                                ts = _parse_ts(end_ts)
-                                if ts is not None:
-                                    POOL_LAST_SCAN_TS.labels(pool=pool_name).set(ts)
-
-                        topology = pool.get("topology")
-                        if isinstance(topology, dict):
-                            self._extract_vdev_errors(pool_name, topology)
-
-                    self._collect_zpool_status_metrics(client)
-
-                    # --- Disks ---
-                    disks = result_cache.get("disk.query")
-                    if disks is None:
-                        disks = self._call_query_with_fallback(
-                            client, "disk.query",
+                    with self._source_scope("pools"):
+                        # --- Pools ---
+                        # Use a fresh call with rich select params rather than the generic
+                        # cache entry (which may have been fetched with no select).
+                        pools = self._call_query_with_fallback(
+                            client, "pool.query",
                             {
-                                "extra": {"pools": True},
                                 "select": [
                                     "name",
-                                    "identifier",
+                                    "healthy",
+                                    "warning",
+                                    "status",
                                     "size",
-                                    "pool",
-                                    "type",
-                                    "rotationrate",
-                                    "model",
-                                    "bus",
-                                ],
+                                    "allocated",
+                                    "free",
+                                *(["freeing"] if self.compatibility_profile.name in {"26.0", "27.0"} else []),
+                                    "scan",
+                                    "fragmentation",
+                                    "autotrim",
+                                    "dedup_table_size",
+                                    "expand",
+                                    "topology",
+                                ]
                             },
-                            allow_bare_fallback=False,
                         )
-                        result_cache["disk.query"] = disks
-                    disk_list = disks if isinstance(disks, list) else []
-                    DISK_COUNT.set(len(disk_list))
-                    disk_names: list[str] = []
-                    for disk in disk_list:
-                        if not isinstance(disk, dict):
-                            continue
-                        raw_disk_name = _first_not_none(
-                            disk.get("name"), disk.get("identifier")
-                        )
-                        if not isinstance(raw_disk_name, str) or not raw_disk_name:
-                            continue
-                        disk_name = raw_disk_name
-                        disk_names.append(disk_name)
-                        DISK_IN_USE.labels(disk=disk_name).set(
-                            1 if disk.get("pool") is not None else 0
-                        )
-                        size = _as_float(disk.get("size"))
-                        if size is not None:
-                            DISK_SIZE_BYTES.labels(disk=disk_name).set(size)
-
-                    if disk_names:
-                        self._collect_disk_temperature_agg(client, disk_names)
-                        try:
-                            temp_alerts = self._call(
-                                client, "disk.temperature_alerts", [disk_names]
+                        if not isinstance(pools, list):
+                            raise TypeError("pools query must return a list")
+                        pool_list = pools
+                        POOL_COUNT.set(len(pool_list))
+                        for pool in pool_list:
+                            if not isinstance(pool, dict):
+                                continue
+                            raw_pool_name = pool.get("name")
+                            if not isinstance(raw_pool_name, str) or not raw_pool_name:
+                                continue
+                            pool_name = raw_pool_name
+                            _set_optional_bool_gauge(
+                                POOL_HEALTHY.labels(pool=pool_name), pool.get("healthy")
                             )
-                            if isinstance(temp_alerts, list):
-                                alert_counts = dict.fromkeys(disk_names, 0)
-                                for alert in temp_alerts:
-                                    if not isinstance(alert, dict):
-                                        continue
-                                    raw_alert_disk = _first_not_none(
-                                        alert.get("disk"),
-                                        alert.get("device"),
-                                        alert.get("name"),
-                                    )
-                                    args = alert.get("args")
-                                    if isinstance(args, dict):
+                            _set_optional_bool_gauge(
+                                POOL_WARNING.labels(pool=pool_name), pool.get("warning")
+                            )
+                            pool_status = pool.get("status")
+                            if isinstance(pool_status, str) and pool_status:
+                                POOL_STATUS.labels(
+                                    pool=pool_name, status=pool_status.upper()
+                                ).set(1)
+                            for gauge, field in (
+                                (POOL_SIZE_BYTES, "size"),
+                                (POOL_ALLOCATED_BYTES, "allocated"),
+                                (POOL_FREE_BYTES, "free"),
+                            ):
+                                val = _as_float(self._response_field(pool, field))
+                                if val is not None:
+                                    gauge.labels(pool=pool_name).set(val)
+
+                            if self.compatibility_profile.name in {"26.0", "27.0"}:
+                                freeing = _as_float(self._response_field(pool, "freeing"))
+                                if freeing is not None and freeing >= 0:
+                                    POOL_FREEING_BYTES.labels(pool=pool_name).set(freeing)
+
+                            frag = _as_percent(self._response_field(pool, "fragmentation"))
+                            if frag is not None:
+                                POOL_FRAGMENTATION.labels(pool=pool_name).set(frag)
+
+                            # Autotrim (v5 addition)
+                            autotrim = pool.get("autotrim")
+                            if isinstance(autotrim, dict):
+                                _set_optional_bool_gauge(
+                                    POOL_AUTOTRIM_ENABLED.labels(pool=pool_name),
+                                    autotrim.get("value"),
+                                )
+                            elif autotrim is not None:
+                                _set_optional_bool_gauge(
+                                    POOL_AUTOTRIM_ENABLED.labels(pool=pool_name), autotrim
+                                )
+
+                            dedup = _as_float(
+                                self._response_field(pool, "dedup_table_size", "dedup_table_quota")
+                            )
+                            if dedup is not None:
+                                POOL_DEDUP_TABLE_SIZE_BYTES.labels(pool=pool_name).set(dedup)
+
+                            expand = pool.get("expand")
+                            if isinstance(expand, dict):
+                                reflowed = _as_float(
+                                    self._response_field(expand, "bytes_reflowed", "reflowed")
+                                )
+                                total = _as_float(
+                                    self._response_field(expand, "bytes_to_reflow", "to_reflow")
+                                )
+                                percent = _as_percent(self._response_field(expand, "percentage"))
+                                if reflowed is not None:
+                                    POOL_EXPAND_REFLOWED_BYTES.labels(pool=pool_name).set(reflowed)
+                                if total is not None:
+                                    POOL_EXPAND_TO_REFLOW_BYTES.labels(pool=pool_name).set(total)
+                                    POOL_EXPAND_SIZE_BYTES.labels(pool=pool_name).set(total)
+                                if percent is not None:
+                                    POOL_EXPAND_PERCENT.labels(pool=pool_name).set(percent)
+
+                            scan = pool.get("scan")
+                            if isinstance(scan, dict):
+                                pct = _as_float(self._response_field(scan, "percentage", "percent"))
+                                if pct is not None:
+                                    POOL_SCAN_PERCENT.labels(pool=pool_name).set(pct)
+                                # Detailed scan stats (v3 addition)
+                                errors = _as_float(self._response_field(scan, "errors"))
+                                if errors is not None:
+                                    POOL_SCAN_ERRORS.labels(pool=pool_name).set(errors)
+                                bytes_proc = _as_float(
+                                    self._response_field(scan, "bytes_processed", "processed_bytes")
+                                )
+                                if bytes_proc is not None:
+                                    POOL_SCAN_BYTES_PROCESSED.labels(pool=pool_name).set(bytes_proc)
+                                bytes_tot = _as_float(
+                                    self._response_field(scan, "bytes_to_process", "total_bytes")
+                                )
+                                if bytes_tot is not None:
+                                    POOL_SCAN_BYTES_TOTAL.labels(pool=pool_name).set(bytes_tot)
+                                secs_remaining = _as_float(
+                                    self._response_field(scan, "total_secs_left", "seconds_remaining")
+                                )
+                                if secs_remaining is not None:
+                                    POOL_SCAN_SECONDS_REMAINING.labels(pool=pool_name).set(secs_remaining)
+                                end_ts = scan.get("end_time")
+                                if end_ts is not None:
+                                    ts = _parse_ts(end_ts)
+                                    if ts is not None:
+                                        POOL_LAST_SCAN_TS.labels(pool=pool_name).set(ts)
+
+                            topology = pool.get("topology")
+                            if isinstance(topology, dict):
+                                self._extract_vdev_errors(pool_name, topology)
+
+                        self._collect_zpool_status_metrics(client)
+
+                    with self._source_scope("disks"):
+                        # --- Disks ---
+                        disks = result_cache.get("disk.query")
+                        if disks is None:
+                            disks = self._call_query_with_fallback(
+                                client, "disk.query",
+                                {
+                                    "extra": {"pools": True},
+                                    "select": [
+                                        "name",
+                                        "identifier",
+                                        "size",
+                                        "pool",
+                                        "type",
+                                        "rotationrate",
+                                        "model",
+                                        "bus",
+                                    ],
+                                },
+                                allow_bare_fallback=False,
+                            )
+                            result_cache["disk.query"] = disks
+                        if not isinstance(disks, list):
+                            raise TypeError("disks query must return a list")
+                        disk_list = disks
+                        DISK_COUNT.set(len(disk_list))
+                        disk_names: list[str] = []
+                        for disk in disk_list:
+                            if not isinstance(disk, dict):
+                                continue
+                            raw_disk_name = _first_not_none(
+                                disk.get("name"), disk.get("identifier")
+                            )
+                            if not isinstance(raw_disk_name, str) or not raw_disk_name:
+                                continue
+                            disk_name = raw_disk_name
+                            disk_names.append(disk_name)
+                            DISK_IN_USE.labels(disk=disk_name).set(
+                                1 if disk.get("pool") is not None else 0
+                            )
+                            size = _as_float(disk.get("size"))
+                            if size is not None:
+                                DISK_SIZE_BYTES.labels(disk=disk_name).set(size)
+
+                        if disk_names:
+                            self._collect_disk_temperature_agg(client, disk_names)
+                            try:
+                                temp_alerts = self._call(
+                                    client, "disk.temperature_alerts", [disk_names]
+                                )
+                                if isinstance(temp_alerts, list):
+                                    alert_counts = dict.fromkeys(disk_names, 0)
+                                    for alert in temp_alerts:
+                                        if not isinstance(alert, dict):
+                                            continue
                                         raw_alert_disk = _first_not_none(
-                                            raw_alert_disk,
-                                            args.get("disk"),
-                                            args.get("device"),
-                                            args.get("name"),
+                                            alert.get("disk"),
+                                            alert.get("device"),
+                                            alert.get("name"),
                                         )
-                                    if (
-                                        isinstance(raw_alert_disk, str)
-                                        and raw_alert_disk in alert_counts
-                                    ):
-                                        alert_counts[raw_alert_disk] += 1
-                                for disk_name, count in alert_counts.items():
-                                    DISK_TEMP_ALERT_COUNT.labels(disk=disk_name).set(count)
-                        except Exception:
-                            LOG.debug("disk.temperature_alerts failed", exc_info=True)
+                                        args = alert.get("args")
+                                        if isinstance(args, dict):
+                                            raw_alert_disk = _first_not_none(
+                                                raw_alert_disk,
+                                                args.get("disk"),
+                                                args.get("device"),
+                                                args.get("name"),
+                                            )
+                                        if (
+                                            isinstance(raw_alert_disk, str)
+                                            and raw_alert_disk in alert_counts
+                                        ):
+                                            alert_counts[raw_alert_disk] += 1
+                                    for disk_name, count in alert_counts.items():
+                                        DISK_TEMP_ALERT_COUNT.labels(disk=disk_name).set(count)
+                            except Exception:
+                                LOG.debug("disk.temperature_alerts failed", exc_info=True)
 
-                    # The method requires the disk list and include-thresholds flag.
-                    temps = None
-                    if disk_names:
-                        try:
-                            temps = self._call(client, "disk.temperatures", [disk_names, False])
-                        except Exception:
-                            LOG.debug("disk.temperatures not available", exc_info=True)
-                    if isinstance(temps, dict):
-                        for disk_name, temp_value in temps.items():
-                            temp = _as_float(temp_value)
-                            if temp is not None:
-                                DISK_TEMPERATURE_C.labels(disk=_str_label(disk_name)).set(temp)
+                        # The method requires the disk list and include-thresholds flag.
+                        temps = None
+                        if disk_names:
+                            try:
+                                temps = self._call(client, "disk.temperatures", [disk_names, False])
+                            except Exception:
+                                LOG.debug("disk.temperatures not available", exc_info=True)
+                        if isinstance(temps, dict):
+                            for disk_name, temp_value in temps.items():
+                                temp = _as_float(temp_value)
+                                if temp is not None:
+                                    DISK_TEMPERATURE_C.labels(disk=_str_label(disk_name)).set(temp)
 
-                    # --- Interfaces (fresh call with rich extra params) ---
-                    interfaces = self._call_query_with_fallback(
-                        client, "interface.query",
-                        {"extra": {"retrieve_names_only": False}},
-                    )
-                    iface_list = interfaces if isinstance(interfaces, list) else []
-                    INTERFACE_COUNT.set(len(iface_list))
-                    for iface in iface_list:
-                        if not isinstance(iface, dict):
-                            continue
-                        raw_name = iface.get("name")
-                        if not isinstance(raw_name, str) or not raw_name:
-                            continue
-                        name = raw_name
-                        candidate = iface.get("state")
-                        if isinstance(candidate, dict):
-                            link_up = _link_is_up(_first_not_none(
-                                candidate.get("link_state"),
-                                candidate.get("up"),
-                                candidate.get("state"),
-                            ))
-                        else:
-                            link_up = _link_is_up(_first_not_none(iface.get("up"), iface.get("link_state")))
-                        if link_up is not None:
-                            INTERFACE_LINK_UP.labels(interface=name).set(1 if link_up else 0)
-
-                        # Interface MTU
-                        mtu = _as_float(
-                            candidate.get("mtu") if isinstance(candidate, dict) else iface.get("mtu")
+                    with self._source_scope("interfaces"):
+                        # --- Interfaces (fresh call with rich extra params) ---
+                        interfaces = self._call_query_with_fallback(
+                            client, "interface.query",
+                            {"extra": {"retrieve_names_only": False}},
                         )
-                        if mtu is None:
-                            mtu = _as_float(iface.get("mtu"))
-                        if mtu is not None:
-                            INTERFACE_MTU.labels(interface=name).set(mtu)
+                        if not isinstance(interfaces, list):
+                            raise TypeError("interfaces query must return a list")
+                        iface_list = interfaces
+                        INTERFACE_COUNT.set(len(iface_list))
+                        for iface in iface_list:
+                            if not isinstance(iface, dict):
+                                continue
+                            raw_name = iface.get("name")
+                            if not isinstance(raw_name, str) or not raw_name:
+                                continue
+                            name = raw_name
+                            candidate = iface.get("state")
+                            if isinstance(candidate, dict):
+                                link_up = _link_is_up(_first_not_none(
+                                    candidate.get("link_state"),
+                                    candidate.get("up"),
+                                    candidate.get("state"),
+                                ))
+                            else:
+                                link_up = _link_is_up(_first_not_none(iface.get("up"), iface.get("link_state")))
+                            if link_up is not None:
+                                INTERFACE_LINK_UP.labels(interface=name).set(1 if link_up else 0)
 
-                        # Interface type (PHYSICAL/BRIDGE/LINK_AGGREGATION/VLAN)
-                        iface_type = _str_label(iface.get("type"), "unknown")
-                        if iface_type and iface_type != "unknown":
-                            INTERFACE_TYPE.labels(interface=name, type=iface_type).set(1)
-
-                    services = result_cache.get("service.query")
-                    if services is None:
-                        services = self._call_query_with_fallback(
-                            client, "service.query",
-                            {"extra": {"include_state": True}, "select": ["service", "enable", "state"]},
-                        )
-                        result_cache["service.query"] = services
-                    service_list = services if isinstance(services, list) else []
-                    SERVICE_COUNT.set(len(service_list))
-                    for svc in service_list:
-                        if not isinstance(svc, dict):
-                            continue
-                        raw_name = _first_not_none(svc.get("service"), svc.get("name"))
-                        if not isinstance(raw_name, str) or not raw_name:
-                            continue
-                        name = raw_name
-                        _set_optional_bool_gauge(
-                            SERVICE_ENABLED.labels(service=name), svc.get("enable")
-                        )
-                        state = svc.get("state")
-                        running = state.get("running") if isinstance(state, dict) else state
-                        _set_optional_bool_gauge(SERVICE_RUNNING.labels(service=name), running)
-
-                    # --- Alerts (use cache) ---
-                    alerts_raw = result_cache.get("alert.list")
-                    if alerts_raw is None:
-                        alerts_raw = self._call(client, "alert.list", [])
-                    self._export_alert_metrics(alerts_raw)
-
-                    # --- Update status (use cache) ---
-                    update = result_cache.get("update.status")
-                    if update is None:
-                        update = self._call(client, "update.status", [])
-                    if isinstance(update, dict):
-                        raw_code = update.get("code")
-                        status_label = raw_code.upper() if isinstance(raw_code, str) else None
-                        if status_label in {"NORMAL", "ERROR"}:
-                            UPDATE_STATUS.labels(status=status_label).set(1)
-                        status = update.get("status")
-                        if (
-                            status_label == "NORMAL"
-                            and isinstance(status, dict)
-                            and "new_version" in status
-                        ):
-                            UPDATE_AVAILABLE.set(
-                                1 if status.get("new_version") is not None else 0
+                            # Interface MTU
+                            mtu = _as_float(
+                                candidate.get("mtu") if isinstance(candidate, dict) else iface.get("mtu")
                             )
-                        download = update.get("update_download_progress")
-                        if isinstance(download, dict):
-                            percent = _as_percent(download.get("percent"))
-                            if percent is not None:
-                                UPDATE_DOWNLOAD_PROGRESS_PERCENT.set(percent)
+                            if mtu is None:
+                                mtu = _as_float(iface.get("mtu"))
+                            if mtu is not None:
+                                INTERFACE_MTU.labels(interface=name).set(mtu)
+
+                            # Interface type (PHYSICAL/BRIDGE/LINK_AGGREGATION/VLAN)
+                            iface_type = _str_label(iface.get("type"), "unknown")
+                            if iface_type and iface_type != "unknown":
+                                INTERFACE_TYPE.labels(interface=name, type=iface_type).set(1)
+
+                    with self._source_scope("services"):
+                        services = result_cache.get("service.query")
+                        if services is None:
+                            services = self._call_query_with_fallback(
+                                client, "service.query",
+                                {"extra": {"include_state": True}, "select": ["service", "enable", "state"]},
+                            )
+                            result_cache["service.query"] = services
+                        if not isinstance(services, list):
+                            raise TypeError("services query must return a list")
+                        service_list = services
+                        SERVICE_COUNT.set(len(service_list))
+                        for svc in service_list:
+                            if not isinstance(svc, dict):
+                                continue
+                            raw_name = _first_not_none(svc.get("service"), svc.get("name"))
+                            if not isinstance(raw_name, str) or not raw_name:
+                                continue
+                            name = raw_name
+                            _set_optional_bool_gauge(
+                                SERVICE_ENABLED.labels(service=name), svc.get("enable")
+                            )
+                            state = svc.get("state")
+                            running = state.get("running") if isinstance(state, dict) else state
+                            _set_optional_bool_gauge(SERVICE_RUNNING.labels(service=name), running)
+
+                    with self._source_scope("alerts"):
+                        # --- Alerts (use cache) ---
+                        alerts_raw = result_cache.get("alert.list")
+                        if alerts_raw is None:
+                            alerts_raw = self._call(client, "alert.list", [])
+                        self._export_alert_metrics(alerts_raw)
+
+                    with self._source_scope("updates"):
+                        # --- Update status (use cache) ---
+                        update = result_cache.get("update.status")
+                        if update is None:
+                            update = self._call(client, "update.status", [])
+                        if isinstance(update, dict):
+                            raw_code = update.get("code")
+                            status_label = raw_code.upper() if isinstance(raw_code, str) else None
+                            if status_label in {"NORMAL", "ERROR"}:
+                                UPDATE_STATUS.labels(status=status_label).set(1)
+                            status = update.get("status")
+                            if (
+                                status_label == "NORMAL"
+                                and isinstance(status, dict)
+                                and "new_version" in status
+                            ):
+                                UPDATE_AVAILABLE.set(
+                                    1 if status.get("new_version") is not None else 0
+                                )
+                            download = update.get("update_download_progress")
+                            if isinstance(download, dict):
+                                percent = _as_percent(download.get("percent"))
+                                if percent is not None:
+                                    UPDATE_DOWNLOAD_PROGRESS_PERCENT.set(percent)
 
                     # --- System extras (product type, version, IDs) ---
                     self._collect_system_extras(client, result_cache)
@@ -4025,7 +4138,7 @@ class TrueNASExporter:
                     self._collect_misc_configs(client, result_cache)
                     self._collect_security_posture(client, result_cache)
 
-                    success = True
+                    success = not self._required_source_failed
 
             except Exception:
                 _log_exception_redacted(

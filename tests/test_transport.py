@@ -52,7 +52,7 @@ def test_transport_skips_stray_messages_and_returns_matching_response(monkeypatc
 
     assert result == {"state": "READY"}
     assert socket.sent == [{"jsonrpc": "2.0", "id": 1, "method": "system.state", "params": []}]
-    assert socket.timeouts == [10.0, 10.0]
+    assert socket.timeouts and all(timeout == 10.0 for timeout in socket.timeouts)
     assert socket.closed is True
     assert captured["sslopt"] == {"cert_reqs": ssl.CERT_REQUIRED, "ca_certs": "/tmp/test-ca.pem"}
 

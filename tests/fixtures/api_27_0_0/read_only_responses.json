@@ -1,0 +1,8 @@
+{
+  "auth.login_ex": {"response_type": "SUCCESS"},
+  "system.version_short": "27.0.0-RC.1",
+  "pool.query": [
+    {"name": "demo", "healthy": true, "warning": false, "status": "ONLINE", "size": 8192, "allocated": 4096, "free": 4096, "freeing": 4096}
+  ],
+  "reporting.realtime": {"cpu": {"cpu": {"usage": 25}}, "disls": {"demo": {"read_bytes": 42, "write_bytes": 0}}}
+}

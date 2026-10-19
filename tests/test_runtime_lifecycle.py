@@ -12,6 +12,10 @@ import truenas_exporter as exporter_module
 runtime = sys.modules[exporter_module.TrueNASExporter.__module__]
 
 
+def transport_parameter_error():
+    return runtime.JsonRpcError("unsupported options", code=-32602)
+
+
 def _event_snapshot_families(exporter):
     exporter._publish_cached_events_to_default_registry()
     exporter._publish_metric_snapshot()
@@ -92,13 +96,13 @@ def test_call_diagnostics_fallback_and_count(monkeypatch):
     assert exporter._api_call_success["disk.query"] == 1
     assert exporter._query_count(client, "disk.query", [["name", "!=", ""]]) == 3
 
-    failing = _CallClient(error=RuntimeError("unsupported options"))
+    failing = _CallClient(error=transport_parameter_error())
     calls = []
 
     def fallback_call(_client, method, params=None):
         calls.append((method, params))
         if len(calls) == 1:
-            raise RuntimeError("unsupported options")
+            raise transport_parameter_error()
         return ["ok"]
 
     monkeypatch.setattr(exporter, "_call", fallback_call)
