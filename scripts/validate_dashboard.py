@@ -93,6 +93,8 @@ def walk_panels(panels: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
 
 
 def referenced_metric_names(dashboard: dict[str, Any]) -> set[str]:
+    if "apiVersion" in dashboard:
+        return set(METRIC_RE.findall(json.dumps(dashboard.get("spec", {}))))
     panels = list(walk_panels(dashboard.get("panels", [])))
     expressions = [
         target["expr"]
@@ -113,6 +115,36 @@ def referenced_metric_names(dashboard: dict[str, Any]) -> set[str]:
 
 
 def dashboard_validation_errors(dashboard: dict[str, Any], contract: dict[str, Any]) -> list[str]:
+    if "apiVersion" in dashboard:
+        spec = dashboard.get("spec", {})
+        elements = spec.get("elements", {})
+        errors = []
+
+        def check_refs(value: Any) -> None:
+            if isinstance(value, dict):
+                ref = value.get("element")
+                if isinstance(ref, dict) and ref.get("name") not in elements:
+                    errors.append(f"missing dashboard element: {ref.get('name')}")
+                for child in value.values():
+                    check_refs(child)
+            elif isinstance(value, list):
+                for child in value:
+                    check_refs(child)
+
+        check_refs(spec.get("layout", {}))
+        panels = []
+        for element in elements.values():
+            panel = element.get("spec", {})
+            queries = panel.get("data", {}).get("spec", {}).get("queries", [])
+            panels.append({"id": panel.get("id"), "title": panel.get("title"), "targets": [
+                item.get("spec", {}).get("query", {}).get("spec", {}) for item in queries
+            ]})
+        classic = {"panels": panels}
+        errors.extend(dashboard_validation_errors(classic, contract))
+        missing = referenced_metric_names(dashboard) - {m["name"] for m in contract["metrics"]}
+        if missing:
+            errors.append("undefined exporter metrics: " + ", ".join(sorted(missing)))
+        return errors
     metric_names = {metric["name"] for metric in contract["metrics"]}
     panels = list(walk_panels(dashboard.get("panels", [])))
 
@@ -153,6 +185,11 @@ def main() -> None:
         raise SystemExit("\n".join(errors))
 
     print(f"dashboard_ok panels={len(panels)} metric_references={len(referenced)}")
+    tabbed = json.loads((DASHBOARD.parent / "truenas-mission-control.json").read_text(encoding="utf-8"))
+    errors = dashboard_validation_errors(tabbed, contract)
+    if errors:
+        raise SystemExit("\n".join(errors))
+    print(f"mission_control_dashboard_ok elements={len(tabbed['spec']['elements'])}")
 
 
 if __name__ == "__main__":

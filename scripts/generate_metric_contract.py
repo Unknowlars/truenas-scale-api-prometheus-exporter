@@ -40,6 +40,8 @@ def build_contract() -> dict[str, object]:
         raise ValueError(f"duplicate metric definitions: {', '.join(duplicates)}")
     return {
         "schema_version": 1,
+        "primary_truenas_version": "27.0.0",
+        "supported_truenas_profiles": ["25.10", "26.0", "27.0"],
         "truenas_version": TRUENAS_API_VERSION,
         "source": "src/truenas_exporter/metrics.py",
         "metrics": metrics,

@@ -15,23 +15,16 @@ Output: truenas-mission-control.json (Kubernetes-style resource wrapper).
 
 from __future__ import annotations
 
+import argparse
 import copy
 import json
-import os
 import re
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "operations-center-dashboard.json"
 OUT = HERE / "truenas-mission-control.json"
-
-# Live exporter endpoint used to detect metrics that exist in code but are
-# never emitted on this system (their panels get moved to a collapsed row).
-EXPORTER_URL = os.environ.get("TRUENAS_EXPORTER_URL",
-                              "http://192.168.0.247:9108/metrics")
 
 DS_VAR = "${DS_PROMETHEUS}"
 
@@ -486,38 +479,6 @@ CONDITIONAL_METRIC_PREFIXES = (
 )
 
 
-NAMES_CACHE = HERE / ".metric-names-cache.json"
-
-
-def fetch_live_metrics() -> set | None:
-    """Names of truenas_* metrics with at least one sample line (NaN counts).
-
-    A single scrape is flaky (some collectors report intermittently), so the
-    result is unioned with every name observed in previous runs, cached in a
-    names-only file next to this script. Returns None when the exporter is
-    unreachable and no cache exists (pass is then skipped).
-    """
-    cached: set = set()
-    if NAMES_CACHE.exists():
-        cached = set(json.loads(NAMES_CACHE.read_text(encoding="utf-8")))
-    try:
-        with urllib.request.urlopen(EXPORTER_URL, timeout=60) as resp:
-            text = resp.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, OSError) as exc:
-        print(f"warning: exporter not reachable ({exc}); "
-              f"using {len(cached)} cached metric names" if cached else
-              f"warning: exporter not reachable ({exc}); "
-              "dead-panel relocation skipped", file=sys.stderr)
-        return cached or None
-    live = set(cached)
-    for line in text.splitlines():
-        if line.startswith("truenas_"):
-            live.add(line.split("{", 1)[0].split(" ", 1)[0])
-    NAMES_CACHE.write_text(json.dumps(sorted(live), indent=0) + "\n",
-                           encoding="utf-8")
-    return live
-
-
 def panel_is_dead(p: dict, live: set | None) -> bool:
     """True when every truenas_* metric the panel queries has zero samples."""
     if live is None:
@@ -886,12 +847,13 @@ TAB_SOURCES: list[tuple[str, list[str]]] = [
 ]
 
 
-def build() -> dict:
+def build(live: set | None = None) -> tuple[dict, set | None]:
+    global _next_id
+    _next_id = NEW_ID_START
     classic = json.loads(SRC.read_text(encoding="utf-8"))
     classic_rows = {p["title"]: p.get("panels", [])
                     for p in classic["panels"] if p["type"] == "row"}
 
-    live = fetch_live_metrics()
     elements: dict = {}
     tabs = []
     relocated: list[str] = []
@@ -1073,11 +1035,26 @@ def validate(doc: dict, live: set | None) -> None:
 
 
 def main() -> None:
-    doc, live = build()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--output", type=Path, default=OUT)
+    parser.add_argument("--metric-names", type=Path, help="Optional local JSON list of metric names for system-specific layout")
+    args = parser.parse_args()
+    live = None
+    if args.metric_names:
+        names = json.loads(args.metric_names.read_text(encoding="utf-8"))
+        if not isinstance(names, list) or not all(isinstance(n, str) and re.fullmatch(r"truenas_[A-Za-z0-9_:]+", n) for n in names):
+            parser.error("--metric-names must contain a JSON list of truenas_ metric names")
+        live = set(names)
+    doc, live = build(live)
     validate(doc, live)
-    OUT.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n",
-                   encoding="utf-8")
-    print(f"wrote {OUT} ({OUT.stat().st_size // 1024} KiB)")
+    rendered = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
+    if args.check:
+        if not args.output.is_file() or args.output.read_text(encoding="utf-8") != rendered:
+            raise SystemExit("Mission Control dashboard is out of date: regenerate without --check")
+    else:
+        args.output.write_text(rendered, encoding="utf-8")
+    print("mission_control_ok")
 
 
 if __name__ == "__main__":

@@ -3160,8 +3160,98 @@
           "pluginVersion": "12.4.0"
         },
         {
-          "type": "bargauge",
+          "type": "timeseries",
           "id": 47,
+          "title": "Pool Space Being Freed",
+          "description": "Bytes being freed by ongoing operations on TrueNAS26/27. Missing on unsupported or unavailable sources.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_pool_freeing_bytes{instance=~\"$instance\", pool=~\"$pool\"}",
+              "legendFormat": "{{pool}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": [],
+              "unit": "bytes",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 56,
+            "w": 24,
+            "h": 6
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "transformations": [],
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "bargauge",
+          "id": 48,
           "title": "Pool Utilization",
           "description": "Per-pool fill ratio. Pools above 80% suffer performance degradation.",
           "datasource": {
@@ -3210,7 +3300,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 56,
+            "y": 62,
             "w": 12,
             "h": 8
           },
@@ -3243,7 +3333,7 @@
         },
         {
           "type": "bargauge",
-          "id": 48,
+          "id": 49,
           "title": "Top Dataset Utilization",
           "description": "Datasets closest to filling their available space.",
           "datasource": {
@@ -3292,7 +3382,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 56,
+            "y": 62,
             "w": 12,
             "h": 8
           },
@@ -3325,7 +3415,7 @@
         },
         {
           "type": "timeseries",
-          "id": 49,
+          "id": 50,
           "title": "Pool Capacity Trends",
           "description": "Pool allocated and free space over time for capacity planning.",
           "datasource": {
@@ -3399,7 +3489,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 64,
+            "y": 70,
             "w": 12,
             "h": 8
           },
@@ -3424,7 +3514,7 @@
         },
         {
           "type": "timeseries",
-          "id": 50,
+          "id": 51,
           "title": "Pool Fragmentation",
           "description": "Pool fragmentation over time. High fragmentation degrades performance.",
           "datasource": {
@@ -3489,7 +3579,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 64,
+            "y": 70,
             "w": 6,
             "h": 8
           },
@@ -3514,7 +3604,7 @@
         },
         {
           "type": "timeseries",
-          "id": 51,
+          "id": 52,
           "title": "Pool Scan Progress",
           "description": "Active scrub or resilver progress per pool.",
           "datasource": {
@@ -3579,7 +3669,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 64,
+            "y": 70,
             "w": 6,
             "h": 8
           },
@@ -3604,7 +3694,7 @@
         },
         {
           "type": "table",
-          "id": 52,
+          "id": 53,
           "title": "Pool Inventory",
           "description": "Pool capacity, health, dedup-table footprint, and active expansion progress.",
           "datasource": {
@@ -3930,7 +4020,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 72,
+            "y": 78,
             "w": 24,
             "h": 10
           },
@@ -4012,7 +4102,7 @@
         },
         {
           "type": "timeseries",
-          "id": 53,
+          "id": 54,
           "title": "Pool Expansion Progress",
           "description": "Completion percentage for active pool expansion reflow.",
           "datasource": {
@@ -4077,7 +4167,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 82,
+            "y": 88,
             "w": 12,
             "h": 8
           },
@@ -4102,7 +4192,7 @@
         },
         {
           "type": "timeseries",
-          "id": 54,
+          "id": 55,
           "title": "Pool Realtime I/O",
           "description": "Per-pool read/write throughput.",
           "datasource": {
@@ -4176,7 +4266,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 82,
+            "y": 88,
             "w": 12,
             "h": 8
           },
@@ -4201,7 +4291,7 @@
         },
         {
           "type": "stat",
-          "id": 55,
+          "id": 56,
           "title": "Snap Task Max",
           "description": "Maximum number of snapshot tasks allowed.",
           "datasource": {
@@ -4240,7 +4330,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 90,
+            "y": 96,
             "w": 4,
             "h": 4
           },
@@ -4263,7 +4353,7 @@
         },
         {
           "type": "stat",
-          "id": 56,
+          "id": 57,
           "title": "Snap Task Max Total",
           "description": "Maximum total snapshot tasks allowed.",
           "datasource": {
@@ -4302,7 +4392,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 90,
+            "y": 96,
             "w": 4,
             "h": 4
           },
@@ -4325,7 +4415,7 @@
         },
         {
           "type": "stat",
-          "id": 57,
+          "id": 58,
           "title": "Scrub Enabled",
           "description": "Pools with an enabled scrub task.",
           "datasource": {
@@ -4364,7 +4454,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 90,
+            "y": 96,
             "w": 4,
             "h": 4
           },
@@ -4387,7 +4477,7 @@
         },
         {
           "type": "stat",
-          "id": 58,
+          "id": 59,
           "title": "Pools Warning",
           "description": "Pools currently flagging a warning.",
           "datasource": {
@@ -4430,7 +4520,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 90,
+            "y": 96,
             "w": 4,
             "h": 4
           },
@@ -4453,7 +4543,7 @@
         },
         {
           "type": "stat",
-          "id": 59,
+          "id": 60,
           "title": "Scanning Now",
           "description": "Pools with an active scrub/resilver scan.",
           "datasource": {
@@ -4492,7 +4582,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 90,
+            "y": 96,
             "w": 4,
             "h": 4
           },
@@ -4515,7 +4605,7 @@
         },
         {
           "type": "stat",
-          "id": 60,
+          "id": 61,
           "title": "Oldest Scan",
           "description": "Age of the least-recently-scanned pool.",
           "datasource": {
@@ -4554,7 +4644,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 90,
+            "y": 96,
             "w": 4,
             "h": 4
           },
@@ -4577,7 +4667,7 @@
         },
         {
           "type": "table",
-          "id": 61,
+          "id": 62,
           "title": "Pool Status & Scrub Detail",
           "description": "Pool status enum, v26 detailed status_code, warning flag, scrub-task enablement, and time since last scan.",
           "datasource": {
@@ -4750,7 +4840,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 94,
+            "y": 100,
             "w": 24,
             "h": 8
           },
@@ -4822,7 +4912,7 @@
         },
         {
           "type": "timeseries",
-          "id": 62,
+          "id": 63,
           "title": "Pool Scan Bytes Progress",
           "description": "Bytes processed vs. total for the last/active pool scrub or resilver scan.",
           "datasource": {
@@ -4896,7 +4986,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 102,
+            "y": 108,
             "w": 12,
             "h": 8
           },
@@ -4921,7 +5011,7 @@
         },
         {
           "type": "timeseries",
-          "id": 63,
+          "id": 64,
           "title": "Pool Realtime Capacity",
           "description": "Per-pool capacity from the reporting.realtime event stream.",
           "datasource": {
@@ -5004,7 +5094,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 102,
+            "y": 108,
             "w": 12,
             "h": 8
           },
@@ -5029,7 +5119,7 @@
         },
         {
           "type": "timeseries",
-          "id": 64,
+          "id": 65,
           "title": "Pool Scan ETA",
           "description": "Estimated seconds remaining in the active pool scan.",
           "datasource": {
@@ -5094,7 +5184,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 110,
+            "y": 116,
             "w": 12,
             "h": 8
           },
@@ -5119,7 +5209,7 @@
         },
         {
           "type": "timeseries",
-          "id": 65,
+          "id": 66,
           "title": "Pool Scan Errors",
           "description": "Errors found during the last/active pool scan.",
           "datasource": {
@@ -5184,7 +5274,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 110,
+            "y": 116,
             "w": 12,
             "h": 8
           },
@@ -5217,13 +5307,13 @@
     },
     {
       "type": "row",
-      "id": 66,
+      "id": 67,
       "title": "ZFS ARC & Cache",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 67,
+          "id": 68,
           "title": "ARC Size",
           "description": "Current documented ZFS ARC cache size.",
           "datasource": {
@@ -5262,7 +5352,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 119,
+            "y": 125,
             "w": 4,
             "h": 4
           },
@@ -5285,7 +5375,7 @@
         },
         {
           "type": "stat",
-          "id": 68,
+          "id": 69,
           "title": "ARC Free",
           "description": "ARC-reported free memory.",
           "datasource": {
@@ -5324,7 +5414,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 119,
+            "y": 125,
             "w": 4,
             "h": 4
           },
@@ -5347,7 +5437,7 @@
         },
         {
           "type": "stat",
-          "id": 69,
+          "id": 70,
           "title": "ARC Avail",
           "description": "ARC-reported available memory.",
           "datasource": {
@@ -5386,7 +5476,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 119,
+            "y": 125,
             "w": 4,
             "h": 4
           },
@@ -5409,7 +5499,7 @@
         },
         {
           "type": "stat",
-          "id": 70,
+          "id": 71,
           "title": "L2ARC Hit %",
           "description": "L2ARC hit ratio.",
           "datasource": {
@@ -5456,7 +5546,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 119,
+            "y": 125,
             "w": 4,
             "h": 4
           },
@@ -5479,7 +5569,7 @@
         },
         {
           "type": "stat",
-          "id": 71,
+          "id": 72,
           "title": "Data Hit %",
           "description": "Demand data hit ratio.",
           "datasource": {
@@ -5526,7 +5616,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 119,
+            "y": 125,
             "w": 4,
             "h": 4
           },
@@ -5549,7 +5639,7 @@
         },
         {
           "type": "stat",
-          "id": 72,
+          "id": 73,
           "title": "Meta Hit %",
           "description": "Demand metadata hit ratio.",
           "datasource": {
@@ -5596,7 +5686,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 119,
+            "y": 125,
             "w": 4,
             "h": 4
           },
@@ -5619,7 +5709,7 @@
         },
         {
           "type": "timeseries",
-          "id": 73,
+          "id": 74,
           "title": "Demand Hit & Miss Rates",
           "description": "Documented ARC demand-data and demand-metadata hit and miss rates.",
           "datasource": {
@@ -5711,7 +5801,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 123,
+            "y": 129,
             "w": 12,
             "h": 8
           },
@@ -5736,7 +5826,7 @@
         },
         {
           "type": "timeseries",
-          "id": 74,
+          "id": 75,
           "title": "ARC Memory Headroom",
           "description": "Documented ARC free and available memory fields.",
           "datasource": {
@@ -5810,7 +5900,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 123,
+            "y": 129,
             "w": 12,
             "h": 8
           },
@@ -5835,7 +5925,7 @@
         },
         {
           "type": "timeseries",
-          "id": 75,
+          "id": 76,
           "title": "Demand & L2ARC Hit Ratios",
           "description": "Cache hit ratios \u2014 higher is better.",
           "datasource": {
@@ -5918,7 +6008,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 131,
+            "y": 137,
             "w": 8,
             "h": 8
           },
@@ -5943,7 +6033,7 @@
         },
         {
           "type": "timeseries",
-          "id": 76,
+          "id": 77,
           "title": "Demand Data & Metadata Rates",
           "description": "Demand access rates for data and metadata, including I/O-level hit rates.",
           "datasource": {
@@ -6053,7 +6143,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 131,
+            "y": 137,
             "w": 8,
             "h": 8
           },
@@ -6078,7 +6168,7 @@
         },
         {
           "type": "timeseries",
-          "id": 77,
+          "id": 78,
           "title": "L2ARC Throughput",
           "description": "L2ARC I/O. High write with low hit ratio signals cache churn.",
           "datasource": {
@@ -6152,7 +6242,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 131,
+            "y": 137,
             "w": 8,
             "h": 8
           },
@@ -6178,20 +6268,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 118,
+        "y": 124,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 78,
+      "id": 79,
       "title": "Disks & Temperatures",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 79,
+          "id": 80,
           "title": "Disk Count",
           "description": "Number of disks.",
           "datasource": {
@@ -6230,7 +6320,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 140,
+            "y": 146,
             "w": 8,
             "h": 4
           },
@@ -6253,7 +6343,7 @@
         },
         {
           "type": "stat",
-          "id": 80,
+          "id": 81,
           "title": "Hottest Disk",
           "description": "Highest disk temperature.",
           "datasource": {
@@ -6300,7 +6390,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 140,
+            "y": 146,
             "w": 8,
             "h": 4
           },
@@ -6323,7 +6413,7 @@
         },
         {
           "type": "stat",
-          "id": 81,
+          "id": 82,
           "title": "Avg Busy",
           "description": "Average disk busy %.",
           "datasource": {
@@ -6370,7 +6460,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 140,
+            "y": 146,
             "w": 8,
             "h": 4
           },
@@ -6393,7 +6483,7 @@
         },
         {
           "type": "timeseries",
-          "id": 82,
+          "id": 83,
           "title": "Disk Throughput by Device",
           "description": "Read/write throughput for the busiest devices.",
           "datasource": {
@@ -6467,7 +6557,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 144,
+            "y": 150,
             "w": 12,
             "h": 8
           },
@@ -6492,7 +6582,7 @@
         },
         {
           "type": "timeseries",
-          "id": 83,
+          "id": 84,
           "title": "Disk IOPS by Device",
           "description": "Read/write IOPS per device.",
           "datasource": {
@@ -6566,7 +6656,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 144,
+            "y": 150,
             "w": 12,
             "h": 8
           },
@@ -6591,7 +6681,7 @@
         },
         {
           "type": "timeseries",
-          "id": 84,
+          "id": 85,
           "title": "Disk Busy %",
           "description": "Disk utilization saturation.",
           "datasource": {
@@ -6656,7 +6746,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 152,
+            "y": 158,
             "w": 12,
             "h": 8
           },
@@ -6681,7 +6771,7 @@
         },
         {
           "type": "timeseries",
-          "id": 85,
+          "id": 86,
           "title": "Disk Temperature Over Time",
           "description": "Per-disk temperatures over time.",
           "datasource": {
@@ -6746,7 +6836,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 152,
+            "y": 158,
             "w": 12,
             "h": 8
           },
@@ -6771,7 +6861,7 @@
         },
         {
           "type": "bargauge",
-          "id": 86,
+          "id": 87,
           "title": "Disk Temperatures",
           "description": "",
           "datasource": {
@@ -6819,7 +6909,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 160,
+            "y": 166,
             "w": 12,
             "h": 8
           },
@@ -6852,7 +6942,7 @@
         },
         {
           "type": "barchart",
-          "id": 87,
+          "id": 88,
           "title": "Disk Sizes",
           "description": "",
           "datasource": {
@@ -6910,7 +7000,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 160,
+            "y": 166,
             "w": 12,
             "h": 8
           },
@@ -6974,7 +7064,7 @@
         },
         {
           "type": "table",
-          "id": 88,
+          "id": 89,
           "title": "Disk Inventory",
           "description": "Per-disk capacity, performance, temperature, and media type.",
           "datasource": {
@@ -7268,7 +7358,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 168,
+            "y": 174,
             "w": 24,
             "h": 10
           },
@@ -7346,7 +7436,7 @@
         },
         {
           "type": "table",
-          "id": 89,
+          "id": 90,
           "title": "Disk Identity",
           "description": "Disk model, serial number, and bus for each device.",
           "datasource": {
@@ -7394,7 +7484,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 178,
+            "y": 184,
             "w": 12,
             "h": 8
           },
@@ -7456,7 +7546,7 @@
         },
         {
           "type": "timeseries",
-          "id": 90,
+          "id": 91,
           "title": "Aggregated Disk Temperature (~5 min)",
           "description": "Aggregated (e.g. min/avg/max) disk temperature, refreshed on the heavy-query cadence.",
           "datasource": {
@@ -7521,7 +7611,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 178,
+            "y": 184,
             "w": 12,
             "h": 8
           },
@@ -7547,20 +7637,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 139,
+        "y": 145,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 91,
+      "id": 92,
       "title": "Network & Interfaces",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 92,
+          "id": 93,
           "title": "Interfaces",
           "description": "Network interface count.",
           "datasource": {
@@ -7599,7 +7689,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 187,
+            "y": 193,
             "w": 3,
             "h": 4
           },
@@ -7622,7 +7712,7 @@
         },
         {
           "type": "stat",
-          "id": 93,
+          "id": 94,
           "title": "Gateway Config",
           "description": "Applied default route is configured.",
           "datasource": {
@@ -7677,7 +7767,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 187,
+            "y": 193,
             "w": 3,
             "h": 4
           },
@@ -7700,7 +7790,7 @@
         },
         {
           "type": "stat",
-          "id": 94,
+          "id": 95,
           "title": "Nameservers",
           "description": "Configured nameservers.",
           "datasource": {
@@ -7739,7 +7829,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 187,
+            "y": 193,
             "w": 3,
             "h": 4
           },
@@ -7762,7 +7852,7 @@
         },
         {
           "type": "stat",
-          "id": 95,
+          "id": 96,
           "title": "Default Routes",
           "description": "Number of default routes.",
           "datasource": {
@@ -7801,7 +7891,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 187,
+            "y": 193,
             "w": 3,
             "h": 4
           },
@@ -7824,7 +7914,7 @@
         },
         {
           "type": "stat",
-          "id": 96,
+          "id": 97,
           "title": "DNS Resolvers",
           "description": "Configured DNS resolvers.",
           "datasource": {
@@ -7863,7 +7953,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 187,
+            "y": 193,
             "w": 3,
             "h": 4
           },
@@ -7886,7 +7976,7 @@
         },
         {
           "type": "stat",
-          "id": 97,
+          "id": 98,
           "title": "Pending Changes",
           "description": "Unapplied network interface changes.",
           "datasource": {
@@ -7941,7 +8031,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 187,
+            "y": 193,
             "w": 3,
             "h": 4
           },
@@ -7964,7 +8054,7 @@
         },
         {
           "type": "stat",
-          "id": 98,
+          "id": 99,
           "title": "Checkin Wait",
           "description": "Seconds until pending changes auto-rollback.",
           "datasource": {
@@ -8003,7 +8093,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 187,
+            "y": 193,
             "w": 3,
             "h": 4
           },
@@ -8026,7 +8116,7 @@
         },
         {
           "type": "timeseries",
-          "id": 99,
+          "id": 100,
           "title": "Network RX by Interface",
           "description": "Per-interface receive throughput.",
           "datasource": {
@@ -8091,7 +8181,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 191,
+            "y": 197,
             "w": 12,
             "h": 8
           },
@@ -8116,7 +8206,7 @@
         },
         {
           "type": "timeseries",
-          "id": 100,
+          "id": 101,
           "title": "Network TX by Interface",
           "description": "Per-interface transmit throughput.",
           "datasource": {
@@ -8181,7 +8271,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 191,
+            "y": 197,
             "w": 12,
             "h": 8
           },
@@ -8206,7 +8296,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 101,
+          "id": 102,
           "title": "Interface Link State",
           "description": "Link up/down events.",
           "datasource": {
@@ -8280,7 +8370,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 199,
+            "y": 205,
             "w": 12,
             "h": 8
           },
@@ -8304,7 +8394,7 @@
         },
         {
           "type": "bargauge",
-          "id": 102,
+          "id": 103,
           "title": "Interface MTU",
           "description": "MTU per interface.",
           "datasource": {
@@ -8348,7 +8438,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 199,
+            "y": 205,
             "w": 12,
             "h": 8
           },
@@ -8381,7 +8471,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 103,
+          "id": 104,
           "title": "Interface Realtime Link State",
           "description": "Link up/down from the reporting.realtime event stream.",
           "datasource": {
@@ -8455,7 +8545,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 207,
+            "y": 213,
             "w": 12,
             "h": 8
           },
@@ -8479,7 +8569,7 @@
         },
         {
           "type": "timeseries",
-          "id": 104,
+          "id": 105,
           "title": "Interface Realtime Speed",
           "description": "Realtime link speed in megabits per second.",
           "datasource": {
@@ -8544,7 +8634,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 207,
+            "y": 213,
             "w": 12,
             "h": 8
           },
@@ -8569,7 +8659,7 @@
         },
         {
           "type": "table",
-          "id": 105,
+          "id": 106,
           "title": "Interface Types",
           "description": "Interface type (PHYSICAL/BRIDGE/etc) per interface.",
           "datasource": {
@@ -8617,7 +8707,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 215,
+            "y": 221,
             "w": 24,
             "h": 6
           },
@@ -8676,20 +8766,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 186,
+        "y": 192,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 106,
+      "id": 107,
       "title": "Services & Shares",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 107,
+          "id": 108,
           "title": "Services",
           "description": "Total services.",
           "datasource": {
@@ -8728,7 +8818,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -8751,7 +8841,7 @@
         },
         {
           "type": "stat",
-          "id": 108,
+          "id": 109,
           "title": "Running",
           "description": "Running services.",
           "datasource": {
@@ -8790,7 +8880,7 @@
           },
           "gridPos": {
             "x": 2,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -8813,7 +8903,7 @@
         },
         {
           "type": "stat",
-          "id": 109,
+          "id": 110,
           "title": "SMB Shares",
           "description": "Configured SMB shares.",
           "datasource": {
@@ -8852,7 +8942,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -8875,7 +8965,7 @@
         },
         {
           "type": "stat",
-          "id": 110,
+          "id": 111,
           "title": "NFS Shares",
           "description": "Configured NFS shares.",
           "datasource": {
@@ -8914,7 +9004,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -8937,7 +9027,7 @@
         },
         {
           "type": "stat",
-          "id": 111,
+          "id": 112,
           "title": "iSCSI Tgts",
           "description": "iSCSI targets.",
           "datasource": {
@@ -8976,7 +9066,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -8999,7 +9089,7 @@
         },
         {
           "type": "stat",
-          "id": 112,
+          "id": 113,
           "title": "NFS v3",
           "description": "NFSv3 clients.",
           "datasource": {
@@ -9038,7 +9128,7 @@
           },
           "gridPos": {
             "x": 10,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -9061,7 +9151,7 @@
         },
         {
           "type": "stat",
-          "id": 113,
+          "id": 114,
           "title": "NFS v4",
           "description": "NFSv4 clients.",
           "datasource": {
@@ -9100,7 +9190,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -9123,7 +9213,7 @@
         },
         {
           "type": "stat",
-          "id": 114,
+          "id": 115,
           "title": "iSCSI Cli",
           "description": "iSCSI clients.",
           "datasource": {
@@ -9162,7 +9252,7 @@
           },
           "gridPos": {
             "x": 14,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -9185,7 +9275,7 @@
         },
         {
           "type": "stat",
-          "id": 115,
+          "id": 116,
           "title": "NVMe-oF",
           "description": "NVMe-oF sessions.",
           "datasource": {
@@ -9224,7 +9314,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -9247,7 +9337,7 @@
         },
         {
           "type": "stat",
-          "id": 116,
+          "id": 117,
           "title": "SMB1",
           "description": "Legacy SMB1 protocol enabled (insecure when on).",
           "datasource": {
@@ -9302,7 +9392,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -9325,7 +9415,7 @@
         },
         {
           "type": "stat",
-          "id": 117,
+          "id": 118,
           "title": "NTLMv1",
           "description": "Insecure NTLMv1 authentication enabled.",
           "datasource": {
@@ -9380,7 +9470,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -9403,7 +9493,7 @@
         },
         {
           "type": "stat",
-          "id": 118,
+          "id": 119,
           "title": "NFS RDMA",
           "description": "NFS over RDMA enabled.",
           "datasource": {
@@ -9458,7 +9548,7 @@
           },
           "gridPos": {
             "x": 22,
-            "y": 222,
+            "y": 228,
             "w": 2,
             "h": 4
           },
@@ -9481,7 +9571,7 @@
         },
         {
           "type": "stat",
-          "id": 119,
+          "id": 120,
           "title": "SMB Sessions",
           "description": "Active SMB sessions (live, from smb.status).",
           "datasource": {
@@ -9520,7 +9610,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 226,
+            "y": 232,
             "w": 5,
             "h": 4
           },
@@ -9543,7 +9633,7 @@
         },
         {
           "type": "stat",
-          "id": 120,
+          "id": 121,
           "title": "SMB Conns",
           "description": "Active SMB tree connections (live, from smb.status).",
           "datasource": {
@@ -9582,7 +9672,7 @@
           },
           "gridPos": {
             "x": 5,
-            "y": 226,
+            "y": 232,
             "w": 5,
             "h": 4
           },
@@ -9605,7 +9695,7 @@
         },
         {
           "type": "stat",
-          "id": 121,
+          "id": 122,
           "title": "SMB Open Files",
           "description": "Open SMB file locks (live, from smb.status).",
           "datasource": {
@@ -9644,7 +9734,7 @@
           },
           "gridPos": {
             "x": 10,
-            "y": 226,
+            "y": 232,
             "w": 5,
             "h": 4
           },
@@ -9667,7 +9757,7 @@
         },
         {
           "type": "stat",
-          "id": 122,
+          "id": 123,
           "title": "WebShare",
           "description": "Configured WebShare (WebDAV) shares (v26+).",
           "datasource": {
@@ -9706,7 +9796,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 226,
+            "y": 232,
             "w": 5,
             "h": 4
           },
@@ -9729,7 +9819,7 @@
         },
         {
           "type": "stat",
-          "id": 123,
+          "id": 124,
           "title": "WebShare Auth",
           "description": "WebShare passkey authentication enabled (v26+).",
           "datasource": {
@@ -9784,7 +9874,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 226,
+            "y": 232,
             "w": 4,
             "h": 4
           },
@@ -9807,7 +9897,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 124,
+          "id": 125,
           "title": "Service Runtime State",
           "description": "Service running/stopped history.",
           "datasource": {
@@ -9881,7 +9971,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 230,
+            "y": 236,
             "w": 12,
             "h": 8
           },
@@ -9905,7 +9995,7 @@
         },
         {
           "type": "piechart",
-          "id": 125,
+          "id": 126,
           "title": "Protocol Activity Mix",
           "description": "Relative protocol activity.",
           "datasource": {
@@ -9959,7 +10049,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 230,
+            "y": 236,
             "w": 12,
             "h": 8
           },
@@ -9993,7 +10083,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 126,
+          "id": 127,
           "title": "SMB Encryption Mode",
           "description": "Configured SMB transport-encryption mode.",
           "datasource": {
@@ -10040,7 +10130,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 238,
+            "y": 244,
             "w": 24,
             "h": 8
           },
@@ -10064,7 +10154,7 @@
         },
         {
           "type": "stat",
-          "id": 127,
+          "id": 128,
           "title": "Portals",
           "description": "iSCSI portals.",
           "datasource": {
@@ -10103,7 +10193,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10126,7 +10216,7 @@
         },
         {
           "type": "stat",
-          "id": 128,
+          "id": 129,
           "title": "Extents",
           "description": "iSCSI extents.",
           "datasource": {
@@ -10165,7 +10255,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10188,7 +10278,7 @@
         },
         {
           "type": "stat",
-          "id": 129,
+          "id": 130,
           "title": "Initiators",
           "description": "iSCSI initiator groups.",
           "datasource": {
@@ -10227,7 +10317,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10250,7 +10340,7 @@
         },
         {
           "type": "stat",
-          "id": 130,
+          "id": 131,
           "title": "iSCSI Sess",
           "description": "Active iSCSI sessions.",
           "datasource": {
@@ -10289,7 +10379,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10312,7 +10402,7 @@
         },
         {
           "type": "stat",
-          "id": 131,
+          "id": 132,
           "title": "ALUA",
           "description": "iSCSI ALUA protocol (optional).",
           "datasource": {
@@ -10367,7 +10457,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10390,7 +10480,7 @@
         },
         {
           "type": "stat",
-          "id": 132,
+          "id": 133,
           "title": "iSER",
           "description": "iSCSI iSER (RDMA) protocol (optional).",
           "datasource": {
@@ -10445,7 +10535,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10468,7 +10558,7 @@
         },
         {
           "type": "stat",
-          "id": 133,
+          "id": 134,
           "title": "SMB Multi",
           "description": "SMB multichannel (optional).",
           "datasource": {
@@ -10523,7 +10613,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10546,7 +10636,7 @@
         },
         {
           "type": "stat",
-          "id": 134,
+          "id": 135,
           "title": "NFSv4 On",
           "description": "NFSv4 enabled (optional).",
           "datasource": {
@@ -10601,7 +10691,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 246,
+            "y": 252,
             "w": 3,
             "h": 4
           },
@@ -10624,7 +10714,7 @@
         },
         {
           "type": "stat",
-          "id": 135,
+          "id": 136,
           "title": "iSER Sess",
           "description": "Active iSCSI sessions using iSER.",
           "datasource": {
@@ -10663,7 +10753,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 250,
+            "y": 256,
             "w": 4,
             "h": 4
           },
@@ -10686,7 +10776,7 @@
         },
         {
           "type": "stat",
-          "id": 136,
+          "id": 137,
           "title": "Offload Sess",
           "description": "Active iSCSI sessions using offload.",
           "datasource": {
@@ -10725,7 +10815,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 250,
+            "y": 256,
             "w": 5,
             "h": 4
           },
@@ -10748,7 +10838,7 @@
         },
         {
           "type": "stat",
-          "id": 137,
+          "id": 138,
           "title": "ImmediateData",
           "description": "Active iSCSI sessions with immediate-data enabled.",
           "datasource": {
@@ -10787,7 +10877,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 250,
+            "y": 256,
             "w": 5,
             "h": 4
           },
@@ -10810,7 +10900,7 @@
         },
         {
           "type": "stat",
-          "id": 138,
+          "id": 139,
           "title": "NFS Threads",
           "description": "NFS server threads.",
           "datasource": {
@@ -10849,7 +10939,7 @@
           },
           "gridPos": {
             "x": 14,
-            "y": 250,
+            "y": 256,
             "w": 5,
             "h": 4
           },
@@ -10872,7 +10962,7 @@
         },
         {
           "type": "stat",
-          "id": 139,
+          "id": 140,
           "title": "Used Disks",
           "description": "Disks currently in use by pools.",
           "datasource": {
@@ -10911,7 +11001,7 @@
           },
           "gridPos": {
             "x": 19,
-            "y": 250,
+            "y": 256,
             "w": 5,
             "h": 4
           },
@@ -10934,7 +11024,7 @@
         },
         {
           "type": "table",
-          "id": 140,
+          "id": 141,
           "title": "Service Inventory",
           "description": "Service runtime state and boot enablement.",
           "datasource": {
@@ -11062,7 +11152,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 254,
+            "y": 260,
             "w": 24,
             "h": 10
           },
@@ -11129,20 +11219,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 221,
+        "y": 227,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 141,
+      "id": 142,
       "title": "Apps & Docker",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 142,
+          "id": 143,
           "title": "Apps",
           "description": "Installed apps.",
           "datasource": {
@@ -11181,7 +11271,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11204,7 +11294,7 @@
         },
         {
           "type": "stat",
-          "id": 143,
+          "id": 144,
           "title": "Avail Space",
           "description": "Space available for new apps.",
           "datasource": {
@@ -11243,7 +11333,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11266,7 +11356,7 @@
         },
         {
           "type": "stat",
-          "id": 144,
+          "id": 145,
           "title": "Docker Imgs",
           "description": "Docker images.",
           "datasource": {
@@ -11305,7 +11395,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11328,7 +11418,7 @@
         },
         {
           "type": "stat",
-          "id": 145,
+          "id": 146,
           "title": "Docker Nets",
           "description": "Docker networks.",
           "datasource": {
@@ -11367,7 +11457,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11390,7 +11480,7 @@
         },
         {
           "type": "stat",
-          "id": 146,
+          "id": 147,
           "title": "Docker Up",
           "description": "Docker service running.",
           "datasource": {
@@ -11445,7 +11535,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11468,7 +11558,7 @@
         },
         {
           "type": "stat",
-          "id": 147,
+          "id": 148,
           "title": "NVIDIA GPU",
           "description": "NVIDIA GPU available.",
           "datasource": {
@@ -11523,7 +11613,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11546,7 +11636,7 @@
         },
         {
           "type": "stat",
-          "id": 148,
+          "id": 149,
           "title": "Catalog Trains",
           "description": "App catalog trains.",
           "datasource": {
@@ -11585,7 +11675,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11608,7 +11698,7 @@
         },
         {
           "type": "stat",
-          "id": 149,
+          "id": 150,
           "title": "Pref Trains",
           "description": "Preferred catalog trains configured.",
           "datasource": {
@@ -11647,7 +11737,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 265,
+            "y": 271,
             "w": 3,
             "h": 4
           },
@@ -11670,7 +11760,7 @@
         },
         {
           "type": "stat",
-          "id": 150,
+          "id": 151,
           "title": "DH RL Error",
           "description": "DockerHub rate-limit endpoint currently reports an error.",
           "datasource": {
@@ -11729,7 +11819,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 269,
+            "y": 275,
             "w": 4,
             "h": 4
           },
@@ -11752,7 +11842,7 @@
         },
         {
           "type": "stat",
-          "id": 151,
+          "id": 152,
           "title": "DH Rem %",
           "description": "DockerHub pull-limit budget remaining percentage.",
           "datasource": {
@@ -11799,7 +11889,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 269,
+            "y": 275,
             "w": 5,
             "h": 4
           },
@@ -11822,7 +11912,7 @@
         },
         {
           "type": "stat",
-          "id": 152,
+          "id": 153,
           "title": "DockerHub Rem",
           "description": "DockerHub pull requests remaining in current window.",
           "datasource": {
@@ -11861,7 +11951,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 269,
+            "y": 275,
             "w": 5,
             "h": 4
           },
@@ -11884,7 +11974,7 @@
         },
         {
           "type": "stat",
-          "id": 153,
+          "id": 154,
           "title": "DockerHub Limit",
           "description": "DockerHub pull limit window total requests.",
           "datasource": {
@@ -11923,7 +12013,7 @@
           },
           "gridPos": {
             "x": 14,
-            "y": 269,
+            "y": 275,
             "w": 5,
             "h": 4
           },
@@ -11946,7 +12036,7 @@
         },
         {
           "type": "stat",
-          "id": 154,
+          "id": 155,
           "title": "DH Window Left",
           "description": "Seconds remaining in the current DockerHub pull-limit window.",
           "datasource": {
@@ -11985,7 +12075,7 @@
           },
           "gridPos": {
             "x": 19,
-            "y": 269,
+            "y": 275,
             "w": 5,
             "h": 4
           },
@@ -12008,7 +12098,7 @@
         },
         {
           "type": "stat",
-          "id": 155,
+          "id": 156,
           "title": "App Upgrades",
           "description": "Apps with a newer chart or package version available.",
           "datasource": {
@@ -12047,7 +12137,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 273,
+            "y": 279,
             "w": 6,
             "h": 4
           },
@@ -12070,7 +12160,7 @@
         },
         {
           "type": "stat",
-          "id": 156,
+          "id": 157,
           "title": "Custom Apps",
           "description": "Apps deployed as custom apps.",
           "datasource": {
@@ -12109,7 +12199,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 273,
+            "y": 279,
             "w": 6,
             "h": 4
           },
@@ -12132,7 +12222,7 @@
         },
         {
           "type": "stat",
-          "id": 157,
+          "id": 158,
           "title": "Migrated Apps",
           "description": "Apps migrated from the older Kubernetes stack.",
           "datasource": {
@@ -12171,7 +12261,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 273,
+            "y": 279,
             "w": 6,
             "h": 4
           },
@@ -12194,7 +12284,7 @@
         },
         {
           "type": "stat",
-          "id": 158,
+          "id": 159,
           "title": "Img Updates",
           "description": "Apps with container image updates available.",
           "datasource": {
@@ -12233,7 +12323,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 273,
+            "y": 279,
             "w": 6,
             "h": 4
           },
@@ -12256,7 +12346,7 @@
         },
         {
           "type": "bargauge",
-          "id": 159,
+          "id": 160,
           "title": "Top Apps by CPU",
           "description": "Top CPU consumers.",
           "datasource": {
@@ -12305,7 +12395,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 277,
+            "y": 283,
             "w": 12,
             "h": 8
           },
@@ -12338,7 +12428,7 @@
         },
         {
           "type": "bargauge",
-          "id": 160,
+          "id": 161,
           "title": "Top Apps by Memory",
           "description": "Top memory consumers.",
           "datasource": {
@@ -12386,7 +12476,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 277,
+            "y": 283,
             "w": 12,
             "h": 8
           },
@@ -12419,7 +12509,7 @@
         },
         {
           "type": "timeseries",
-          "id": 161,
+          "id": 162,
           "title": "App CPU Over Time",
           "description": "App CPU usage trends.",
           "datasource": {
@@ -12484,7 +12574,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 285,
+            "y": 291,
             "w": 12,
             "h": 8
           },
@@ -12509,7 +12599,7 @@
         },
         {
           "type": "timeseries",
-          "id": 162,
+          "id": 163,
           "title": "App Memory Over Time",
           "description": "App memory usage trends.",
           "datasource": {
@@ -12574,7 +12664,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 285,
+            "y": 291,
             "w": 12,
             "h": 8
           },
@@ -12599,7 +12689,7 @@
         },
         {
           "type": "timeseries",
-          "id": 163,
+          "id": 164,
           "title": "App Block I/O",
           "description": "Read/write volume by app.",
           "datasource": {
@@ -12673,7 +12763,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 293,
+            "y": 299,
             "w": 12,
             "h": 8
           },
@@ -12698,7 +12788,7 @@
         },
         {
           "type": "timeseries",
-          "id": 164,
+          "id": 165,
           "title": "App Network",
           "description": "App network ingress/egress.",
           "datasource": {
@@ -12772,7 +12862,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 293,
+            "y": 299,
             "w": 12,
             "h": 8
           },
@@ -12797,7 +12887,7 @@
         },
         {
           "type": "bargauge",
-          "id": 165,
+          "id": 166,
           "title": "Apps by Container Count",
           "description": "Apps with the largest active workload footprint.",
           "datasource": {
@@ -12845,7 +12935,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 301,
+            "y": 307,
             "w": 8,
             "h": 8
           },
@@ -12878,7 +12968,7 @@
         },
         {
           "type": "piechart",
-          "id": 166,
+          "id": 167,
           "title": "App State Distribution",
           "description": "Current state mix across installed apps.",
           "datasource": {
@@ -12914,7 +13004,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 301,
+            "y": 307,
             "w": 8,
             "h": 8
           },
@@ -12948,7 +13038,7 @@
         },
         {
           "type": "piechart",
-          "id": 167,
+          "id": 168,
           "title": "App Container State Distribution",
           "description": "Current runtime state mix across app containers.",
           "datasource": {
@@ -12984,7 +13074,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 301,
+            "y": 307,
             "w": 8,
             "h": 8
           },
@@ -13018,7 +13108,7 @@
         },
         {
           "type": "table",
-          "id": 168,
+          "id": 169,
           "title": "App Inventory",
           "description": "App resource footprint, update posture, and exposure summary.",
           "datasource": {
@@ -13251,7 +13341,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 309,
+            "y": 315,
             "w": 24,
             "h": 10
           },
@@ -13327,7 +13417,7 @@
         },
         {
           "type": "stat",
-          "id": 169,
+          "id": 170,
           "title": "DH Window",
           "description": "DockerHub rate-limit window duration.",
           "datasource": {
@@ -13366,7 +13456,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 319,
+            "y": 325,
             "w": 6,
             "h": 4
           },
@@ -13390,20 +13480,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 264,
+        "y": 270,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 170,
+      "id": 171,
       "title": "Virtualization (VMs & Incus)",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 171,
+          "id": 172,
           "title": "VM Count",
           "description": "Virtual machines.",
           "datasource": {
@@ -13442,7 +13532,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13465,7 +13555,7 @@
         },
         {
           "type": "stat",
-          "id": 172,
+          "id": 173,
           "title": "Virt Support",
           "description": "KVM/HW virt available.",
           "datasource": {
@@ -13520,7 +13610,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13543,7 +13633,7 @@
         },
         {
           "type": "stat",
-          "id": 173,
+          "id": 174,
           "title": "Virt Details",
           "description": "Virtualization support from vm.virtualization_details.",
           "datasource": {
@@ -13598,7 +13688,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13621,7 +13711,7 @@
         },
         {
           "type": "stat",
-          "id": 174,
+          "id": 175,
           "title": "Virt Error",
           "description": "vm.virtualization_details currently reports an error.",
           "datasource": {
@@ -13676,7 +13766,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13699,7 +13789,7 @@
         },
         {
           "type": "stat",
-          "id": 175,
+          "id": 176,
           "title": "Max vCPUs",
           "description": "Maximum supported vCPUs.",
           "datasource": {
@@ -13738,7 +13828,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13761,7 +13851,7 @@
         },
         {
           "type": "stat",
-          "id": 176,
+          "id": 177,
           "title": "VM Avail RAM",
           "description": "Available memory for VMs.",
           "datasource": {
@@ -13800,7 +13890,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13823,7 +13913,7 @@
         },
         {
           "type": "stat",
-          "id": 177,
+          "id": 178,
           "title": "Incus Inst",
           "description": "Incus/LXD instances.",
           "datasource": {
@@ -13862,7 +13952,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13885,7 +13975,7 @@
         },
         {
           "type": "stat",
-          "id": 178,
+          "id": 179,
           "title": "IOMMU",
           "description": "IOMMU/PCI passthrough.",
           "datasource": {
@@ -13940,7 +14030,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 324,
+            "y": 330,
             "w": 3,
             "h": 4
           },
@@ -13963,7 +14053,7 @@
         },
         {
           "type": "stat",
-          "id": 179,
+          "id": 180,
           "title": "Intel VMX",
           "description": "Intel VT-x capability flag.",
           "datasource": {
@@ -14018,7 +14108,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 328,
+            "y": 334,
             "w": 4,
             "h": 4
           },
@@ -14041,7 +14131,7 @@
         },
         {
           "type": "stat",
-          "id": 180,
+          "id": 181,
           "title": "AMD RVI",
           "description": "AMD RVI/NPT capability flag.",
           "datasource": {
@@ -14096,7 +14186,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 328,
+            "y": 334,
             "w": 4,
             "h": 4
           },
@@ -14119,7 +14209,7 @@
         },
         {
           "type": "stat",
-          "id": 181,
+          "id": 182,
           "title": "Unrestricted",
           "description": "Unrestricted guest capability flag.",
           "datasource": {
@@ -14174,7 +14264,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 328,
+            "y": 334,
             "w": 4,
             "h": 4
           },
@@ -14197,7 +14287,7 @@
         },
         {
           "type": "stat",
-          "id": 182,
+          "id": 183,
           "title": "AMD ASIDs",
           "description": "AMD Address Space Identifiers are supported.",
           "datasource": {
@@ -14252,7 +14342,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 328,
+            "y": 334,
             "w": 4,
             "h": 4
           },
@@ -14275,7 +14365,7 @@
         },
         {
           "type": "stat",
-          "id": 183,
+          "id": 184,
           "title": "Incus Vols",
           "description": "Incus storage volumes.",
           "datasource": {
@@ -14314,7 +14404,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 328,
+            "y": 334,
             "w": 4,
             "h": 4
           },
@@ -14337,7 +14427,7 @@
         },
         {
           "type": "stat",
-          "id": 184,
+          "id": 185,
           "title": "VM Mem Used",
           "description": "VM memory in use.",
           "datasource": {
@@ -14376,7 +14466,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 328,
+            "y": 334,
             "w": 4,
             "h": 4
           },
@@ -14399,7 +14489,7 @@
         },
         {
           "type": "timeseries",
-          "id": 185,
+          "id": 186,
           "title": "VM Memory Allocation",
           "description": "VM memory available vs in use.",
           "datasource": {
@@ -14473,7 +14563,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 332,
+            "y": 338,
             "w": 12,
             "h": 8
           },
@@ -14498,7 +14588,7 @@
         },
         {
           "type": "timeseries",
-          "id": 186,
+          "id": 187,
           "title": "Incus Instance CPU",
           "description": "Per-instance CPU usage.",
           "datasource": {
@@ -14563,7 +14653,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 332,
+            "y": 338,
             "w": 12,
             "h": 8
           },
@@ -14588,7 +14678,7 @@
         },
         {
           "type": "timeseries",
-          "id": 187,
+          "id": 188,
           "title": "Incus Instance Memory",
           "description": "Per-instance memory usage.",
           "datasource": {
@@ -14653,7 +14743,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 340,
+            "y": 346,
             "w": 24,
             "h": 8
           },
@@ -14678,7 +14768,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 188,
+          "id": 189,
           "title": "Incus Instance Running State",
           "description": "Incus/LXD instance running state history.",
           "datasource": {
@@ -14752,7 +14842,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 348,
+            "y": 354,
             "w": 24,
             "h": 8
           },
@@ -14777,20 +14867,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 323,
+        "y": 329,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 189,
+      "id": 190,
       "title": "Alerts, Tasks & Updates",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 190,
+          "id": 191,
           "title": "Total Alerts",
           "description": "Active alerts.",
           "datasource": {
@@ -14837,7 +14927,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -14860,7 +14950,7 @@
         },
         {
           "type": "stat",
-          "id": 191,
+          "id": 192,
           "title": "Critical",
           "description": "Critical alerts.",
           "datasource": {
@@ -14903,7 +14993,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -14926,7 +15016,7 @@
         },
         {
           "type": "stat",
-          "id": 192,
+          "id": 193,
           "title": "Warning",
           "description": "Warning alerts.",
           "datasource": {
@@ -14973,7 +15063,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -14996,7 +15086,7 @@
         },
         {
           "type": "stat",
-          "id": 193,
+          "id": 194,
           "title": "Tasks",
           "description": "Scheduled tasks.",
           "datasource": {
@@ -15035,7 +15125,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -15058,7 +15148,7 @@
         },
         {
           "type": "stat",
-          "id": 194,
+          "id": 195,
           "title": "Tasks On",
           "description": "Enabled tasks.",
           "datasource": {
@@ -15097,7 +15187,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -15120,7 +15210,7 @@
         },
         {
           "type": "stat",
-          "id": 195,
+          "id": 196,
           "title": "Cloud Bkp",
           "description": "Cloud backup tasks.",
           "datasource": {
@@ -15159,7 +15249,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -15182,7 +15272,7 @@
         },
         {
           "type": "stat",
-          "id": 196,
+          "id": 197,
           "title": "Cron Jobs",
           "description": "Configured cron jobs.",
           "datasource": {
@@ -15221,7 +15311,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -15244,7 +15334,7 @@
         },
         {
           "type": "stat",
-          "id": 197,
+          "id": 198,
           "title": "Reboot Req",
           "description": "Reboot required to finish pending changes.",
           "datasource": {
@@ -15299,7 +15389,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 357,
+            "y": 363,
             "w": 3,
             "h": 4
           },
@@ -15322,7 +15412,7 @@
         },
         {
           "type": "stat",
-          "id": 198,
+          "id": 199,
           "title": "Dismissed",
           "description": "Alerts dismissed but still present.",
           "datasource": {
@@ -15361,7 +15451,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 361,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -15384,7 +15474,7 @@
         },
         {
           "type": "stat",
-          "id": 199,
+          "id": 200,
           "title": "One-Shot",
           "description": "One-shot alerts requiring explicit handling.",
           "datasource": {
@@ -15423,7 +15513,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 361,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -15446,7 +15536,7 @@
         },
         {
           "type": "stat",
-          "id": 200,
+          "id": 201,
           "title": "Active Jobs",
           "description": "Jobs currently waiting or running.",
           "datasource": {
@@ -15485,7 +15575,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 361,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -15508,7 +15598,7 @@
         },
         {
           "type": "stat",
-          "id": 201,
+          "id": 202,
           "title": "Abortable",
           "description": "Active jobs that can be cancelled.",
           "datasource": {
@@ -15547,7 +15637,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 361,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -15570,7 +15660,7 @@
         },
         {
           "type": "stat",
-          "id": 202,
+          "id": 203,
           "title": "Transient",
           "description": "Active transient jobs.",
           "datasource": {
@@ -15609,7 +15699,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 361,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -15632,7 +15722,7 @@
         },
         {
           "type": "stat",
-          "id": 203,
+          "id": 204,
           "title": "Last Alert Activity",
           "description": "Age since the most recent alert occurrence.",
           "datasource": {
@@ -15671,7 +15761,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 361,
+            "y": 367,
             "w": 4,
             "h": 4
           },
@@ -15694,7 +15784,7 @@
         },
         {
           "type": "piechart",
-          "id": 204,
+          "id": 205,
           "title": "Alert Level Distribution",
           "description": "Current alert severity mix.",
           "datasource": {
@@ -15730,7 +15820,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 365,
+            "y": 371,
             "w": 8,
             "h": 8
           },
@@ -15764,7 +15854,7 @@
         },
         {
           "type": "barchart",
-          "id": 205,
+          "id": 206,
           "title": "Tasks by Type",
           "description": "Scheduled work breakdown.",
           "datasource": {
@@ -15822,7 +15912,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 365,
+            "y": 371,
             "w": 8,
             "h": 8
           },
@@ -15875,7 +15965,7 @@
         },
         {
           "type": "timeseries",
-          "id": 206,
+          "id": 207,
           "title": "Alert Count Over Time",
           "description": "Alert count trend.",
           "datasource": {
@@ -15940,7 +16030,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 365,
+            "y": 371,
             "w": 8,
             "h": 8
           },
@@ -15965,7 +16055,7 @@
         },
         {
           "type": "barchart",
-          "id": 207,
+          "id": 208,
           "title": "Alert Classes",
           "description": "Most common current alert classes.",
           "datasource": {
@@ -16023,7 +16113,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 373,
+            "y": 379,
             "w": 8,
             "h": 8
           },
@@ -16076,7 +16166,7 @@
         },
         {
           "type": "piechart",
-          "id": 208,
+          "id": 209,
           "title": "Alert Sources",
           "description": "Which subsystems are generating alerts.",
           "datasource": {
@@ -16112,7 +16202,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 373,
+            "y": 379,
             "w": 8,
             "h": 8
           },
@@ -16146,7 +16236,7 @@
         },
         {
           "type": "bargauge",
-          "id": 209,
+          "id": 210,
           "title": "Running Job Progress",
           "description": "Progress of currently running jobs by method.",
           "datasource": {
@@ -16195,7 +16285,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 373,
+            "y": 379,
             "w": 8,
             "h": 8
           },
@@ -16228,7 +16318,7 @@
         },
         {
           "type": "timeseries",
-          "id": 210,
+          "id": 211,
           "title": "Active Jobs by State",
           "description": "Current active job counts split by WAITING and RUNNING state.",
           "datasource": {
@@ -16293,7 +16383,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 381,
+            "y": 387,
             "w": 12,
             "h": 8
           },
@@ -16318,7 +16408,7 @@
         },
         {
           "type": "timeseries",
-          "id": 211,
+          "id": 212,
           "title": "Oldest Active Job Age",
           "description": "Age of the oldest active job in each state.",
           "datasource": {
@@ -16383,7 +16473,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 381,
+            "y": 387,
             "w": 12,
             "h": 8
           },
@@ -16408,7 +16498,7 @@
         },
         {
           "type": "table",
-          "id": 212,
+          "id": 213,
           "title": "Job Method Detail",
           "description": "Active job counts and progress by middleware method.",
           "datasource": {
@@ -16528,7 +16618,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 389,
+            "y": 395,
             "w": 12,
             "h": 10
           },
@@ -16598,7 +16688,7 @@
         },
         {
           "type": "table",
-          "id": 213,
+          "id": 214,
           "title": "Alert Source and Node Detail",
           "description": "Current alert counts grouped by source and by node.",
           "datasource": {
@@ -16686,7 +16776,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 389,
+            "y": 395,
             "w": 12,
             "h": 10
           },
@@ -16731,7 +16821,7 @@
         },
         {
           "type": "table",
-          "id": 214,
+          "id": 215,
           "title": "Task Enablement Detail",
           "description": "Task enablement from documented task query fields.",
           "datasource": {
@@ -16814,7 +16904,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 399,
+            "y": 405,
             "w": 24,
             "h": 10
           },
@@ -16880,7 +16970,7 @@
         },
         {
           "type": "stat",
-          "id": 215,
+          "id": 216,
           "title": "Alert Svcs",
           "description": "Configured alert notification services.",
           "datasource": {
@@ -16919,7 +17009,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 409,
+            "y": 415,
             "w": 4,
             "h": 4
           },
@@ -16942,7 +17032,7 @@
         },
         {
           "type": "stat",
-          "id": 216,
+          "id": 217,
           "title": "Cron On",
           "description": "Enabled cron jobs.",
           "datasource": {
@@ -16981,7 +17071,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 409,
+            "y": 415,
             "w": 4,
             "h": 4
           },
@@ -17004,7 +17094,7 @@
         },
         {
           "type": "stat",
-          "id": 217,
+          "id": 218,
           "title": "Cloud Bkp On",
           "description": "Enabled cloud backup tasks.",
           "datasource": {
@@ -17043,7 +17133,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 409,
+            "y": 415,
             "w": 4,
             "h": 4
           },
@@ -17066,7 +17156,7 @@
         },
         {
           "type": "stat",
-          "id": 218,
+          "id": 219,
           "title": "Boot Changes",
           "description": "Boot ID changes seen since exporter start (proxy for reboot count).",
           "datasource": {
@@ -17105,7 +17195,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 409,
+            "y": 415,
             "w": 4,
             "h": 4
           },
@@ -17128,7 +17218,7 @@
         },
         {
           "type": "stat",
-          "id": 219,
+          "id": 220,
           "title": "Update Avail",
           "description": "A newer version is available.",
           "datasource": {
@@ -17183,7 +17273,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 409,
+            "y": 415,
             "w": 4,
             "h": 4
           },
@@ -17206,7 +17296,7 @@
         },
         {
           "type": "stat",
-          "id": 220,
+          "id": 221,
           "title": "Reboot Reason",
           "description": "A pending-reboot reason is currently reported.",
           "datasource": {
@@ -17261,7 +17351,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 409,
+            "y": 415,
             "w": 4,
             "h": 4
           },
@@ -17284,7 +17374,7 @@
         },
         {
           "type": "table",
-          "id": 221,
+          "id": 222,
           "title": "Alert Services",
           "description": "Configured alert notification services and their enablement.",
           "datasource": {
@@ -17367,7 +17457,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 413,
+            "y": 419,
             "w": 12,
             "h": 8
           },
@@ -17426,7 +17516,7 @@
         },
         {
           "type": "table",
-          "id": 222,
+          "id": 223,
           "title": "Update & Reboot Status",
           "description": "Current update status/available version and any pending reboot reason.",
           "datasource": {
@@ -17474,7 +17564,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 413,
+            "y": 419,
             "w": 12,
             "h": 8
           },
@@ -17521,20 +17611,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 356,
+        "y": 362,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 223,
+      "id": 224,
       "title": "Security & Platform",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 224,
+          "id": 225,
           "title": "2FA",
           "description": "Two-factor auth (disabled is a security finding).",
           "datasource": {
@@ -17589,7 +17679,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 422,
+            "y": 428,
             "w": 4,
             "h": 4
           },
@@ -17612,7 +17702,7 @@
         },
         {
           "type": "stat",
-          "id": 225,
+          "id": 226,
           "title": "SSH",
           "description": "SSH service enabled at boot.",
           "datasource": {
@@ -17667,7 +17757,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 422,
+            "y": 428,
             "w": 4,
             "h": 4
           },
@@ -17690,7 +17780,7 @@
         },
         {
           "type": "stat",
-          "id": 226,
+          "id": 227,
           "title": "FTP",
           "description": "FTP service enabled at boot.",
           "datasource": {
@@ -17745,7 +17835,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 422,
+            "y": 428,
             "w": 4,
             "h": 4
           },
@@ -17768,7 +17858,7 @@
         },
         {
           "type": "stat",
-          "id": 227,
+          "id": 228,
           "title": "SNMP",
           "description": "SNMP service enabled at boot.",
           "datasource": {
@@ -17823,7 +17913,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 422,
+            "y": 428,
             "w": 4,
             "h": 4
           },
@@ -17846,7 +17936,7 @@
         },
         {
           "type": "stat",
-          "id": 228,
+          "id": 229,
           "title": "FIPS",
           "description": "FIPS mode (policy-dependent).",
           "datasource": {
@@ -17901,7 +17991,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 422,
+            "y": 428,
             "w": 4,
             "h": 4
           },
@@ -17924,7 +18014,7 @@
         },
         {
           "type": "stat",
-          "id": 229,
+          "id": 230,
           "title": "Sessions",
           "description": "Active API sessions.",
           "datasource": {
@@ -17963,7 +18053,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 422,
+            "y": 428,
             "w": 4,
             "h": 4
           },
@@ -17986,7 +18076,7 @@
         },
         {
           "type": "stat",
-          "id": 230,
+          "id": 231,
           "title": "Production",
           "description": "Marked as production.",
           "datasource": {
@@ -18041,7 +18131,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 426,
+            "y": 432,
             "w": 4,
             "h": 4
           },
@@ -18064,7 +18154,7 @@
         },
         {
           "type": "stat",
-          "id": 231,
+          "id": 232,
           "title": "iX Hardware",
           "description": "iXsystems hardware.",
           "datasource": {
@@ -18119,7 +18209,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 426,
+            "y": 432,
             "w": 4,
             "h": 4
           },
@@ -18142,7 +18232,7 @@
         },
         {
           "type": "stat",
-          "id": 232,
+          "id": 233,
           "title": "Support A+E",
           "description": "Support available and enabled.",
           "datasource": {
@@ -18197,7 +18287,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 426,
+            "y": 432,
             "w": 4,
             "h": 4
           },
@@ -18220,7 +18310,7 @@
         },
         {
           "type": "stat",
-          "id": 233,
+          "id": 234,
           "title": "Dir Svc OK",
           "description": "Directory services healthy (when configured).",
           "datasource": {
@@ -18275,7 +18365,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 426,
+            "y": 432,
             "w": 4,
             "h": 4
           },
@@ -18298,7 +18388,7 @@
         },
         {
           "type": "stat",
-          "id": 234,
+          "id": 235,
           "title": "Dir Svc Cfg",
           "description": "Directory service detected by status.",
           "datasource": {
@@ -18353,7 +18443,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 426,
+            "y": 432,
             "w": 4,
             "h": 4
           },
@@ -18376,7 +18466,7 @@
         },
         {
           "type": "stat",
-          "id": 235,
+          "id": 236,
           "title": "Dir Faults",
           "description": "Enabled directory services reporting a fault.",
           "datasource": {
@@ -18419,7 +18509,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 426,
+            "y": 432,
             "w": 4,
             "h": 4
           },
@@ -18442,7 +18532,7 @@
         },
         {
           "type": "stat",
-          "id": 236,
+          "id": 237,
           "title": "Security FIPS",
           "description": "System security FIPS configured (policy-dependent).",
           "datasource": {
@@ -18497,7 +18587,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 430,
+            "y": 436,
             "w": 4,
             "h": 4
           },
@@ -18520,7 +18610,7 @@
         },
         {
           "type": "stat",
-          "id": 237,
+          "id": 238,
           "title": "GPOS STIG",
           "description": "GPOS STIG policy enabled (policy-dependent).",
           "datasource": {
@@ -18575,7 +18665,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 430,
+            "y": 436,
             "w": 4,
             "h": 4
           },
@@ -18598,7 +18688,7 @@
         },
         {
           "type": "stat",
-          "id": 238,
+          "id": 239,
           "title": "Pwd Min Len",
           "description": "Minimum password length policy.",
           "datasource": {
@@ -18645,7 +18735,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 430,
+            "y": 436,
             "w": 4,
             "h": 4
           },
@@ -18668,7 +18758,7 @@
         },
         {
           "type": "stat",
-          "id": 239,
+          "id": 240,
           "title": "Pwd Max Age",
           "description": "Maximum password age in days.",
           "datasource": {
@@ -18715,7 +18805,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 430,
+            "y": 436,
             "w": 4,
             "h": 4
           },
@@ -18738,7 +18828,7 @@
         },
         {
           "type": "stat",
-          "id": 240,
+          "id": 241,
           "title": "Pwd History",
           "description": "Password history retention count.",
           "datasource": {
@@ -18785,7 +18875,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 430,
+            "y": 436,
             "w": 4,
             "h": 4
           },
@@ -18808,7 +18898,7 @@
         },
         {
           "type": "stat",
-          "id": 241,
+          "id": 242,
           "title": "FIPS Avail",
           "description": "FIPS capability is available on this system.",
           "datasource": {
@@ -18863,7 +18953,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 430,
+            "y": 436,
             "w": 4,
             "h": 4
           },
@@ -18886,7 +18976,7 @@
         },
         {
           "type": "table",
-          "id": 242,
+          "id": 243,
           "title": "Security and Identity Counts",
           "description": "Identity and trust object counts.",
           "datasource": {
@@ -18961,7 +19051,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 434,
+            "y": 440,
             "w": 12,
             "h": 10
           },
@@ -19018,7 +19108,7 @@
         },
         {
           "type": "table",
-          "id": 243,
+          "id": 244,
           "title": "Certificate Expiry",
           "description": "Certificate expiry in operator-friendly relative and absolute forms.",
           "datasource": {
@@ -19128,7 +19218,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 434,
+            "y": 440,
             "w": 12,
             "h": 10
           },
@@ -19194,7 +19284,7 @@
         },
         {
           "type": "stat",
-          "id": 244,
+          "id": 245,
           "title": "API Keys",
           "description": "Configured API keys.",
           "datasource": {
@@ -19233,7 +19323,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 444,
+            "y": 450,
             "w": 4,
             "h": 4
           },
@@ -19256,7 +19346,7 @@
         },
         {
           "type": "stat",
-          "id": 245,
+          "id": 246,
           "title": "API Keys Revoked",
           "description": "Revoked API keys.",
           "datasource": {
@@ -19299,7 +19389,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 444,
+            "y": 450,
             "w": 4,
             "h": 4
           },
@@ -19322,7 +19412,7 @@
         },
         {
           "type": "stat",
-          "id": 246,
+          "id": 247,
           "title": "KMIP Sync Pending",
           "description": "KMIP key synchronization pending.",
           "datasource": {
@@ -19377,7 +19467,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 444,
+            "y": 450,
             "w": 4,
             "h": 4
           },
@@ -19400,7 +19490,7 @@
         },
         {
           "type": "stat",
-          "id": 247,
+          "id": 248,
           "title": "Managed by TC",
           "description": "Managed by TrueCommand.",
           "datasource": {
@@ -19455,7 +19545,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 444,
+            "y": 450,
             "w": 4,
             "h": 4
           },
@@ -19478,7 +19568,7 @@
         },
         {
           "type": "stat",
-          "id": 248,
+          "id": 249,
           "title": "Support Avail",
           "description": "Proactive support available.",
           "datasource": {
@@ -19533,7 +19623,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 444,
+            "y": 450,
             "w": 4,
             "h": 4
           },
@@ -19556,7 +19646,7 @@
         },
         {
           "type": "stat",
-          "id": 249,
+          "id": 250,
           "title": "Pwd Min Age",
           "description": "Configured minimum password age.",
           "datasource": {
@@ -19595,7 +19685,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 444,
+            "y": 450,
             "w": 4,
             "h": 4
           },
@@ -19618,7 +19708,7 @@
         },
         {
           "type": "table",
-          "id": 250,
+          "id": 251,
           "title": "API Key Expiry",
           "description": "Days until each API key expires (negative = already expired).",
           "datasource": {
@@ -19705,7 +19795,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 448,
+            "y": 454,
             "w": 24,
             "h": 8
           },
@@ -19763,20 +19853,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 421,
+        "y": 427,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 264,
+      "id": 265,
       "title": "Boot Environment",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 251,
+          "id": 252,
           "title": "Boot Healthy",
           "description": "Boot pool health.",
           "datasource": {
@@ -19831,7 +19921,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -19854,7 +19944,7 @@
         },
         {
           "type": "stat",
-          "id": 252,
+          "id": 253,
           "title": "Boot Size",
           "description": "",
           "datasource": {
@@ -19893,7 +19983,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -19916,7 +20006,7 @@
         },
         {
           "type": "stat",
-          "id": 253,
+          "id": 254,
           "title": "Boot Free",
           "description": "",
           "datasource": {
@@ -19955,7 +20045,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -19978,7 +20068,7 @@
         },
         {
           "type": "stat",
-          "id": 254,
+          "id": 255,
           "title": "Boot Disks",
           "description": "",
           "datasource": {
@@ -20017,7 +20107,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -20040,7 +20130,7 @@
         },
         {
           "type": "stat",
-          "id": 255,
+          "id": 256,
           "title": "Boot Envs",
           "description": "",
           "datasource": {
@@ -20079,7 +20169,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -20102,7 +20192,7 @@
         },
         {
           "type": "stat",
-          "id": 256,
+          "id": 257,
           "title": "Active BEs",
           "description": "",
           "datasource": {
@@ -20141,7 +20231,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -20164,7 +20254,7 @@
         },
         {
           "type": "stat",
-          "id": 257,
+          "id": 258,
           "title": "Activated BEs",
           "description": "Boot environments selected for the next boot.",
           "datasource": {
@@ -20203,7 +20293,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -20226,7 +20316,7 @@
         },
         {
           "type": "stat",
-          "id": 258,
+          "id": 259,
           "title": "Keep BEs",
           "description": "",
           "datasource": {
@@ -20265,7 +20355,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 457,
+            "y": 463,
             "w": 3,
             "h": 4
           },
@@ -20288,7 +20378,7 @@
         },
         {
           "type": "gauge",
-          "id": 259,
+          "id": 260,
           "title": "Boot Pool Usage",
           "description": "Boot pool fill ratio.",
           "datasource": {
@@ -20337,7 +20427,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 461,
+            "y": 467,
             "w": 6,
             "h": 8
           },
@@ -20360,7 +20450,7 @@
         },
         {
           "type": "bargauge",
-          "id": 260,
+          "id": 261,
           "title": "Boot Environment Used Space",
           "description": "Bytes used by each boot environment.",
           "datasource": {
@@ -20408,7 +20498,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 461,
+            "y": 467,
             "w": 18,
             "h": 8
           },
@@ -20441,7 +20531,7 @@
         },
         {
           "type": "stat",
-          "id": 261,
+          "id": 262,
           "title": "Boot Scan %",
           "description": "Boot pool active scan percentage.",
           "datasource": {
@@ -20480,7 +20570,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 469,
+            "y": 475,
             "w": 6,
             "h": 4
           },
@@ -20503,7 +20593,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 262,
+          "id": 263,
           "title": "Boot Pool Scan State",
           "description": "Boot pool scrub/resilver state.",
           "datasource": {
@@ -20550,7 +20640,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 469,
+            "y": 475,
             "w": 9,
             "h": 4
           },
@@ -20574,7 +20664,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 263,
+          "id": 264,
           "title": "Boot Pool Status",
           "description": "Boot pool status.",
           "datasource": {
@@ -20621,7 +20711,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 469,
+            "y": 475,
             "w": 9,
             "h": 4
           },
@@ -20646,20 +20736,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 456,
+        "y": 462,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 281,
+      "id": 282,
       "title": "Hardware & IPMI",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 265,
+          "id": 266,
           "title": "IPMI Loaded",
           "description": "",
           "datasource": {
@@ -20714,7 +20804,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -20737,7 +20827,7 @@
         },
         {
           "type": "stat",
-          "id": 266,
+          "id": 267,
           "title": "Power On",
           "description": "",
           "datasource": {
@@ -20792,7 +20882,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -20815,7 +20905,7 @@
         },
         {
           "type": "stat",
-          "id": 267,
+          "id": 268,
           "title": "GPUs",
           "description": "",
           "datasource": {
@@ -20854,7 +20944,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -20877,7 +20967,7 @@
         },
         {
           "type": "stat",
-          "id": 268,
+          "id": 269,
           "title": "Power Overld",
           "description": "",
           "datasource": {
@@ -20920,7 +21010,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -20943,7 +21033,7 @@
         },
         {
           "type": "stat",
-          "id": 269,
+          "id": 270,
           "title": "Intrusion",
           "description": "",
           "datasource": {
@@ -20986,7 +21076,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -21009,7 +21099,7 @@
         },
         {
           "type": "stat",
-          "id": 270,
+          "id": 271,
           "title": "Drive Fault",
           "description": "",
           "datasource": {
@@ -21052,7 +21142,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -21075,7 +21165,7 @@
         },
         {
           "type": "stat",
-          "id": 271,
+          "id": 272,
           "title": "Fan Fault",
           "description": "",
           "datasource": {
@@ -21118,7 +21208,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -21141,7 +21231,7 @@
         },
         {
           "type": "stat",
-          "id": 272,
+          "id": 273,
           "title": "JBOF",
           "description": "",
           "datasource": {
@@ -21180,7 +21270,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 458,
+            "y": 464,
             "w": 3,
             "h": 4
           },
@@ -21203,7 +21293,7 @@
         },
         {
           "type": "stat",
-          "id": 273,
+          "id": 274,
           "title": "SEL Entries",
           "description": "",
           "datasource": {
@@ -21242,7 +21332,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 462,
+            "y": 468,
             "w": 4,
             "h": 4
           },
@@ -21265,7 +21355,7 @@
         },
         {
           "type": "stat",
-          "id": 274,
+          "id": 275,
           "title": "SEL Free",
           "description": "",
           "datasource": {
@@ -21304,7 +21394,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 462,
+            "y": 468,
             "w": 4,
             "h": 4
           },
@@ -21327,7 +21417,7 @@
         },
         {
           "type": "stat",
-          "id": 275,
+          "id": 276,
           "title": "GPU Host Avail",
           "description": "GPUs available to the TrueNAS host.",
           "datasource": {
@@ -21366,7 +21456,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 462,
+            "y": 468,
             "w": 4,
             "h": 4
           },
@@ -21389,7 +21479,7 @@
         },
         {
           "type": "stat",
-          "id": 276,
+          "id": 277,
           "title": "GPU Critical",
           "description": "GPUs using system-critical PCI devices.",
           "datasource": {
@@ -21432,7 +21522,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 462,
+            "y": 468,
             "w": 4,
             "h": 4
           },
@@ -21455,7 +21545,7 @@
         },
         {
           "type": "stat",
-          "id": 277,
+          "id": 278,
           "title": "ECC Memory",
           "description": "",
           "datasource": {
@@ -21510,7 +21600,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 462,
+            "y": 468,
             "w": 4,
             "h": 4
           },
@@ -21533,7 +21623,7 @@
         },
         {
           "type": "stat",
-          "id": 278,
+          "id": 279,
           "title": "Resilver On",
           "description": "",
           "datasource": {
@@ -21588,7 +21678,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 462,
+            "y": 468,
             "w": 4,
             "h": 4
           },
@@ -21611,7 +21701,7 @@
         },
         {
           "type": "stat",
-          "id": 279,
+          "id": 280,
           "title": "Physical Cores",
           "description": "Host physical CPU cores (non-HT).",
           "datasource": {
@@ -21650,7 +21740,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 466,
+            "y": 472,
             "w": 6,
             "h": 4
           },
@@ -21673,7 +21763,7 @@
         },
         {
           "type": "table",
-          "id": 280,
+          "id": 281,
           "title": "Host & Chassis Identity",
           "description": "Static host, system, CPU, chassis, hypervisor, and GPU identity labels.",
           "datasource": {
@@ -21721,7 +21811,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 466,
+            "y": 472,
             "w": 18,
             "h": 8
           },
@@ -21798,20 +21888,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 457,
+        "y": 463,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 292,
+      "id": 293,
       "title": "Advanced Protocols (NVMe-oF / FC / HA)",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 282,
+          "id": 283,
           "title": "NVMe-oF Sess",
           "description": "",
           "datasource": {
@@ -21850,7 +21940,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -21873,7 +21963,7 @@
         },
         {
           "type": "stat",
-          "id": 283,
+          "id": 284,
           "title": "NVMe-oF Subs",
           "description": "",
           "datasource": {
@@ -21912,7 +22002,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -21935,7 +22025,7 @@
         },
         {
           "type": "stat",
-          "id": 284,
+          "id": 285,
           "title": "NVMe-oF Ports",
           "description": "",
           "datasource": {
@@ -21974,7 +22064,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -21997,7 +22087,7 @@
         },
         {
           "type": "stat",
-          "id": 285,
+          "id": 286,
           "title": "NVMe-oF Hosts",
           "description": "",
           "datasource": {
@@ -22036,7 +22126,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -22059,7 +22149,7 @@
         },
         {
           "type": "stat",
-          "id": 286,
+          "id": 287,
           "title": "NVMe-oF NS",
           "description": "",
           "datasource": {
@@ -22098,7 +22188,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -22121,7 +22211,7 @@
         },
         {
           "type": "stat",
-          "id": 287,
+          "id": 288,
           "title": "FC Hosts",
           "description": "",
           "datasource": {
@@ -22160,7 +22250,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -22183,7 +22273,7 @@
         },
         {
           "type": "stat",
-          "id": 288,
+          "id": 289,
           "title": "FC Ports",
           "description": "",
           "datasource": {
@@ -22222,7 +22312,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -22245,7 +22335,7 @@
         },
         {
           "type": "stat",
-          "id": 289,
+          "id": 290,
           "title": "HA Disabled",
           "description": "",
           "datasource": {
@@ -22288,7 +22378,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 459,
+            "y": 465,
             "w": 3,
             "h": 4
           },
@@ -22311,7 +22401,7 @@
         },
         {
           "type": "table",
-          "id": 290,
+          "id": 291,
           "title": "Failover Disabled Reasons",
           "description": "Reasons HA failover is currently disabled.",
           "datasource": {
@@ -22359,7 +22449,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 463,
+            "y": 469,
             "w": 12,
             "h": 6
           },
@@ -22399,7 +22489,7 @@
         },
         {
           "type": "table",
-          "id": 291,
+          "id": 292,
           "title": "Failover Node Reboot Required",
           "description": "Failover nodes with a documented reboot-required reason.",
           "datasource": {
@@ -22482,7 +22572,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 463,
+            "y": 469,
             "w": 12,
             "h": 6
           },
@@ -22524,20 +22614,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 458,
+        "y": 464,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 305,
+      "id": 306,
       "title": "Audit & Directory Services",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 293,
+          "id": 294,
           "title": "Audit Used",
           "description": "",
           "datasource": {
@@ -22576,7 +22666,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 460,
+            "y": 466,
             "w": 4,
             "h": 4
           },
@@ -22599,7 +22689,7 @@
         },
         {
           "type": "stat",
-          "id": 294,
+          "id": 295,
           "title": "Audit Avail",
           "description": "",
           "datasource": {
@@ -22638,7 +22728,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 460,
+            "y": 466,
             "w": 4,
             "h": 4
           },
@@ -22661,7 +22751,7 @@
         },
         {
           "type": "stat",
-          "id": 295,
+          "id": 296,
           "title": "Audit Quota",
           "description": "",
           "datasource": {
@@ -22700,7 +22790,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 460,
+            "y": 466,
             "w": 4,
             "h": 4
           },
@@ -22723,7 +22813,7 @@
         },
         {
           "type": "stat",
-          "id": 296,
+          "id": 297,
           "title": "Audit Reserve",
           "description": "",
           "datasource": {
@@ -22762,7 +22852,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 460,
+            "y": 466,
             "w": 4,
             "h": 4
           },
@@ -22785,7 +22875,7 @@
         },
         {
           "type": "stat",
-          "id": 297,
+          "id": 298,
           "title": "Warn Fill %",
           "description": "",
           "datasource": {
@@ -22824,7 +22914,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 460,
+            "y": 466,
             "w": 4,
             "h": 4
           },
@@ -22847,7 +22937,7 @@
         },
         {
           "type": "stat",
-          "id": 298,
+          "id": 299,
           "title": "Crit Fill %",
           "description": "",
           "datasource": {
@@ -22886,7 +22976,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 460,
+            "y": 466,
             "w": 4,
             "h": 4
           },
@@ -22909,7 +22999,7 @@
         },
         {
           "type": "stat",
-          "id": 299,
+          "id": 300,
           "title": "Retention",
           "description": "Configured local audit retention.",
           "datasource": {
@@ -22948,7 +23038,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 464,
+            "y": 470,
             "w": 6,
             "h": 4
           },
@@ -22971,7 +23061,7 @@
         },
         {
           "type": "stat",
-          "id": 300,
+          "id": 301,
           "title": "Remote Log",
           "description": "Remote audit logging enabled (optional).",
           "datasource": {
@@ -23026,7 +23116,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 464,
+            "y": 470,
             "w": 6,
             "h": 4
           },
@@ -23049,7 +23139,7 @@
         },
         {
           "type": "stat",
-          "id": 301,
+          "id": 302,
           "title": "Dir Svc OK",
           "description": "",
           "datasource": {
@@ -23104,7 +23194,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 464,
+            "y": 470,
             "w": 6,
             "h": 4
           },
@@ -23127,7 +23217,7 @@
         },
         {
           "type": "stat",
-          "id": 302,
+          "id": 303,
           "title": "Dir Faults",
           "description": "",
           "datasource": {
@@ -23170,7 +23260,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 464,
+            "y": 470,
             "w": 6,
             "h": 4
           },
@@ -23193,7 +23283,7 @@
         },
         {
           "type": "table",
-          "id": 303,
+          "id": 304,
           "title": "Directory Service Type",
           "description": "Configured directory service type (always 1 when configured).",
           "datasource": {
@@ -23241,7 +23331,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 468,
+            "y": 474,
             "w": 12,
             "h": 6
           },
@@ -23281,7 +23371,7 @@
         },
         {
           "type": "table",
-          "id": 304,
+          "id": 305,
           "title": "Directory Service Status",
           "description": "Per-service directory service status.",
           "datasource": {
@@ -23329,7 +23419,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 468,
+            "y": 474,
             "w": 12,
             "h": 6
           },
@@ -23372,20 +23462,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 459,
+        "y": 465,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 327,
+      "id": 328,
       "title": "System Configuration",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 306,
+          "id": 307,
           "title": "HTTPS Port",
           "description": "",
           "datasource": {
@@ -23424,7 +23514,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 461,
+            "y": 467,
             "w": 4,
             "h": 4
           },
@@ -23447,7 +23537,7 @@
         },
         {
           "type": "stat",
-          "id": 307,
+          "id": 308,
           "title": "Reporting On",
           "description": "",
           "datasource": {
@@ -23502,7 +23592,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 461,
+            "y": 467,
             "w": 4,
             "h": 4
           },
@@ -23525,7 +23615,7 @@
         },
         {
           "type": "stat",
-          "id": 308,
+          "id": 309,
           "title": "Exporters",
           "description": "",
           "datasource": {
@@ -23564,7 +23654,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 461,
+            "y": 467,
             "w": 4,
             "h": 4
           },
@@ -23587,7 +23677,7 @@
         },
         {
           "type": "stat",
-          "id": 309,
+          "id": 310,
           "title": "Static Routes",
           "description": "",
           "datasource": {
@@ -23626,7 +23716,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 461,
+            "y": 467,
             "w": 4,
             "h": 4
           },
@@ -23649,7 +23739,7 @@
         },
         {
           "type": "stat",
-          "id": 310,
+          "id": 311,
           "title": "Tunables",
           "description": "",
           "datasource": {
@@ -23688,7 +23778,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 461,
+            "y": 467,
             "w": 4,
             "h": 4
           },
@@ -23711,7 +23801,7 @@
         },
         {
           "type": "stat",
-          "id": 311,
+          "id": 312,
           "title": "Init Scripts",
           "description": "",
           "datasource": {
@@ -23750,7 +23840,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 461,
+            "y": 467,
             "w": 4,
             "h": 4
           },
@@ -23773,7 +23863,7 @@
         },
         {
           "type": "stat",
-          "id": 312,
+          "id": 313,
           "title": "Upd AutoChk",
           "description": "Automatic update checks enabled.",
           "datasource": {
@@ -23828,7 +23918,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 465,
+            "y": 471,
             "w": 4,
             "h": 4
           },
@@ -23851,7 +23941,7 @@
         },
         {
           "type": "stat",
-          "id": 313,
+          "id": 314,
           "title": "Upd Profile",
           "description": "Update profile information present.",
           "datasource": {
@@ -23906,7 +23996,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 465,
+            "y": 471,
             "w": 4,
             "h": 4
           },
@@ -23929,7 +24019,7 @@
         },
         {
           "type": "stat",
-          "id": 314,
+          "id": 315,
           "title": "NTP Servers",
           "description": "Configured NTP servers.",
           "datasource": {
@@ -23968,7 +24058,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 465,
+            "y": 471,
             "w": 4,
             "h": 4
           },
@@ -23991,7 +24081,7 @@
         },
         {
           "type": "stat",
-          "id": 315,
+          "id": 316,
           "title": "Tier0 Days",
           "description": "Reporting tier0 retention period.",
           "datasource": {
@@ -24030,7 +24120,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 465,
+            "y": 471,
             "w": 4,
             "h": 4
           },
@@ -24053,7 +24143,7 @@
         },
         {
           "type": "stat",
-          "id": 316,
+          "id": 317,
           "title": "Tier1 Days",
           "description": "Reporting tier1 retention period.",
           "datasource": {
@@ -24092,7 +24182,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 465,
+            "y": 471,
             "w": 4,
             "h": 4
           },
@@ -24115,7 +24205,7 @@
         },
         {
           "type": "stat",
-          "id": 317,
+          "id": 318,
           "title": "Tier1 Int",
           "description": "Reporting tier1 update interval.",
           "datasource": {
@@ -24154,7 +24244,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 465,
+            "y": 471,
             "w": 4,
             "h": 4
           },
@@ -24177,7 +24267,7 @@
         },
         {
           "type": "stat",
-          "id": 318,
+          "id": 319,
           "title": "Catalog Cfg",
           "description": "Catalog config payload present.",
           "datasource": {
@@ -24232,7 +24322,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 469,
+            "y": 475,
             "w": 4,
             "h": 4
           },
@@ -24255,7 +24345,7 @@
         },
         {
           "type": "stat",
-          "id": 319,
+          "id": 320,
           "title": "Pref Trains",
           "description": "Preferred catalog trains configured.",
           "datasource": {
@@ -24294,7 +24384,7 @@
           },
           "gridPos": {
             "x": 4,
-            "y": 469,
+            "y": 475,
             "w": 4,
             "h": 4
           },
@@ -24317,7 +24407,7 @@
         },
         {
           "type": "stat",
-          "id": 320,
+          "id": 321,
           "title": "NTP Burst",
           "description": "NTP servers with burst enabled.",
           "datasource": {
@@ -24356,7 +24446,7 @@
           },
           "gridPos": {
             "x": 8,
-            "y": 469,
+            "y": 475,
             "w": 4,
             "h": 4
           },
@@ -24379,7 +24469,7 @@
         },
         {
           "type": "stat",
-          "id": 321,
+          "id": 322,
           "title": "NTP Iburst",
           "description": "NTP servers with iburst enabled.",
           "datasource": {
@@ -24418,7 +24508,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 469,
+            "y": 475,
             "w": 4,
             "h": 4
           },
@@ -24441,7 +24531,7 @@
         },
         {
           "type": "stat",
-          "id": 322,
+          "id": 323,
           "title": "NTP Min Poll",
           "description": "Minimum configured NTP poll interval.",
           "datasource": {
@@ -24480,7 +24570,7 @@
           },
           "gridPos": {
             "x": 16,
-            "y": 469,
+            "y": 475,
             "w": 4,
             "h": 4
           },
@@ -24503,7 +24593,7 @@
         },
         {
           "type": "stat",
-          "id": 323,
+          "id": 324,
           "title": "NTP Max Poll",
           "description": "Maximum configured NTP poll interval.",
           "datasource": {
@@ -24542,7 +24632,7 @@
           },
           "gridPos": {
             "x": 20,
-            "y": 469,
+            "y": 475,
             "w": 4,
             "h": 4
           },
@@ -24565,7 +24655,7 @@
         },
         {
           "type": "stat",
-          "id": 324,
+          "id": 325,
           "title": "FS Paths",
           "description": "Filesystem paths being scraped.",
           "datasource": {
@@ -24604,7 +24694,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 473,
+            "y": 479,
             "w": 6,
             "h": 4
           },
@@ -24627,7 +24717,7 @@
         },
         {
           "type": "stat",
-          "id": 325,
+          "id": 326,
           "title": "NTP Prefer",
           "description": "NTP servers marked prefer.",
           "datasource": {
@@ -24666,7 +24756,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 473,
+            "y": 479,
             "w": 6,
             "h": 4
           },
@@ -24689,7 +24779,7 @@
         },
         {
           "type": "table",
-          "id": 326,
+          "id": 327,
           "title": "System Identity",
           "description": "Static system identity labels: global/host ID, product type, current state, version, and system dataset pool.",
           "datasource": {
@@ -24737,7 +24827,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 473,
+            "y": 479,
             "w": 12,
             "h": 8
           },
@@ -24790,20 +24880,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 460,
+        "y": 466,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 336,
+      "id": 337,
       "title": "Dataset Deep-Dive",
       "collapsed": true,
       "panels": [
         {
           "type": "bargauge",
-          "id": 328,
+          "id": 329,
           "title": "Top Datasets by Used Bytes",
           "description": "Datasets by documented used-space value.",
           "datasource": {
@@ -24851,7 +24941,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 462,
+            "y": 468,
             "w": 12,
             "h": 8
           },
@@ -24884,7 +24974,7 @@
         },
         {
           "type": "bargauge",
-          "id": 329,
+          "id": 330,
           "title": "Datasets by Available Space (Bottom 15)",
           "description": "Datasets with least available space.",
           "datasource": {
@@ -24932,7 +25022,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 462,
+            "y": 468,
             "w": 12,
             "h": 8
           },
@@ -24965,7 +25055,7 @@
         },
         {
           "type": "bargauge",
-          "id": 330,
+          "id": 331,
           "title": "Dataset Snapshot Counts",
           "description": "Datasets with most snapshots.",
           "datasource": {
@@ -25013,7 +25103,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 470,
+            "y": 476,
             "w": 12,
             "h": 8
           },
@@ -25046,7 +25136,7 @@
         },
         {
           "type": "bargauge",
-          "id": 331,
+          "id": 332,
           "title": "Dataset Compression Ratio",
           "description": "Compression effectiveness per dataset.",
           "datasource": {
@@ -25094,7 +25184,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 470,
+            "y": 476,
             "w": 12,
             "h": 8
           },
@@ -25127,7 +25217,7 @@
         },
         {
           "type": "bargauge",
-          "id": 332,
+          "id": 333,
           "title": "Datasets Using Snapshot Space",
           "description": "Datasets consuming the most space in snapshots.",
           "datasource": {
@@ -25175,7 +25265,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 478,
+            "y": 484,
             "w": 12,
             "h": 8
           },
@@ -25208,7 +25298,7 @@
         },
         {
           "type": "bargauge",
-          "id": 333,
+          "id": 334,
           "title": "Datasets with Reservations",
           "description": "Datasets with explicit ZFS reservations.",
           "datasource": {
@@ -25256,7 +25346,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 478,
+            "y": 484,
             "w": 12,
             "h": 8
           },
@@ -25289,7 +25379,7 @@
         },
         {
           "type": "table",
-          "id": 334,
+          "id": 335,
           "title": "Dataset Capacity Detail",
           "description": "Detailed dataset capacity, encryption, quota, and snapshot info.",
           "datasource": {
@@ -25581,7 +25671,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 486,
+            "y": 492,
             "w": 24,
             "h": 10
           },
@@ -25663,7 +25753,7 @@
         },
         {
           "type": "table",
-          "id": 335,
+          "id": 336,
           "title": "Dataset Policy Detail",
           "description": "Dataset encryption, policy flags, quota thresholds, and age.",
           "datasource": {
@@ -26214,7 +26304,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 496,
+            "y": 502,
             "w": 24,
             "h": 10
           },
@@ -26303,20 +26393,20 @@
       ],
       "gridPos": {
         "x": 0,
-        "y": 461,
+        "y": 467,
         "w": 24,
         "h": 1
       }
     },
     {
       "type": "row",
-      "id": 367,
+      "id": 370,
       "title": "Exporter + Advanced ZFS",
       "collapsed": true,
       "panels": [
         {
           "type": "stat",
-          "id": 337,
+          "id": 338,
           "title": "Exporter Up",
           "description": "",
           "datasource": {
@@ -26371,7 +26461,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26394,7 +26484,7 @@
         },
         {
           "type": "stat",
-          "id": 338,
+          "id": 339,
           "title": "Scrape Time",
           "description": "",
           "datasource": {
@@ -26441,7 +26531,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26464,7 +26554,7 @@
         },
         {
           "type": "stat",
-          "id": 339,
+          "id": 340,
           "title": "Event Stream",
           "description": "",
           "datasource": {
@@ -26519,7 +26609,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26542,7 +26632,7 @@
         },
         {
           "type": "stat",
-          "id": 340,
+          "id": 341,
           "title": "Methods OK %",
           "description": "Share of API methods whose latest scrape call succeeded (not a call-level success rate).",
           "datasource": {
@@ -26589,7 +26679,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26612,7 +26702,7 @@
         },
         {
           "type": "stat",
-          "id": 341,
+          "id": 342,
           "title": "API Errors (1h)",
           "description": "API call errors in the last hour; returns to 0 after recovery.",
           "datasource": {
@@ -26659,7 +26749,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26682,7 +26772,7 @@
         },
         {
           "type": "stat",
-          "id": 342,
+          "id": 343,
           "title": "Coll Errors (1h)",
           "description": "Collector errors in the last hour; returns to 0 after recovery.",
           "datasource": {
@@ -26729,7 +26819,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26752,9 +26842,9 @@
         },
         {
           "type": "stat",
-          "id": 343,
+          "id": 344,
           "title": "Scrape Age",
-          "description": "Seconds since last successful scrape.",
+          "description": "Seconds since the last scrape attempt; check Exporter Up for success.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -26791,7 +26881,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26814,7 +26904,7 @@
         },
         {
           "type": "stat",
-          "id": 344,
+          "id": 345,
           "title": "Features On",
           "description": "Enabled platform feature flags.",
           "datasource": {
@@ -26853,7 +26943,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 463,
+            "y": 469,
             "w": 3,
             "h": 4
           },
@@ -26876,7 +26966,7 @@
         },
         {
           "type": "stat",
-          "id": 345,
+          "id": 346,
           "title": "Oldest Alert Age",
           "description": "Age of the oldest active alert.",
           "datasource": {
@@ -26915,7 +27005,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -26938,7 +27028,7 @@
         },
         {
           "type": "stat",
-          "id": 346,
+          "id": 347,
           "title": "Repl Parallel",
           "description": "Configured maximum replication parallelism.",
           "datasource": {
@@ -26977,7 +27067,7 @@
           },
           "gridPos": {
             "x": 3,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -27000,7 +27090,7 @@
         },
         {
           "type": "stat",
-          "id": 347,
+          "id": 348,
           "title": "Boot Env Active",
           "description": "Boot environments active now.",
           "datasource": {
@@ -27039,7 +27129,7 @@
           },
           "gridPos": {
             "x": 6,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -27062,7 +27152,7 @@
         },
         {
           "type": "stat",
-          "id": 348,
+          "id": 349,
           "title": "Boot Env Next",
           "description": "Boot environments selected for the next boot.",
           "datasource": {
@@ -27101,7 +27191,7 @@
           },
           "gridPos": {
             "x": 9,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -27124,7 +27214,7 @@
         },
         {
           "type": "stat",
-          "id": 349,
+          "id": 350,
           "title": "Demand Access/s",
           "description": "Total ARC demand accesses per second.",
           "datasource": {
@@ -27163,7 +27253,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -27186,7 +27276,7 @@
         },
         {
           "type": "stat",
-          "id": 350,
+          "id": 351,
           "title": "Data IO Hit %",
           "description": "Demand data I/O hit ratio.",
           "datasource": {
@@ -27225,7 +27315,7 @@
           },
           "gridPos": {
             "x": 15,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -27248,7 +27338,7 @@
         },
         {
           "type": "stat",
-          "id": 351,
+          "id": 352,
           "title": "Meta IO Hit %",
           "description": "Demand metadata I/O hit ratio.",
           "datasource": {
@@ -27287,7 +27377,7 @@
           },
           "gridPos": {
             "x": 18,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -27310,7 +27400,7 @@
         },
         {
           "type": "stat",
-          "id": 352,
+          "id": 353,
           "title": "L2ARC Miss %",
           "description": "L2ARC miss ratio.",
           "datasource": {
@@ -27349,7 +27439,7 @@
           },
           "gridPos": {
             "x": 21,
-            "y": 467,
+            "y": 473,
             "w": 3,
             "h": 4
           },
@@ -27372,7 +27462,7 @@
         },
         {
           "type": "timeseries",
-          "id": 353,
+          "id": 354,
           "title": "Exporter & Event Stream Health",
           "description": "Telemetry collection health (collector errors shown as a rate, not a lifetime total).",
           "datasource": {
@@ -27455,7 +27545,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 471,
+            "y": 477,
             "w": 12,
             "h": 8
           },
@@ -27480,7 +27570,7 @@
         },
         {
           "type": "timeseries",
-          "id": 354,
+          "id": 355,
           "title": "Scrape Duration Over Time",
           "description": "Exporter scrape duration trend.",
           "datasource": {
@@ -27545,7 +27635,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 471,
+            "y": 477,
             "w": 12,
             "h": 8
           },
@@ -27570,7 +27660,7 @@
         },
         {
           "type": "timeseries",
-          "id": 355,
+          "id": 356,
           "title": "API Method Duration (Top 12)",
           "description": "Slowest API methods.",
           "datasource": {
@@ -27635,7 +27725,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 479,
+            "y": 485,
             "w": 12,
             "h": 8
           },
@@ -27660,7 +27750,7 @@
         },
         {
           "type": "state-timeline",
-          "id": 356,
+          "id": 357,
           "title": "API Method Success",
           "description": "Per-method success state.",
           "datasource": {
@@ -27734,7 +27824,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 479,
+            "y": 485,
             "w": 12,
             "h": 8
           },
@@ -27758,7 +27848,7 @@
         },
         {
           "type": "histogram",
-          "id": 357,
+          "id": 358,
           "title": "API Duration Distribution",
           "description": "API method duration spread.",
           "datasource": {
@@ -27797,7 +27887,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 487,
+            "y": 493,
             "w": 12,
             "h": 8
           },
@@ -27821,7 +27911,7 @@
         },
         {
           "type": "timeseries",
-          "id": 358,
+          "id": 359,
           "title": "Event Messages Rate",
           "description": "Event stream message rate.",
           "datasource": {
@@ -27886,7 +27976,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 487,
+            "y": 493,
             "w": 12,
             "h": 8
           },
@@ -27911,7 +28001,7 @@
         },
         {
           "type": "timeseries",
-          "id": 359,
+          "id": 360,
           "title": "Advanced ZFS Ratios",
           "description": "Advanced ARC/L2ARC percentage metrics from realtime telemetry.",
           "datasource": {
@@ -28021,7 +28111,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 495,
+            "y": 501,
             "w": 12,
             "h": 8
           },
@@ -28046,7 +28136,7 @@
         },
         {
           "type": "timeseries",
-          "id": 360,
+          "id": 361,
           "title": "Advanced ZFS Access & Miss Rates",
           "description": "Advanced demand and L2ARC activity rates.",
           "datasource": {
@@ -28156,7 +28246,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 495,
+            "y": 501,
             "w": 12,
             "h": 8
           },
@@ -28181,7 +28271,7 @@
         },
         {
           "type": "table",
-          "id": 361,
+          "id": 362,
           "title": "Exporter Version",
           "description": "Exporter build version label currently active per instance.",
           "datasource": {
@@ -28264,7 +28354,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 503,
+            "y": 509,
             "w": 12,
             "h": 8
           },
@@ -28321,7 +28411,7 @@
         },
         {
           "type": "table",
-          "id": 362,
+          "id": 363,
           "title": "Boot Environment Flags",
           "description": "Current, next-boot, and retention flags for rollback planning.",
           "datasource": {
@@ -28494,7 +28584,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 503,
+            "y": 509,
             "w": 12,
             "h": 8
           },
@@ -28562,7 +28652,7 @@
         },
         {
           "type": "table",
-          "id": 363,
+          "id": 364,
           "title": "API Method Detail",
           "description": "Per-method duration, success flag, and errors.",
           "datasource": {
@@ -28705,7 +28795,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 511,
+            "y": 517,
             "w": 24,
             "h": 10
           },
@@ -28774,7 +28864,7 @@
         },
         {
           "type": "table",
-          "id": 364,
+          "id": 365,
           "title": "Generic Event Field Extraction",
           "description": "Fallback per-event-field values extracted for undocumented event payload fields (path identifies the field).",
           "datasource": {
@@ -28822,7 +28912,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 521,
+            "y": 527,
             "w": 12,
             "h": 8
           },
@@ -28885,7 +28975,7 @@
         },
         {
           "type": "table",
-          "id": 365,
+          "id": 366,
           "title": "Generic Method Field Extraction",
           "description": "Fallback per-method-field values extracted for undocumented API method result fields (path identifies the field).",
           "datasource": {
@@ -28933,7 +29023,7 @@
           },
           "gridPos": {
             "x": 12,
-            "y": 521,
+            "y": 527,
             "w": 12,
             "h": 8
           },
@@ -28996,7 +29086,7 @@
         },
         {
           "type": "table",
-          "id": 366,
+          "id": 367,
           "title": "Event Last Message Age",
           "description": "Seconds since the last message was received for each subscribed event.",
           "datasource": {
@@ -29057,7 +29147,7 @@
           },
           "gridPos": {
             "x": 0,
-            "y": 529,
+            "y": 535,
             "w": 24,
             "h": 6
           },
@@ -29111,11 +29201,191 @@
             }
           ],
           "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "timeseries",
+          "id": 368,
+          "title": "Generic Series Budget Usage",
+          "description": "Generic series retained; each source has its own MAX_GENERIC_SERIES budget.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "truenas_generic_series{instance=~\"$instance\"}",
+              "legendFormat": "{{source}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": [],
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 541,
+            "w": 12,
+            "h": 6
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "transformations": [],
+          "pluginVersion": "12.4.0"
+        },
+        {
+          "type": "timeseries",
+          "id": 369,
+          "title": "Generic Series Limit Hits",
+          "description": "Extraction branches omitted at the configured budget. Descendant samples are not counted individually.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "expr": "rate(truenas_generic_series_limit_hits_total{instance=~\"$instance\"}[$__rate_interval])",
+              "legendFormat": "{{source}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "gradientMode": "opacity",
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": [],
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 541,
+            "w": 12,
+            "h": 6
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "transformations": [],
+          "pluginVersion": "12.4.0"
         }
       ],
       "gridPos": {
         "x": 0,
-        "y": 462,
+        "y": 468,
         "w": 24,
         "h": 1
       }

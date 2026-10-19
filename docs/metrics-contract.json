@@ -1340,6 +1340,24 @@
       "variable": "FTP_ENABLED"
     },
     {
+      "help": "Current generic series retained within the configured budget",
+      "labels": [
+        "source"
+      ],
+      "name": "truenas_generic_series",
+      "type": "gauge",
+      "variable": "GENERIC_SERIES"
+    },
+    {
+      "help": "Generic extraction branches omitted after reaching the series budget",
+      "labels": [
+        "source"
+      ],
+      "name": "truenas_generic_series_limit_hits_total",
+      "type": "counter",
+      "variable": "GENERIC_SERIES_LIMIT_HITS"
+    },
+    {
       "help": "1 if the GPU is available to the TrueNAS host",
       "labels": [
         "index"
@@ -2208,6 +2226,15 @@
       "name": "truenas_pool_free_bytes",
       "type": "gauge",
       "variable": "POOL_FREE_BYTES"
+    },
+    {
+      "help": "Bytes being freed by ongoing pool operations when available",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_freeing_bytes",
+      "type": "gauge",
+      "variable": "POOL_FREEING_BYTES"
     },
     {
       "help": "Pool healthy flag (1 healthy, 0 not)",
@@ -3323,7 +3350,13 @@
       "variable": "ZFS_L2ARC_WRITE_BYTES_RATE"
     }
   ],
+  "primary_truenas_version": "27.0.0",
   "schema_version": 1,
   "source": "src/truenas_exporter/metrics.py",
+  "supported_truenas_profiles": [
+    "25.10",
+    "26.0",
+    "27.0"
+  ],
   "truenas_version": "25.10.2"
 }

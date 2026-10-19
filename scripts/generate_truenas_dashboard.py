@@ -670,6 +670,8 @@ def build_dashboard():
         stat("Boot Pool OK", f'min(truenas_boot_pool_healthy{{instance=~"{I}"}})', 21, y, w=3, desc="Boot pool health.", mappings=UP_MAP),
     ])
     y += 4
+    panels.append(timeseries("Pool Space Being Freed", [tgt(f'truenas_pool_freeing_bytes{{instance=~"{I}", pool=~"$pool"}}', '{{pool}}')], 0, y, w=24, h=6, unit="bytes", desc="Bytes being freed by ongoing operations on TrueNAS26/27. Missing on unsupported or unavailable sources."))
+    y += 6
     panels.append(bargauge(
         "Pool Utilization",
         [tgt(f'100 * truenas_pool_allocated_bytes{{instance=~"{I}", pool=~"$pool"}} / clamp_min(truenas_pool_size_bytes{{instance=~"{I}", pool=~"$pool"}}, 1)', '{{pool}}', 'A')],
@@ -2140,7 +2142,7 @@ def build_dashboard():
         stat("Coll Errors (1h)", f'sum(increase(truenas_collector_errors_total{{instance=~"{I}"}}[1h]))', 15, apy, w=3,
              desc="Collector errors in the last hour; returns to 0 after recovery.",
              thresholds=[{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]),
-        stat("Scrape Age", f'time() - max(truenas_last_scrape_timestamp_seconds{{instance=~"{I}"}})', 18, apy, w=3, unit="s", desc="Seconds since last successful scrape."),
+        stat("Scrape Age", f'time() - max(truenas_last_scrape_timestamp_seconds{{instance=~"{I}"}})', 18, apy, w=3, unit="s", desc="Seconds since the last scrape attempt; check Exporter Up for success."),
         stat("Features On", f'sum(truenas_feature_enabled{{instance=~"{I}"}})', 21, apy, w=3, desc="Enabled platform feature flags."),
     ])
     apy += 4
@@ -2349,6 +2351,10 @@ def build_dashboard():
         sort_col='Age',
     ))
     apy += 6
+    api_panels.extend([
+        timeseries("Generic Series Budget Usage", [tgt(f'truenas_generic_series{{instance=~"{I}"}}', '{{source}}')], 0, apy, w=12, h=6, desc="Generic series retained; each source has its own MAX_GENERIC_SERIES budget."),
+        timeseries("Generic Series Limit Hits", [tgt(f'rate(truenas_generic_series_limit_hits_total{{instance=~"{I}"}}[$__rate_interval])', '{{source}}')], 12, apy, w=12, h=6, desc="Extraction branches omitted at the configured budget. Descendant samples are not counted individually."),
+    ])
     panels.append(row("Exporter + Advanced ZFS", y, collapsed=True, panels=api_panels))
     y += 1
 
