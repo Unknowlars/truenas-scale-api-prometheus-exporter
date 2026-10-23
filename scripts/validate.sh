@@ -17,6 +17,7 @@ python3 -m pytest -q -p no:cacheprovider \
   --cov-report=term \
   --cov-fail-under=85
 python3 scripts/generate_metric_contract.py --check
+python3 scripts/check_prometheus_lint_baseline.py --promtool
 python3 scripts/generate_truenas_dashboard.py --check
 python3 grafana-dashboard/build_mission_control.py --check
 python3 scripts/validate_dashboard.py

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -16,7 +16,7 @@ DEFAULT_EVENT_SUBSCRIPTIONS = DEFAULT_SAFE_EVENT_SUBSCRIPTIONS
 @dataclass
 class Config:
     ws_url: str
-    api_key: str
+    api_key: str = field(repr=False)
     interval_seconds: int
     timeout_seconds: int
     verify_tls: bool

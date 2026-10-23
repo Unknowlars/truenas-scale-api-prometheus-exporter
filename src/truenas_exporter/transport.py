@@ -67,6 +67,10 @@ class JsonRpcWsClient:
             raise TimeoutError(f"{operation}: total scrape budget exhausted")
         return min(float(self._timeout_seconds), remaining)
 
+    def ensure_within_deadline(self, operation: str) -> None:
+        """Fail before a caller reaches ``send`` when its total budget expired."""
+        self._remaining_timeout(operation)
+
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         if self._ws is not None:
             try:
@@ -145,7 +149,18 @@ class JsonRpcWsClient:
                 "login_options": {"user_info": False, "reconnect_token": False},
             }])
             if not isinstance(result, dict) or result.get("response_type") != "SUCCESS":
-                raise JsonRpcError("auth.login_ex did not return SUCCESS")
+                response_type = "UNKNOWN"
+                if isinstance(result, dict):
+                    candidate = result.get("response_type")
+                    if (
+                        isinstance(candidate, str)
+                        and 0 < len(candidate) <= 40
+                        and all(char.isupper() or char.isdigit() or char == "_" for char in candidate)
+                    ):
+                        response_type = candidate
+                raise JsonRpcError(
+                    f"auth.login_ex did not return SUCCESS (response_type={response_type})"
+                )
             return
         result = request("auth.login_with_api_key", [api_key])
         if isinstance(result, dict) and "response_type" in result:

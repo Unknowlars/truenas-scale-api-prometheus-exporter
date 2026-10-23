@@ -246,6 +246,10 @@ def build_inventory() -> dict[str, Any]:
             sources, kind, fields = ["pool.query"], "method", ["freeing"]
             status = "new TrueNAS26/27 producer; not part of historical 25.10 contract"
             mapping_evidence = "explicit nullable integer byte field in 26 and both 27 pool.query schemas; same selected call, no additional request"
+        for source, owned_fields in parity.EXPANDED_TELEMETRY_FIELDS.items():
+            if metric["variable"] in owned_fields:
+                sources, kind, fields = [source], "method", list(owned_fields[metric["variable"]])
+                mapping_evidence = "explicit typed expansion ownership; tests/test_telemetry_expansion.py; pinned-source and bounded-live evidence in docs/telemetry-expansion.md"
         if metric["variable"] in {"GENERIC_SERIES", "GENERIC_SERIES_LIMIT_HITS"}:
             sources, kind, fields = ["exporter-owned state"], "internal", ["generic extraction series budget state"]
             mapping_evidence = "explicit current generic extraction accounting; no additional API call"

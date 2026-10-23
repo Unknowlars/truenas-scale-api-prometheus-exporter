@@ -144,8 +144,13 @@ from .metrics import (
     CERT_DAYS_TO_EXPIRY,
     CERT_EXPIRY_TIMESTAMP_SECONDS,
     CHASSIS_HARDWARE,
+    CLOUD_BACKUP_TASK_COMPLETION_TS,
     CLOUD_BACKUP_TASK_COUNT,
+    CLOUD_BACKUP_TASK_DURATION_SECONDS,
     CLOUD_BACKUP_TASK_ENABLED,
+    CLOUD_BACKUP_TASK_LOCKED,
+    CLOUD_BACKUP_TASK_PROGRESS_PERCENT,
+    CLOUD_BACKUP_TASK_START_TS,
     CLOUD_BACKUP_TASK_STATE,
     COLLECTOR_ERRORS_TOTAL,
     CPU_CORE_USAGE_PERCENT,
@@ -161,16 +166,21 @@ from .metrics import (
     DATASET_ATIME,
     DATASET_AVAILABLE_BYTES,
     DATASET_COMPRESSION_RATIO,
+    DATASET_COPIES,
     DATASET_COUNT,
     DATASET_CREATION_TS,
+    DATASET_DEDUP_ENABLED,
     DATASET_ENCRYPTED,
     DATASET_EXEC,
     DATASET_KEY_LOADED,
     DATASET_LOCKED,
+    DATASET_LOGICAL_REFERENCED_BYTES,
+    DATASET_LOGICAL_USED_BYTES,
     DATASET_QUOTA_BYTES,
     DATASET_QUOTA_CRITICAL_PERCENT,
     DATASET_QUOTA_WARNING_PERCENT,
     DATASET_READONLY,
+    DATASET_RECORDSIZE_BYTES,
     DATASET_REFERENCED_BYTES,
     DATASET_REFQUOTA_BYTES,
     DATASET_REFQUOTA_CRITICAL_PERCENT,
@@ -178,10 +188,14 @@ from .metrics import (
     DATASET_REFRESERVATION_BYTES,
     DATASET_RESERVATION_BYTES,
     DATASET_SNAPSHOT_COUNT,
+    DATASET_SYNC_MODE,
     DATASET_USED_BY_CHILDREN_BYTES,
     DATASET_USED_BY_DATASET_BYTES,
+    DATASET_USED_BY_REFRESERVATION_BYTES,
     DATASET_USED_BY_SNAPSHOTS_BYTES,
     DATASET_USED_BYTES,
+    DATASET_VOLBLOCKSIZE_BYTES,
+    DATASET_VOLSIZE_BYTES,
     DIRECTORYSERVICES_CONFIG_ENABLED,
     DIRECTORYSERVICES_FAULT_PRESENT,
     DIRECTORYSERVICES_FAULT_REASON,
@@ -195,6 +209,8 @@ from .metrics import (
     DISK_READ_BYTES_RATE,
     DISK_READ_OPS_RATE,
     DISK_ROTATIONAL,
+    DISK_SED_CAPABLE,
+    DISK_SED_STATUS,
     DISK_SIZE_BYTES,
     DISK_SMART_ENABLED,
     DISK_TEMP_AGG_C,
@@ -323,6 +339,7 @@ from .metrics import (
     POOL_EXPAND_REFLOWED_BYTES,
     POOL_EXPAND_SIZE_BYTES,
     POOL_EXPAND_TO_REFLOW_BYTES,
+    POOL_FEATURES_UPGRADED,
     POOL_FRAGMENTATION,
     POOL_FREE_BYTES,
     POOL_FREEING_BYTES,
@@ -334,11 +351,17 @@ from .metrics import (
     POOL_REALTIME_USED_BYTES,
     POOL_REALTIME_WRITE_BYTES,
     POOL_RESILVER_ENABLED,
+    POOL_SCAN_BYTES_ISSUED,
     POOL_SCAN_BYTES_PROCESSED,
     POOL_SCAN_BYTES_TOTAL,
     POOL_SCAN_ERRORS,
+    POOL_SCAN_FUNCTION,
+    POOL_SCAN_PAUSE_TS,
+    POOL_SCAN_PAUSED,
     POOL_SCAN_PERCENT,
     POOL_SCAN_SECONDS_REMAINING,
+    POOL_SCAN_START_TS,
+    POOL_SCAN_STATE,
     POOL_SCRUB_LAST_RUN_TS,
     POOL_SCRUB_TASK_COUNT,
     POOL_SCRUB_TASK_ENABLED,
@@ -413,7 +436,15 @@ from .metrics import (
     UPDATE_PROFILE_INFO,
     UPDATE_STATUS,
     UPDATE_VERSION_AVAILABLE,
+    UPS_BATTERY_CHARGE_PERCENT,
+    UPS_CURRENT_AMPERES,
+    UPS_FREQUENCY_HERTZ,
+    UPS_LOAD_PERCENT,
+    UPS_RUNTIME_SECONDS,
+    UPS_SAMPLE_TS,
     UPS_STATUS,
+    UPS_TEMPERATURE_CELSIUS,
+    UPS_VOLTAGE_VOLTS,
     VIRT_GLOBAL_STATE,
     VIRT_INSTANCE_COUNT,
     VIRT_INSTANCE_CPU,
@@ -458,6 +489,22 @@ from .metrics import (
     ZFS_L2ARC_MISSES_RATE,
     ZFS_L2ARC_READ_BYTES_RATE,
     ZFS_L2ARC_WRITE_BYTES_RATE,
+    ZFS_TIER_ENABLED,
+    ZFS_TIER_JOB_CREATED_TS,
+    ZFS_TIER_JOB_FAILED_FILES,
+    ZFS_TIER_JOB_LIMIT_REACHED,
+    ZFS_TIER_JOB_PROCESSED_BYTES,
+    ZFS_TIER_JOB_PROCESSED_FILES,
+    ZFS_TIER_JOB_START_TS,
+    ZFS_TIER_JOB_STATE,
+    ZFS_TIER_JOB_SUCCESSFUL_FILES,
+    ZFS_TIER_JOB_TARGET_BYTES,
+    ZFS_TIER_JOB_TARGET_FILES,
+    ZFS_TIER_JOB_UPDATE_TS,
+    ZFS_TIER_JOBS_OBSERVED,
+    ZFS_TIER_MAX_CONCURRENT_JOBS,
+    ZFS_TIER_MAX_USED_PERCENT,
+    ZFS_TIER_METADATA_RESERVE_PERCENT,
     metric_name,
 )
 from .transport import JsonRpcError, JsonRpcWsClient  # noqa: F401 - compatibility re-export
@@ -555,6 +602,7 @@ class TrueNASExporter:
         self.exporter_mode = config.exporter_mode
         self._lock = threading.RLock()
         self._event_thread: threading.Thread | None = None
+        self._scrape_state = threading.local()
         self._all_methods_discovered = False
         self._event_metric_series: dict[Any, set[tuple[str, ...]]] = {}
         self._collector_event_scalars: dict[str, float] = {}
@@ -595,16 +643,14 @@ class TrueNASExporter:
         self._auto_skipped_methods: set[str] = set()
         self._auto_skipped_at: dict[str, float] = {}
         self._has_detected_concrete_profile = False
-        self._disk_temp_agg_cycle = 0
         self._disk_temp_agg_disk_names: tuple[str, ...] = ()
         self._disk_temp_agg_cache: dict[tuple[str, str], float] = {}
-        self._disk_temp_agg_last_success_cycle: int | None = None
-        self._disk_temp_agg_last_attempt_cycle: int | None = None
-        self._snapshot_oldest_cycle = 0
+        self._disk_temp_agg_last_success_monotonic: float | None = None
+        self._disk_temp_agg_last_attempt_monotonic: float | None = None
         self._snapshot_oldest_cached_value: float | None = None
         self._snapshot_oldest_has_cache = False
-        self._snapshot_oldest_last_success_cycle: int | None = None
-        self._snapshot_oldest_last_attempt_cycle: int | None = None
+        self._snapshot_oldest_last_success_monotonic: float | None = None
+        self._snapshot_oldest_last_attempt_monotonic: float | None = None
 
     # ------------------------------------------------------------------
     # Internal utilities
@@ -807,15 +853,17 @@ class TrueNASExporter:
         ):
             self._replace_event_metric_series(metric, {}, series_key=(metric, event))
 
-    def _expire_stale_events(self, force: bool = False) -> None:
+    def _expire_stale_events(self, force: bool = False) -> bool:
         """Invalidate event telemetry. Caller must hold ``self._lock``."""
         now = time.monotonic()
+        changed = False
         events = set(_EVENT_METRICS) | set(self._event_last_monotonic)
         for event in events:
             if not force and self._event_is_fresh(event, now):
                 continue
             if event in self._expired_events:
                 continue
+            changed = True
             self._expired_events.add(event)
             self._clear_cached_event_metrics(event)
             self._clear_generic_event_metrics(event)
@@ -826,6 +874,7 @@ class TrueNASExporter:
                     metric.set(float("nan"))
                 else:
                     self._replace_event_metric_series(metric, {})
+        return changed
 
     def _publish_cached_events_to_default_registry(self) -> None:
         """Publish collector-mode event caches for the full-parity registry bridge."""
@@ -851,6 +900,11 @@ class TrueNASExporter:
             for event, value in self._collector_event_stream_up.items():
                 EVENT_STREAM_UP.labels(event=event).set(value)
 
+    def _publish_event_state_throttled(self) -> None:
+        """Bridge the latest event state and publish atomic HTTP snapshots at most once/s."""
+        self._publish_cached_events_to_default_registry()
+        self._publish_metric_snapshot_throttled()
+
     def is_ready(self) -> bool:
         last_success = self._last_scrape_success_monotonic
         if last_success is None:
@@ -864,6 +918,10 @@ class TrueNASExporter:
 
     def stop(self) -> None:
         self._stop_event.set()
+        with self._snapshot_lock:
+            if self._metric_snapshot_publish_timer is not None:
+                self._metric_snapshot_publish_timer.cancel()
+                self._metric_snapshot_publish_timer = None
 
     def metric_snapshot(self) -> tuple[Any, ...]:
         """Project freshness without taking the polling lock or modifying snapshots."""
@@ -1105,6 +1163,9 @@ class TrueNASExporter:
         self._require_profile_method(method)
         started = time.time()
         try:
+            ensure_within_deadline = getattr(client, "ensure_within_deadline", None)
+            if getattr(self._scrape_state, "active", False) and callable(ensure_within_deadline):
+                ensure_within_deadline(method)
             result = client.call(method, params)
             duration = max(0.0, time.time() - started)
             API_CALL_SUCCESS.labels(method=method).set(1)
@@ -1114,6 +1175,11 @@ class TrueNASExporter:
                 self._api_call_duration[method] = duration
             return result
         except Exception as exc:
+            if getattr(self._scrape_state, "active", False) and (
+                not isinstance(exc, JsonRpcError)
+                or exc.code not in {-32601, -32602, -32001}
+            ):
+                self._scrape_state.transport_failed = True
             duration = max(0.0, time.time() - started)
             API_CALL_SUCCESS.labels(method=method).set(0)
             API_CALL_DURATION.labels(method=method).set(duration)
@@ -2125,9 +2191,7 @@ class TrueNASExporter:
             self._event_last_monotonic.pop(collection, None)
             self._expired_events.add(collection)
             self._clear_generic_event_metrics(collection)
-            if not self._is_collector_mode():
-                self._publish_cached_events_to_default_registry()
-                self._publish_metric_snapshot_throttled()
+            self._publish_event_state_throttled()
             return
 
         if collection == "reporting.realtime":
@@ -2139,12 +2203,9 @@ class TrueNASExporter:
 
         self._event_last_monotonic[collection] = time.monotonic()
         self._expired_events.discard(collection)
-        if not self._is_collector_mode():
-            self._publish_cached_events_to_default_registry()
         if self.config.enable_generic_event_metrics and not self._is_collector_mode():
             self._replace_generic_event_metrics(collection, payload)
-        if not self._is_collector_mode():
-            self._publish_metric_snapshot_throttled()
+        self._publish_event_state_throttled()
 
     # ------------------------------------------------------------------
     # Event stream
@@ -2170,6 +2231,7 @@ class TrueNASExporter:
                         if not self.compatibility_profile.allows_event(event):
                             with self._lock:
                                 self._collector_event_stream_up[event] = 0.0
+                                self._publish_event_state_throttled()
                             if event in self.compatibility_profile.removed_events:
                                 self._collector_error(
                                     "profile_removed_event_suppressed",
@@ -2193,14 +2255,12 @@ class TrueNASExporter:
                                 )
                             with self._lock:
                                 self._collector_event_stream_up[event] = 1.0
-                                if not self._is_collector_mode():
-                                    self._publish_cached_events_to_default_registry()
+                                self._publish_event_state_throttled()
                             subscribed_events[event] = subscription_id
                         except Exception:
                             with self._lock:
                                 self._collector_event_stream_up[event] = 0.0
-                                if not self._is_collector_mode():
-                                    self._publish_cached_events_to_default_registry()
+                                self._publish_event_state_throttled()
                             self._collector_error("event_subscribe", f"Failed subscribing to {event}")
 
                     if not subscribed_events:
@@ -2236,7 +2296,8 @@ class TrueNASExporter:
                                         f"{idle_seconds:.0f}s; assuming dead connection"
                                     ) from None
                                 with self._lock:
-                                    self._expire_stale_events()
+                                    if self._expire_stale_events():
+                                        self._publish_event_state_throttled()
                                 continue
 
                             params = msg.get("params")
@@ -2281,8 +2342,7 @@ class TrueNASExporter:
                                 self._clear_generic_event_metrics(event)
                                 self._event_last_monotonic.pop(event, None)
                                 self._expired_events.add(event)
-                                if not self._is_collector_mode():
-                                    self._publish_cached_events_to_default_registry()
+                                self._publish_event_state_throttled()
 
             except Exception:
                 if self._stop_event.is_set():
@@ -2292,8 +2352,7 @@ class TrueNASExporter:
                     self._expire_stale_events(force=True)
                     for event in self.config.event_subscriptions:
                         self._collector_event_stream_up[event] = 0.0
-                    if not self._is_collector_mode():
-                        self._publish_cached_events_to_default_registry()
+                    self._publish_event_state_throttled()
                 _log_exception_redacted(
                     LOG,
                     logging.WARNING,
@@ -2661,6 +2720,7 @@ class TrueNASExporter:
     def _collect_dataset_metrics(self, client: JsonRpcWsClient) -> None:
         if not self.config.enable_dataset_metrics:
             return
+        accounting = ["referenced", "logicalused", "logicalreferenced", "recordsize", "volblocksize", "volsize", "copies", "sync", "dedup"] if self.compatibility_profile.name == "27.0" else []
         try:
             datasets = self._call(client, "pool.dataset.query", [
                 [],
@@ -2678,6 +2738,8 @@ class TrueNASExporter:
                             "usedbychildren",
                             "usedbydataset",
                             "usedbysnapshots",
+                            "usedbyrefreservation",
+                            *accounting,
                             "readonly",
                             "atime",
                             "exec",
@@ -2700,6 +2762,9 @@ class TrueNASExporter:
                         ["usedbychildren.parsed", "usedbychildren"],
                         ["usedbydataset.parsed", "usedbydataset"],
                         ["usedbysnapshots.parsed", "usedbysnapshots"],
+                        ["usedbyrefreservation.parsed", "usedbyrefreservation"],
+                        *[[f"{field}.parsed", field] for field in accounting if field not in {"dedup", "sync"}],
+                        *([["sync.rawvalue", "sync"], ["deduplication.rawvalue", "deduplication"]] if accounting else []),
                         ["readonly.parsed", "readonly"],
                         ["atime.parsed", "atime"],
                         ["exec.parsed", "exec"],
@@ -2749,10 +2814,33 @@ class TrueNASExporter:
                 (DATASET_USED_BY_CHILDREN_BYTES, "usedbychildren"),
                 (DATASET_USED_BY_DATASET_BYTES, "usedbydataset"),
                 (DATASET_USED_BY_SNAPSHOTS_BYTES, "usedbysnapshots"),
+                (DATASET_USED_BY_REFRESERVATION_BYTES, "usedbyrefreservation"),
             ):
                 val = _as_float(self._response_field(ds, field))
-                if val is not None:
+                if val is not None and val >= 0:
                     gauge.labels(dataset=name).set(val)
+
+            if self.compatibility_profile.name == "27.0":
+                for gauge, field in (
+                    (DATASET_REFERENCED_BYTES, "referenced"),
+                    (DATASET_LOGICAL_USED_BYTES, "logicalused"),
+                    (DATASET_LOGICAL_REFERENCED_BYTES, "logicalreferenced"),
+                    (DATASET_RECORDSIZE_BYTES, "recordsize"),
+                    (DATASET_VOLBLOCKSIZE_BYTES, "volblocksize"),
+                    (DATASET_VOLSIZE_BYTES, "volsize"),
+                    (DATASET_COPIES, "copies"),
+                ):
+                    val = _as_float(self._response_field(ds, field))
+                    if val is not None and val >= 0:
+                        gauge.labels(dataset=name).set(val)
+                sync = self._response_field(ds, "sync")
+                sync = sync.upper() if isinstance(sync, str) else None
+                if sync in ("STANDARD", "ALWAYS", "DISABLED"):
+                    DATASET_SYNC_MODE.labels(dataset=name, mode=sync).set(1)
+                dedup = self._response_field(ds, "deduplication")
+                dedup = dedup.upper() if isinstance(dedup, str) else None
+                if dedup in ("ON", "OFF", "VERIFY"):
+                    DATASET_DEDUP_ENABLED.labels(dataset=name).set(int(dedup != "OFF"))
 
             # quota / refquota: 0 means no quota set; expose raw value
             for gauge, field in (
@@ -3234,8 +3322,162 @@ class TrueNASExporter:
             LOG.debug("auth.sessions failed", exc_info=True)
 
     # ------------------------------------------------------------------
-    # Extended disk info (rotational, SMART) (v3)
+    # Optional typed reporting and ZFS tier telemetry
     # ------------------------------------------------------------------
+
+    def _collect_ups_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
+        if self.compatibility_profile.name != "27.0":
+            return
+        services = cache.get("service.query")
+        if not isinstance(services, list) or not any(
+            isinstance(service, dict) and service.get("service") == "ups"
+            and service.get("state") == "RUNNING" for service in services
+        ):
+            return
+        gauges = {
+            "upscharge": UPS_BATTERY_CHARGE_PERCENT,
+            "upsruntime": UPS_RUNTIME_SECONDS,
+            "upscurrent": UPS_CURRENT_AMPERES,
+            "upsfrequency": UPS_FREQUENCY_HERTZ,
+            "upsload": UPS_LOAD_PERCENT,
+            "upstemperature": UPS_TEMPERATURE_CELSIUS,
+        }
+        graphs = [{"name": name} for name in gauges]
+        graphs.extend({"name": "upsvoltage", "identifier": source} for source in ("battery", "input", "output"))
+        now = int(time.time())
+        try:
+            result = self._call(client, "reporting.get_data", [graphs, {
+                "start": now - 90, "end": now, "aggregate": False,
+            }])
+            if not isinstance(result, list):
+                return
+            for graph in result[:len(graphs)]:
+                if not isinstance(graph, dict):
+                    continue
+                name = graph.get("name")
+                if not isinstance(name, str) or name not in (*gauges, "upsvoltage"):
+                    continue
+                source = graph.get("identifier") if name == "upsvoltage" else "system"
+                if name == "upsvoltage" and source not in ("battery", "input", "output"):
+                    continue
+                legend, data = graph.get("legend"), graph.get("data")
+                if not isinstance(legend, list) or len(legend) != 2 or legend[0] != "time" or not isinstance(data, list):
+                    continue
+                latest: tuple[float, float] | None = None
+                for row in data[-200:]:
+                    if not isinstance(row, list) or len(row) != 2:
+                        continue
+                    timestamp, value = _as_float(row[0]), _as_float(row[1])
+                    if timestamp is None or value is None or not now - 90 <= timestamp <= now:
+                        continue
+                    if name in ("upscharge", "upsload") and not 0 <= value <= 100:
+                        continue
+                    if name != "upstemperature" and value < 0:
+                        continue
+                    if latest is None or timestamp > latest[0]:
+                        latest = timestamp, value
+                if latest is not None:
+                    if name == "upsvoltage":
+                        UPS_VOLTAGE_VOLTS.labels(source=source).set(latest[1])
+                    else:
+                        gauges[name].set(latest[1])
+                    UPS_SAMPLE_TS.labels(graph=name, source=source).set(latest[0])
+        except Exception:
+            COLLECTOR_ERRORS_TOTAL.labels(collector="ups_reporting").inc()
+
+    def _collect_tier_metrics(self, client: JsonRpcWsClient) -> None:
+        if self.compatibility_profile.name != "27.0":
+            return
+        try:
+            config = self._call(client, "zfs.tier.config")
+            if not isinstance(config, dict):
+                return
+            _set_optional_bool_gauge(ZFS_TIER_ENABLED, config.get("enabled"))
+            for gauge, field in (
+                (ZFS_TIER_MAX_CONCURRENT_JOBS, "max_concurrent_jobs"),
+                (ZFS_TIER_MAX_USED_PERCENT, "max_used_percentage"),
+                (ZFS_TIER_METADATA_RESERVE_PERCENT, "special_class_metadata_reserve_pct"),
+            ):
+                value = _as_float(config.get(field))
+                if value is not None and value >= 0 and (field == "max_concurrent_jobs" or value <= 100):
+                    gauge.set(value)
+            if _as_optional_bool(config.get("enabled")) is not True:
+                return
+            limit = min(self.config.query_limit, self.config.max_entity_calls, 10)
+            jobs = self._call(client, "zfs.tier.rewrite_job_query", [{
+                "query-filters": [],
+                "query-options": {"limit": limit, "order_by": ["-tier_job_id"], "select": ["tier_job_id", "dataset_name"]},
+            }])
+            if not isinstance(jobs, list):
+                return
+            if any(not isinstance(job, dict) or type(job.get("tier_job_id")) is not int
+                   or not isinstance(job.get("dataset_name"), str) or not job["dataset_name"]
+                   for job in jobs[:limit]):
+                return
+            ZFS_TIER_JOBS_OBSERVED.set(len(jobs[:limit]))
+            ZFS_TIER_JOB_LIMIT_REACHED.set(int(len(jobs) >= limit))
+            seen: set[str] = set()
+            for job in jobs[:limit]:
+                if not isinstance(job, dict) or type(job.get("tier_job_id")) is not int:
+                    continue
+                dataset = job.get("dataset_name")
+                if not isinstance(dataset, str) or not dataset or dataset in seen:
+                    continue
+                seen.add(dataset)
+                status = self._call(client, "zfs.tier.rewrite_job_status", [job["tier_job_id"]])
+                if not isinstance(status, dict) or status.get("dataset_name") != dataset:
+                    continue
+                state = status.get("status")
+                if state not in ("COMPLETE", "RUNNING", "QUEUED", "CANCELLED", "STOPPED", "ERROR"):
+                    continue
+                ZFS_TIER_JOB_STATE.labels(dataset=dataset, state=state).set(1)
+                stats = status.get("stats")
+                if not isinstance(stats, dict):
+                    continue
+                for gauge, field in (
+                    (ZFS_TIER_JOB_PROCESSED_BYTES, "count_bytes"),
+                    (ZFS_TIER_JOB_TARGET_BYTES, "total_bytes"),
+                    (ZFS_TIER_JOB_PROCESSED_FILES, "count_items"),
+                    (ZFS_TIER_JOB_TARGET_FILES, "total_items"),
+                    (ZFS_TIER_JOB_FAILED_FILES, "failures"),
+                    (ZFS_TIER_JOB_SUCCESSFUL_FILES, "success"),
+                    (ZFS_TIER_JOB_START_TS, "start_time"),
+                    (ZFS_TIER_JOB_CREATED_TS, "initial_time"),
+                    (ZFS_TIER_JOB_UPDATE_TS, "update_time"),
+                ):
+                    value = _as_float(stats.get(field))
+                    if value is not None and value >= 0:
+                        gauge.labels(dataset=dataset).set(value)
+        except Exception:
+            COLLECTOR_ERRORS_TOTAL.labels(collector="zfs_tier").inc()
+
+    def _collect_pool_scan_details(self, pool_name: str, pool: dict[str, Any]) -> None:
+        if self.compatibility_profile.name == "27.0":
+            upgraded = _as_optional_bool(pool.get("is_upgraded"))
+            if upgraded is not None:
+                POOL_FEATURES_UPGRADED.labels(pool=pool_name).set(int(upgraded))
+        scan = pool.get("scan")
+        if not isinstance(scan, dict):
+            return
+        state = scan.get("state")
+        if state in ("NONE", "SCANNING", "FINISHED", "CANCELED", "CANCELLED"):
+            POOL_SCAN_STATE.labels(pool=pool_name, state=state).set(1)
+        function = scan.get("function")
+        if function in ("NONE", "SCRUB", "RESILVER"):
+            POOL_SCAN_FUNCTION.labels(pool=pool_name, function=function).set(1)
+        issued = _as_float(scan.get("bytes_issued"))
+        if issued is not None and issued >= 0:
+            POOL_SCAN_BYTES_ISSUED.labels(pool=pool_name).set(issued)
+        started = _parse_ts(scan.get("start_time"))
+        if started is not None:
+            POOL_SCAN_START_TS.labels(pool=pool_name).set(started)
+        if "pause" in scan:
+            paused = _parse_ts(scan["pause"])
+            if scan["pause"] is None:
+                POOL_SCAN_PAUSED.labels(pool=pool_name).set(0)
+            elif paused is not None:
+                POOL_SCAN_PAUSED.labels(pool=pool_name).set(1)
+                POOL_SCAN_PAUSE_TS.labels(pool=pool_name).set(paused)
 
     def _collect_disk_extended_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         """Collect disk rotational flag and SMART status via disk.query.
@@ -3251,7 +3493,8 @@ class TrueNASExporter:
                 disks = self._call_query_with_fallback(
                     client, "disk.query",
                     {
-                        "extra": {"pools": True},
+                        **({"limit": self.config.query_limit} if self.compatibility_profile.name == "27.0" else {}),
+                        "extra": {"pools": True, **({"sed_status": True} if self.compatibility_profile.name == "27.0" else {})},
                         "select": [
                             "name",
                             "identifier",
@@ -3261,6 +3504,7 @@ class TrueNASExporter:
                             "rotationrate",
                             "model",
                             "bus",
+                            *(["sed", "sed_status"] if self.compatibility_profile.name == "27.0" else []),
                         ],
                     },
                     allow_bare_fallback=False,
@@ -3273,6 +3517,13 @@ class TrueNASExporter:
                 if not isinstance(disk, dict):
                     continue
                 dn = _str_label(disk.get("name") or disk.get("identifier"), "unknown")
+                if self.compatibility_profile.name == "27.0":
+                    capable = _as_optional_bool(disk.get("sed"))
+                    if capable is not None:
+                        DISK_SED_CAPABLE.labels(disk=dn).set(int(capable))
+                    status = disk.get("sed_status")
+                    if status in ("NO_SED", "UNINITIALIZED", "LOCKED", "UNLOCKED", "FAILED"):
+                        DISK_SED_STATUS.labels(disk=dn, status=status).set(1)
                 rotationrate = _as_float(disk.get("rotationrate"))
                 disk_type = _str_label(disk.get("type"), "").upper()
                 if rotationrate is not None:
@@ -3546,6 +3797,8 @@ class TrueNASExporter:
         reset_done = False
         self._required_source_failed = False
         deadline = time.monotonic() + self.config.scrape_budget_seconds
+        self._scrape_state.active = True
+        self._scrape_state.transport_failed = False
 
         with self._lock:
             # SCRAPE_DURATION is measured strictly inside the lock so it reflects
@@ -3755,6 +4008,7 @@ class TrueNASExporter:
                                     "size",
                                     "allocated",
                                     "free",
+                                    *(["is_upgraded"] if self.compatibility_profile.name == "27.0" else []),
                                 *(["freeing"] if self.compatibility_profile.name in {"26.0", "27.0"} else []),
                                     "scan",
                                     "fragmentation",
@@ -3840,6 +4094,7 @@ class TrueNASExporter:
                                 if percent is not None:
                                     POOL_EXPAND_PERCENT.labels(pool=pool_name).set(percent)
 
+                            self._collect_pool_scan_details(pool_name, pool)
                             scan = pool.get("scan")
                             if isinstance(scan, dict):
                                 pct = _as_float(self._response_field(scan, "percentage", "percent"))
@@ -3901,7 +4156,7 @@ class TrueNASExporter:
                         if not isinstance(disks, list):
                             raise TypeError("disks query must return a list")
                         disk_list = disks
-                        DISK_COUNT.set(len(disk_list))
+                        DISK_COUNT.set(self._count_or_len(client, "disk.query", disk_list, self.config.query_limit))
                         disk_names: list[str] = []
                         for disk in disk_list:
                             if not isinstance(disk, dict):
@@ -4098,8 +4353,7 @@ class TrueNASExporter:
                     # --- App extras (available space, WebDAV shares) ---
                     self._collect_app_extras(client, result_cache)
 
-                    # UPS configuration is secret-bearing and 25.10.2 has no documented
-                    # live-status read method; service.query covers enable/running state.
+                    self._collect_ups_metrics(client, result_cache)
 
                     # --- Catalog ---
                     self._collect_catalog_metrics(client, result_cache)
@@ -4137,8 +4391,13 @@ class TrueNASExporter:
                     self._collect_nvmet_extended(client, result_cache)
                     self._collect_misc_configs(client, result_cache)
                     self._collect_security_posture(client, result_cache)
+                    self._collect_tier_metrics(client)
 
-                    success = not self._required_source_failed
+                    success = (
+                        not self._required_source_failed
+                        and not self._scrape_state.transport_failed
+                        and time.monotonic() < deadline
+                    )
 
             except Exception:
                 _log_exception_redacted(
@@ -4149,6 +4408,8 @@ class TrueNASExporter:
                 )
                 success = False
 
+        self._scrape_state.active = False
+
         if self._is_collector_mode():
             self._publish_cached_events_to_default_registry()
         with self._lock:
@@ -4156,9 +4417,9 @@ class TrueNASExporter:
                 self._reset_poll_cycle_metrics()
             SCRAPE_SUCCESS.set(1 if success else 0)
             SCRAPE_DURATION.set(max(0.0, time.time() - started))
+            self._publish_metric_snapshot()
             if success:
                 self._last_scrape_success_monotonic = time.monotonic()
-            self._publish_metric_snapshot()
 
     # ------------------------------------------------------------------
     # System extras (product type, version, IDs)
@@ -4563,26 +4824,26 @@ class TrueNASExporter:
         disk_names: list[str],
     ) -> None:
         """Collect cached 7-day disk temperature aggregates."""
-        self._disk_temp_agg_cycle += 1
-        current_cycle = self._disk_temp_agg_cycle
+        now = time.monotonic()
+        refresh_seconds = DISK_TEMP_AGG_REFRESH_CYCLES * self.config.interval_seconds
         current_disk_names = tuple(disk_names)
         disk_list_changed = current_disk_names != self._disk_temp_agg_disk_names
         if disk_list_changed:
             self._disk_temp_agg_disk_names = current_disk_names
             self._disk_temp_agg_cache = {}
-            self._disk_temp_agg_last_success_cycle = None
-            self._disk_temp_agg_last_attempt_cycle = None
+            self._disk_temp_agg_last_success_monotonic = None
+            self._disk_temp_agg_last_attempt_monotonic = None
 
-        last_success = self._disk_temp_agg_last_success_cycle
-        last_attempt = self._disk_temp_agg_last_attempt_cycle
+        last_success = self._disk_temp_agg_last_success_monotonic
+        last_attempt = self._disk_temp_agg_last_attempt_monotonic
         should_refresh = (
             disk_list_changed
             or last_attempt is None
-            or current_cycle - last_attempt >= DISK_TEMP_AGG_REFRESH_CYCLES
+            or now - last_attempt >= refresh_seconds
         )
 
         if should_refresh:
-            self._disk_temp_agg_last_attempt_cycle = current_cycle
+            self._disk_temp_agg_last_attempt_monotonic = now
             try:
                 temp_agg = self._call(client, "disk.temperature_agg", [disk_names, 7])
             except Exception:
@@ -4599,16 +4860,15 @@ class TrueNASExporter:
                             if val is not None:
                                 cache[(disk_label, kind)] = val
                 self._disk_temp_agg_cache = cache
-                self._disk_temp_agg_last_success_cycle = current_cycle
-                last_success = current_cycle
+                self._disk_temp_agg_last_success_monotonic = now
+                last_success = now
 
         if (
             last_success is not None
-            and current_cycle - last_success
-            >= DISK_TEMP_AGG_REFRESH_CYCLES * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+            and now - last_success >= refresh_seconds * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
         ):
             self._disk_temp_agg_cache = {}
-            self._disk_temp_agg_last_success_cycle = None
+            self._disk_temp_agg_last_success_monotonic = None
 
         self._emit_cached_disk_temp_agg()
 
@@ -4892,17 +5152,17 @@ class TrueNASExporter:
 
     def _collect_snapshot_oldest_metric(self, client: JsonRpcWsClient) -> None:
         """Collect cached oldest snapshot timestamp."""
-        self._snapshot_oldest_cycle += 1
-        current_cycle = self._snapshot_oldest_cycle
-        last_success = self._snapshot_oldest_last_success_cycle
-        last_attempt = self._snapshot_oldest_last_attempt_cycle
+        now = time.monotonic()
+        refresh_seconds = SNAPSHOT_OLDEST_REFRESH_CYCLES * self.config.interval_seconds
+        last_success = self._snapshot_oldest_last_success_monotonic
+        last_attempt = self._snapshot_oldest_last_attempt_monotonic
         should_refresh = (
             last_attempt is None
-            or current_cycle - last_attempt >= SNAPSHOT_OLDEST_REFRESH_CYCLES
+            or now - last_attempt >= refresh_seconds
         )
 
         if should_refresh:
-            self._snapshot_oldest_last_attempt_cycle = current_cycle
+            self._snapshot_oldest_last_attempt_monotonic = now
             oldest_query: Any = None
             refresh_succeeded = False
             try:
@@ -4934,18 +5194,17 @@ class TrueNASExporter:
                     self._extract_snapshot_creation_timestamp(oldest_snapshot)
                 )
                 self._snapshot_oldest_has_cache = True
-                self._snapshot_oldest_last_success_cycle = current_cycle
-                last_success = current_cycle
+                self._snapshot_oldest_last_success_monotonic = now
+                last_success = now
 
         if (
             self._snapshot_oldest_has_cache
             and last_success is not None
-            and current_cycle - last_success
-            >= SNAPSHOT_OLDEST_REFRESH_CYCLES * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
+            and now - last_success >= refresh_seconds * HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
         ):
             self._snapshot_oldest_cached_value = None
             self._snapshot_oldest_has_cache = False
-            self._snapshot_oldest_last_success_cycle = None
+            self._snapshot_oldest_last_success_monotonic = None
 
         if self._snapshot_oldest_has_cache:
             self._emit_cached_snapshot_oldest()
@@ -4973,9 +5232,19 @@ class TrueNASExporter:
     def _collect_cloud_backup_metrics(self, client: JsonRpcWsClient, cache: dict[str, Any]) -> None:
         """Collect cloud backup task inventory and state."""
         try:
-            tasks = cache.get("cloud_backup.query") or self._call(client, "cloud_backup.query", [
-                [], {"limit": self.config.query_limit, "select": ["id", "enabled"]}
-            ])
+            extra_select: list[Any] = []
+            if self.compatibility_profile.name == "27.0":
+                extra_select = [
+                    "locked", ["job.state", "job_state"],
+                    ["job.progress.percent", "job_progress"],
+                    ["job.time_started", "job_started"],
+                    ["job.time_finished", "job_finished"],
+                ]
+            tasks = cache.get("cloud_backup.query")
+            if tasks is None or self.compatibility_profile.name == "27.0":
+                tasks = self._call(client, "cloud_backup.query", [
+                    [], {"limit": self.config.query_limit, "select": ["id", "enabled", *extra_select]}
+                ])
         except Exception:
             COLLECTOR_ERRORS_TOTAL.labels(collector="cloud_backup").inc()
             LOG.debug("cloud_backup.query failed", exc_info=True)
@@ -5000,6 +5269,25 @@ class TrueNASExporter:
             _set_optional_bool_gauge(
                 CLOUD_BACKUP_TASK_ENABLED.labels(name=name), task.get("enabled")
             )
+            if self.compatibility_profile.name != "27.0":
+                continue
+            locked = _as_optional_bool(task.get("locked"))
+            if locked is not None:
+                CLOUD_BACKUP_TASK_LOCKED.labels(name=name).set(int(locked))
+            state = task.get("job_state")
+            if state in ("WAITING", "RUNNING", "SUCCESS", "FAILED", "ABORTED"):
+                CLOUD_BACKUP_TASK_STATE.labels(name=name, state=state).set(1)
+            progress = _as_percent(task.get("job_progress"))
+            if progress is not None:
+                CLOUD_BACKUP_TASK_PROGRESS_PERCENT.labels(name=name).set(progress)
+            started = _parse_ts(task.get("job_started"))
+            finished = _parse_ts(task.get("job_finished"))
+            if started is not None:
+                CLOUD_BACKUP_TASK_START_TS.labels(name=name).set(started)
+            if finished is not None and state in ("SUCCESS", "FAILED", "ABORTED"):
+                CLOUD_BACKUP_TASK_COMPLETION_TS.labels(name=name).set(finished)
+                if started is not None and finished >= started:
+                    CLOUD_BACKUP_TASK_DURATION_SECONDS.labels(name=name).set(finished - started)
 
 
     # ------------------------------------------------------------------
@@ -5053,7 +5341,14 @@ class TrueNASExporter:
             smb = cache.get("smb.config") or self._call(client, "smb.config", [])
             if isinstance(smb, dict):
                 _set_optional_bool_gauge(SMB_MULTICHANNEL_ENABLED, smb.get("multichannel"))
-                _set_optional_bool_gauge(SMB1_ENABLED, smb.get("enable_smb1"))
+                if self.compatibility_profile.name in {"26.0", "27.0"}:
+                    minimum_protocol = smb.get("minimum_protocol")
+                    if isinstance(minimum_protocol, str):
+                        minimum_protocol = minimum_protocol.upper()
+                        if minimum_protocol in {"SMB1", "SMB2", "SMB3"}:
+                            SMB1_ENABLED.set(1 if minimum_protocol == "SMB1" else 0)
+                else:
+                    _set_optional_bool_gauge(SMB1_ENABLED, smb.get("enable_smb1"))
                 _set_optional_bool_gauge(SMB_NTLMV1_AUTH_ENABLED, smb.get("ntlmv1_auth"))
                 encryption = _str_label(smb.get("encryption"), "UNKNOWN").upper()
                 if encryption in {"DEFAULT", "NEGOTIATE", "DESIRED", "REQUIRED"}:

@@ -132,10 +132,34 @@ POOL_EXPAND_REFLOWED_BYTES = declare_gauge("POOL_EXPAND_REFLOWED_BYTES", "truena
 POOL_EXPAND_TO_REFLOW_BYTES = declare_gauge("POOL_EXPAND_TO_REFLOW_BYTES", "truenas_pool_expand_to_reflow_bytes", "API-reported bytes_to_reflow value for the active pool expansion", ["pool"])
 POOL_EXPAND_PERCENT = declare_gauge("POOL_EXPAND_PERCENT", "truenas_pool_expand_percent", "Active pool expansion completion percentage (0 to 100)", ["pool"])
 POOL_STATUS_CODE = declare_gauge("POOL_STATUS_CODE", "truenas_pool_status_code", "Detailed v26 zpool status_code as label", ["pool", "status_code"])
+POOL_SCAN_STATE = declare_gauge("POOL_SCAN_STATE", "truenas_pool_scan_state", "Pool scan state from the last pool query", ["pool", "state"])
+POOL_SCAN_FUNCTION = declare_gauge("POOL_SCAN_FUNCTION", "truenas_pool_scan_function", "Pool scan operation from the last pool query", ["pool", "function"])
+POOL_SCAN_BYTES_ISSUED = declare_gauge("POOL_SCAN_BYTES_ISSUED", "truenas_pool_scan_bytes_issued", "Bytes issued during the current pool scan pass", ["pool"])
+POOL_SCAN_START_TS = declare_gauge("POOL_SCAN_START_TS", "truenas_pool_scan_start_timestamp_seconds", "Unix timestamp when the pool scan started", ["pool"])
+POOL_SCAN_PAUSE_TS = declare_gauge("POOL_SCAN_PAUSE_TS", "truenas_pool_scan_pause_timestamp_seconds", "Unix timestamp when the pool scan was paused", ["pool"])
+POOL_SCAN_PAUSED = declare_gauge("POOL_SCAN_PAUSED", "truenas_pool_scan_paused", "1 if the documented pool scan pause timestamp is present", ["pool"])
+POOL_FEATURES_UPGRADED = declare_gauge("POOL_FEATURES_UPGRADED", "truenas_pool_features_upgraded", "1 if the pool reports all current feature flags enabled", ["pool"])
 
 # ---------------------------------------------------------------------------
 # Datasets
 # ---------------------------------------------------------------------------
+ZFS_TIER_ENABLED = declare_gauge("ZFS_TIER_ENABLED", "truenas_zfs_tier_enabled", "1 if the ZFS tier service is enabled")
+ZFS_TIER_MAX_CONCURRENT_JOBS = declare_gauge("ZFS_TIER_MAX_CONCURRENT_JOBS", "truenas_zfs_tier_max_concurrent_jobs", "Configured maximum concurrent ZFS tier rewrite jobs")
+ZFS_TIER_MAX_USED_PERCENT = declare_gauge("ZFS_TIER_MAX_USED_PERCENT", "truenas_zfs_tier_max_used_percent", "Configured maximum used percentage for the ZFS tier service")
+ZFS_TIER_METADATA_RESERVE_PERCENT = declare_gauge("ZFS_TIER_METADATA_RESERVE_PERCENT", "truenas_zfs_tier_metadata_reserve_percent", "Configured percentage of the special class reserved for metadata")
+ZFS_TIER_JOBS_OBSERVED = declare_gauge("ZFS_TIER_JOBS_OBSERVED", "truenas_zfs_tier_jobs_observed", "Number of tier rewrite jobs returned within the bounded inventory")
+ZFS_TIER_JOB_LIMIT_REACHED = declare_gauge("ZFS_TIER_JOB_LIMIT_REACHED", "truenas_zfs_tier_job_inventory_limit_reached", "1 if the tier rewrite inventory reached its configured query limit")
+ZFS_TIER_JOB_STATE = declare_gauge("ZFS_TIER_JOB_STATE", "truenas_zfs_tier_job_state", "State of the most recent observed tier rewrite job per dataset", ["dataset", "state"])
+ZFS_TIER_JOB_PROCESSED_BYTES = declare_gauge("ZFS_TIER_JOB_PROCESSED_BYTES", "truenas_zfs_tier_job_processed_bytes", "Bytes processed in the latest tier rewrite run; resets on resume", ["dataset"])
+ZFS_TIER_JOB_TARGET_BYTES = declare_gauge("ZFS_TIER_JOB_TARGET_BYTES", "truenas_zfs_tier_job_target_bytes", "Target bytes for the latest tier rewrite job", ["dataset"])
+ZFS_TIER_JOB_PROCESSED_FILES = declare_gauge("ZFS_TIER_JOB_PROCESSED_FILES", "truenas_zfs_tier_job_processed_files", "Files processed in the latest tier rewrite run; resets on resume", ["dataset"])
+ZFS_TIER_JOB_TARGET_FILES = declare_gauge("ZFS_TIER_JOB_TARGET_FILES", "truenas_zfs_tier_job_target_files", "Target files for the latest tier rewrite job", ["dataset"])
+ZFS_TIER_JOB_FAILED_FILES = declare_gauge("ZFS_TIER_JOB_FAILED_FILES", "truenas_zfs_tier_job_failed_files", "Cumulative failed files in the latest tier rewrite job", ["dataset"])
+ZFS_TIER_JOB_SUCCESSFUL_FILES = declare_gauge("ZFS_TIER_JOB_SUCCESSFUL_FILES", "truenas_zfs_tier_job_successful_files", "Cumulative successful files in the latest tier rewrite job", ["dataset"])
+ZFS_TIER_JOB_START_TS = declare_gauge("ZFS_TIER_JOB_START_TS", "truenas_zfs_tier_job_start_timestamp_seconds", "Start timestamp of the latest tier rewrite run", ["dataset"])
+ZFS_TIER_JOB_CREATED_TS = declare_gauge("ZFS_TIER_JOB_CREATED_TS", "truenas_zfs_tier_job_created_timestamp_seconds", "Creation timestamp of the latest tier rewrite job", ["dataset"])
+ZFS_TIER_JOB_UPDATE_TS = declare_gauge("ZFS_TIER_JOB_UPDATE_TS", "truenas_zfs_tier_job_update_timestamp_seconds", "Last statistics update timestamp of the latest tier rewrite job", ["dataset"])
+
 DATASET_COUNT = declare_gauge("DATASET_COUNT", "truenas_dataset_count", "Total number of datasets returned by query")
 DATASET_USED_BYTES = declare_gauge("DATASET_USED_BYTES", "truenas_dataset_used_bytes", "Dataset used space in bytes", ["dataset"])
 DATASET_AVAILABLE_BYTES = declare_gauge("DATASET_AVAILABLE_BYTES", "truenas_dataset_available_bytes", "Dataset available space in bytes", ["dataset"])
@@ -160,6 +184,15 @@ DATASET_QUOTA_CRITICAL_PERCENT = declare_gauge("DATASET_QUOTA_CRITICAL_PERCENT",
 DATASET_REFQUOTA_WARNING_PERCENT = declare_gauge("DATASET_REFQUOTA_WARNING_PERCENT", "truenas_dataset_refquota_warning_percent", "Dataset refquota warning threshold percentage", ["dataset"])
 DATASET_REFQUOTA_CRITICAL_PERCENT = declare_gauge("DATASET_REFQUOTA_CRITICAL_PERCENT", "truenas_dataset_refquota_critical_percent", "Dataset refquota critical threshold percentage", ["dataset"])
 DATASET_CREATION_TS = declare_gauge("DATASET_CREATION_TS", "truenas_dataset_creation_timestamp_seconds", "Dataset creation timestamp as Unix seconds", ["dataset"])
+DATASET_LOGICAL_USED_BYTES = declare_gauge("DATASET_LOGICAL_USED_BYTES", "truenas_dataset_logical_used_bytes", "Logical bytes used by the dataset and descendants before compression", ["dataset"])
+DATASET_LOGICAL_REFERENCED_BYTES = declare_gauge("DATASET_LOGICAL_REFERENCED_BYTES", "truenas_dataset_logical_referenced_bytes", "Logical bytes referenced by the dataset before compression", ["dataset"])
+DATASET_USED_BY_REFRESERVATION_BYTES = declare_gauge("DATASET_USED_BY_REFRESERVATION_BYTES", "truenas_dataset_used_by_refreservation_bytes", "Dataset space consumed by its refreservation in bytes", ["dataset"])
+DATASET_RECORDSIZE_BYTES = declare_gauge("DATASET_RECORDSIZE_BYTES", "truenas_dataset_recordsize_bytes", "Configured dataset record size in bytes", ["dataset"])
+DATASET_VOLBLOCKSIZE_BYTES = declare_gauge("DATASET_VOLBLOCKSIZE_BYTES", "truenas_dataset_volblocksize_bytes", "Configured ZFS volume block size in bytes", ["dataset"])
+DATASET_VOLSIZE_BYTES = declare_gauge("DATASET_VOLSIZE_BYTES", "truenas_dataset_volsize_bytes", "Configured ZFS volume logical size in bytes", ["dataset"])
+DATASET_COPIES = declare_gauge("DATASET_COPIES", "truenas_dataset_copies", "Configured number of dataset data copies", ["dataset"])
+DATASET_SYNC_MODE = declare_gauge("DATASET_SYNC_MODE", "truenas_dataset_sync_mode", "Dataset synchronous write policy", ["dataset", "mode"])
+DATASET_DEDUP_ENABLED = declare_gauge("DATASET_DEDUP_ENABLED", "truenas_dataset_dedup_enabled", "1 if dataset deduplication is ON or VERIFY", ["dataset"])
 
 # ---------------------------------------------------------------------------
 # Disks
@@ -475,6 +508,14 @@ WEBSHARE_ENABLED = declare_gauge("WEBSHARE_ENABLED", "truenas_webshare_enabled",
 # ---------------------------------------------------------------------------
 UPS_STATUS = declare_gauge("UPS_STATUS", "truenas_ups_status", "UPS status string as label", ["status"])
 UPS_CONFIGURED = declare_gauge("UPS_CONFIGURED", "truenas_ups_configured", "1 if a UPS device is configured")
+UPS_BATTERY_CHARGE_PERCENT = declare_gauge("UPS_BATTERY_CHARGE_PERCENT", "truenas_ups_battery_charge_percent", "Latest fresh UPS battery charge percentage from reporting")
+UPS_RUNTIME_SECONDS = declare_gauge("UPS_RUNTIME_SECONDS", "truenas_ups_runtime_seconds", "Latest fresh estimated UPS battery runtime in seconds")
+UPS_VOLTAGE_VOLTS = declare_gauge("UPS_VOLTAGE_VOLTS", "truenas_ups_voltage_volts", "Latest fresh UPS voltage in volts", ["source"])
+UPS_CURRENT_AMPERES = declare_gauge("UPS_CURRENT_AMPERES", "truenas_ups_current_amperes", "Latest fresh UPS input current in amperes")
+UPS_FREQUENCY_HERTZ = declare_gauge("UPS_FREQUENCY_HERTZ", "truenas_ups_frequency_hertz", "Latest fresh UPS input frequency in hertz")
+UPS_LOAD_PERCENT = declare_gauge("UPS_LOAD_PERCENT", "truenas_ups_load_percent", "Latest fresh UPS load percentage from reporting")
+UPS_TEMPERATURE_CELSIUS = declare_gauge("UPS_TEMPERATURE_CELSIUS", "truenas_ups_temperature_celsius", "Latest fresh UPS temperature in degrees Celsius")
+UPS_SAMPLE_TS = declare_gauge("UPS_SAMPLE_TS", "truenas_ups_sample_timestamp_seconds", "Timestamp of the exported UPS reporting sample", ["graph", "source"])
 
 # ---------------------------------------------------------------------------
 # Catalog
@@ -827,6 +868,13 @@ POOL_RESILVER_ENABLED = declare_gauge("POOL_RESILVER_ENABLED", "truenas_pool_res
 CLOUD_BACKUP_TASK_COUNT = declare_gauge("CLOUD_BACKUP_TASK_COUNT", "truenas_cloud_backup_task_count", "Number of configured cloud backup tasks")
 CLOUD_BACKUP_TASK_ENABLED = declare_gauge("CLOUD_BACKUP_TASK_ENABLED", "truenas_cloud_backup_task_enabled", "1 if cloud backup task is enabled", ["name"])
 CLOUD_BACKUP_TASK_STATE = declare_gauge("CLOUD_BACKUP_TASK_STATE", "truenas_cloud_backup_task_state", "Cloud backup task state as label", ["name", "state"])
+CLOUD_BACKUP_TASK_LOCKED = declare_gauge("CLOUD_BACKUP_TASK_LOCKED", "truenas_cloud_backup_task_locked", "1 if the cloud backup task dataset is locked", ["name"])
+CLOUD_BACKUP_TASK_PROGRESS_PERCENT = declare_gauge("CLOUD_BACKUP_TASK_PROGRESS_PERCENT", "truenas_cloud_backup_task_progress_percent", "Progress percentage of the latest cloud backup job", ["name"])
+CLOUD_BACKUP_TASK_START_TS = declare_gauge("CLOUD_BACKUP_TASK_START_TS", "truenas_cloud_backup_task_start_timestamp_seconds", "Start timestamp of the latest cloud backup job", ["name"])
+CLOUD_BACKUP_TASK_COMPLETION_TS = declare_gauge("CLOUD_BACKUP_TASK_COMPLETION_TS", "truenas_cloud_backup_task_last_completion_timestamp_seconds", "Completion timestamp of the latest cloud backup job, including failures", ["name"])
+CLOUD_BACKUP_TASK_DURATION_SECONDS = declare_gauge("CLOUD_BACKUP_TASK_DURATION_SECONDS", "truenas_cloud_backup_task_duration_seconds", "Duration of the latest completed cloud backup job in seconds", ["name"])
+DISK_SED_CAPABLE = declare_gauge("DISK_SED_CAPABLE", "truenas_disk_sed_capable", "1 if the disk reports self-encrypting drive capability", ["disk"])
+DISK_SED_STATUS = declare_gauge("DISK_SED_STATUS", "truenas_disk_sed_status", "Recognized self-encrypting drive status", ["disk", "status"])
 
 # ---------------------------------------------------------------------------
 # Cron jobs (v5 — cronjob.query)

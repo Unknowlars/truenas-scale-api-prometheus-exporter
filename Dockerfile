@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION=3.14.6
+ARG PYTHON_VERSION=3.14.8
 
 FROM python:${PYTHON_VERSION}-slim AS builder
 
@@ -28,7 +28,9 @@ RUN groupadd --system --gid 10001 truenas \
     && useradd --system --uid 10001 --gid 10001 --no-create-home truenas
 
 COPY --from=builder /wheels /wheels
-RUN python -m pip install /wheels/*.whl && rm -rf /wheels
+RUN python -m pip install /wheels/*.whl \
+    && python -m pip uninstall --yes pip \
+    && rm -rf /wheels
 
 USER 10001:10001
 WORKDIR /app

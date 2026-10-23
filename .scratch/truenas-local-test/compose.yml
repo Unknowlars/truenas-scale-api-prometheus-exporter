@@ -1,0 +1,38 @@
+services:
+  exporter:
+    image: truenas-scale-api-prometheus-exporter:local-test
+    pull_policy: never
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    ports:
+      - "${TRUENAS_TEST_BIND_ADDRESS:-0.0.0.0}:9108:9108"
+    volumes:
+      - type: bind
+        source: "${TRUENAS_API_KEY_HOST_FILE:?Set the absolute path to the replacement API key file}"
+        target: /run/secrets/truenas_api_key
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      TRUENAS_WS_URL: "${TRUENAS_WS_URL:?Set the TrueNAS WebSocket URL}"
+      TRUENAS_API_KEY_FILE: /run/secrets/truenas_api_key
+      TRUENAS_USERNAME: "${TRUENAS_USERNAME:-}"
+      TRUENAS_VERIFY_TLS: "${TRUENAS_VERIFY_TLS:-true}"
+      EXPORTER_PORT: "9108"
+      EXPORTER_BIND_ADDRESS: "0.0.0.0"
+      EXPORTER_MODE: collector
+      SCRAPE_INTERVAL_SECONDS: "30"
+      TRUENAS_TIMEOUT_SECONDS: "20"
+      SCRAPE_BUDGET_SECONDS: "25"
+      AUTO_DISCOVER_METHODS: "false"
+      SCRAPE_ALL_METRICS: "false"
+      ENABLE_EVENT_STREAMS: "true"
+      ENABLE_GENERIC_METHOD_METRICS: "false"
+      ENABLE_GENERIC_EVENT_METRICS: "false"

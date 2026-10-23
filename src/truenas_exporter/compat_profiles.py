@@ -171,9 +171,13 @@ V27_REMOVED_METHODS = V26_REMOVED_METHODS | frozenset({
     "virt.instance.image_choices", "virt.volume.get_instance", "vm.device.pptdev_choices",
     "disk.get_instance", "tn_connect.ip_choices",
 })
+V27_ADDED_METHODS = frozenset({
+    "zfs.tier.config", "zfs.tier.rewrite_job_query", "zfs.tier.rewrite_job_status",
+})
+
 PROFILE_27_0 = CompatibilityProfile(
     name="27.0", target_version="27.0.0",
-    reviewed_methods=_V26_METHODS - V27_REMOVED_METHODS,
+    reviewed_methods=(_V26_METHODS - V27_REMOVED_METHODS) | V27_ADDED_METHODS,
     telemetry_methods=_V26_TELEMETRY_METHODS - V27_REMOVED_METHODS,
     reviewed_events=_V26_EVENTS,
     default_event_subscriptions=PROFILE_26_0.default_event_subscriptions,

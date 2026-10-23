@@ -1,0 +1,861 @@
+{
+  "date": "2026-10-21",
+  "source_head": "a1a5526",
+  "baseline": "de0e18b",
+  "exporter_version": "5.2.0rc1",
+  "local": {
+    "validation": "validation_ok",
+    "tests": 306,
+    "branch_coverage_percent": 91.4,
+    "host_python": "3.12.3",
+    "python_matrix": {
+      "3.12.15": 306,
+      "3.13.16": 306,
+      "3.14.8": 306
+    },
+    "baseline_contracts_preserved": 417,
+    "current_contracts": 420,
+    "added_metrics": [
+      "truenas_generic_series",
+      "truenas_generic_series_limit_hits_total",
+      "truenas_pool_freeing_bytes"
+    ],
+    "application_dependency_audit": "No known vulnerabilities found",
+    "release": "dry-run only"
+  },
+  "auth": {
+    "modern_auth": true,
+    "version": "27.0.0-RC.1",
+    "privilege_keys": [
+      "allowlist",
+      "roles",
+      "web_shell",
+      "webui_access"
+    ],
+    "full_admin": null,
+    "roles": null,
+    "wildcard_allowlist": true
+  },
+  "owner_authorized_wildcard_key_after_disclosure": true,
+  "least_privilege_verified": false,
+  "tls_certificate_verification": false,
+  "smoke": [
+    {
+      "method": "system.state",
+      "result_type": "str",
+      "success": true
+    },
+    {
+      "method": "system.info",
+      "result_type": "dict",
+      "success": true
+    },
+    {
+      "method": "system.version_short",
+      "result_type": "str",
+      "success": true
+    },
+    {
+      "method": "pool.query",
+      "result_type": "list",
+      "success": true
+    },
+    {
+      "method": "service.query",
+      "result_type": "list",
+      "success": true
+    }
+  ],
+  "sessions": [
+    {
+      "profile": "current_defaults",
+      "elapsed_seconds": 302.51,
+      "cycles": [
+        {
+          "seconds": 9.738,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.394,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.46,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.32,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.585,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.409,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.004,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.623,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        }
+      ],
+      "calls": {
+        "auth.login_ex": 10,
+        "system.version_short": 10,
+        "vm.query": 8,
+        "app.query": 8,
+        "boot.get_state": 8,
+        "boot.get_disks": 8,
+        "certificate.query": 8,
+        "pool.dataset.query": 8,
+        "pool.dataset.snapshot_count": 200,
+        "core.get_jobs": 16,
+        "replication.query": 8,
+        "cloudsync.query": 8,
+        "rsynctask.query": 8,
+        "pool.snapshottask.query": 8,
+        "pool.snapshottask.max_count": 8,
+        "pool.snapshottask.max_total_count": 8,
+        "directoryservices.status": 8,
+        "ipmi.is_loaded": 8,
+        "sharing.nfs.query": 8,
+        "sharing.smb.query": 8,
+        "api_key.query": 16,
+        "system.reboot.info": 8,
+        "route.system_routes": 8,
+        "truenas.is_production": 8,
+        "truenas.is_ix_hardware": 8,
+        "failover.disabled.reasons": 8,
+        "failover.reboot.info": 8,
+        "smb.status": 24,
+        "device.get_info": 8,
+        "jbof.query": 8,
+        "auth.sessions": 8,
+        "disk.query": 8,
+        "system.state": 8,
+        "system.ready": 8,
+        "system.info": 8,
+        "system.product_type": 8,
+        "vm.get_available_memory": 8,
+        "vm.get_vmemory_in_use": 8,
+        "network.general.summary": 8,
+        "docker.nvidia_present": 8,
+        "docker.network.query": 8,
+        "docker.status": 8,
+        "nfs.client_count": 8,
+        "nfs.get_nfs3_clients": 8,
+        "nfs.get_nfs4_clients": 8,
+        "iscsi.global.client_count": 8,
+        "pool.query": 8,
+        "zpool.query": 8,
+        "disk.temperature_agg": 1,
+        "disk.temperature_alerts": 8,
+        "disk.temperatures": 8,
+        "interface.query": 8,
+        "service.query": 8,
+        "alert.list": 8,
+        "update.status": 8,
+        "system.host_id": 8,
+        "system.boot_id": 8,
+        "truenas.managed_by_truecommand": 8,
+        "update.available_versions": 8,
+        "update.config": 8,
+        "boot.environment.query": 8,
+        "vm.supports_virtualization": 8,
+        "vm.maximum_supported_vcpus": 8,
+        "hardware.virtualization.variant": 8,
+        "vm.flags": 8,
+        "vm.virtualization_details": 8,
+        "container.query": 8,
+        "fc.fc_host.query": 8,
+        "fcport.status": 8,
+        "nvmet.global.sessions": 8,
+        "nvmet.subsys.query": 8,
+        "nvmet.port.query": 8,
+        "iscsi.global.alua_enabled": 8,
+        "iscsi.global.iser_enabled": 8,
+        "iscsi.global.sessions": 32,
+        "interface.has_pending_changes": 8,
+        "interface.checkin_waiting": 8,
+        "app.available_space": 8,
+        "app.image.dockerhub_rate_limit": 8,
+        "sharing.webshare.query": 8,
+        "webshare.config": 8,
+        "catalog.trains": 8,
+        "catalog.config": 8,
+        "system.security.info.fips_available": 8,
+        "system.security.info.fips_enabled": 8,
+        "system.feature_enabled": 24,
+        "truenas.get_chassis_hardware": 8,
+        "audit.config": 8,
+        "ipmi.lan.channels": 8,
+        "pool.scrub.query": 8,
+        "pool.snapshot.query": 9,
+        "pool.resilver.config": 8,
+        "cloud_backup.query": 8,
+        "cronjob.query": 8,
+        "smb.config": 8,
+        "nfs.config": 8,
+        "system.general.config": 8,
+        "system.global.id": 8,
+        "kmip.kmip_sync_pending": 8,
+        "support.is_available": 8,
+        "support.is_available_and_enabled": 8,
+        "systemdataset.config": 8,
+        "user.query": 8,
+        "group.query": 8,
+        "staticroute.query": 8,
+        "tunable.query": 8,
+        "privilege.query": 8,
+        "initshutdownscript.query": 8,
+        "keychaincredential.query": 8,
+        "iscsi.target.query": 8,
+        "iscsi.portal.query": 8,
+        "iscsi.extent.query": 8,
+        "iscsi.initiator.query": 8,
+        "nvmet.host.query": 8,
+        "nvmet.namespace.query": 8,
+        "app.image.query": 8,
+        "replication.config.config": 8,
+        "reporting.exporters.query": 8,
+        "dns.query": 8,
+        "reporting.config": 8,
+        "system.ntpserver.query": 16,
+        "system.security.config": 8,
+        "vm.device.iommu_enabled": 8,
+        "auth.twofactor.config": 8,
+        "alertservice.query": 16,
+        "core.subscribe": 6,
+        "core.unsubscribe": 6
+      },
+      "errors": [
+        {
+          "method": "core.unsubscribe",
+          "error_type": "WebSocketConnectionClosedException",
+          "code": "None",
+          "count": 3
+        }
+      ],
+      "blocked_methods": [],
+      "event_messages": {
+        "reporting.realtime": 125,
+        "app.stats": 111
+      },
+      "health_statuses": {
+        "200": 148
+      },
+      "readiness_statuses": {
+        "503": 5,
+        "200": 143
+      },
+      "http_failures": {},
+      "max_http_probe_seconds": 0.06,
+      "max_samples": 1776,
+      "max_exposition_bytes": 166338,
+      "comparisons": {
+        "truenas_disk_count:match": 8,
+        "truenas_interface_count:match": 8,
+        "truenas_service_count:match": 8,
+        "truenas_host_physical_memory_bytes:match": 8,
+        "truenas_vm_available_memory_bytes:match": 8,
+        "truenas_pool_count:match": 8,
+        "truenas_pool_size_bytes:match": 16,
+        "truenas_pool_allocated_bytes:match": 16,
+        "truenas_pool_free_bytes:match": 16,
+        "truenas_pool_freeing_bytes:match": 16,
+        "truenas_smb1_enabled:mismatch": 8
+      },
+      "ttl_withholding_injected": true,
+      "stale_cpu_nan_observed": true,
+      "resumed_cpu_finite_observed": true,
+      "reconnect_injected": true,
+      "reconnection_observed": true,
+      "http_triggered_poll_rpcs": 0,
+      "http_probe_total_rpc_delta": 0,
+      "max_rpc_seconds": 4.04,
+      "worker_stopped": true,
+      "event_worker_stopped": true,
+      "rpc_attempts": 1290,
+      "distinct_methods": 127,
+      "finite_metric_sample_names": 323
+    },
+    {
+      "profile": "previous_settings",
+      "elapsed_seconds": 301.37,
+      "cycles": [
+        {
+          "seconds": 9.436,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.055,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.067,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.344,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.218,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.258,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.116,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        },
+        {
+          "seconds": 9.358,
+          "up": 1.0,
+          "ready": true,
+          "profile": "27.0"
+        }
+      ],
+      "calls": {
+        "auth.login_ex": 9,
+        "system.version_short": 9,
+        "vm.query": 8,
+        "app.query": 8,
+        "boot.get_state": 8,
+        "boot.get_disks": 8,
+        "certificate.query": 8,
+        "pool.dataset.query": 8,
+        "core.get_jobs": 16,
+        "replication.query": 8,
+        "cloudsync.query": 8,
+        "rsynctask.query": 8,
+        "pool.snapshottask.query": 8,
+        "pool.snapshottask.max_count": 8,
+        "pool.snapshottask.max_total_count": 8,
+        "directoryservices.status": 8,
+        "ipmi.is_loaded": 8,
+        "sharing.nfs.query": 8,
+        "sharing.smb.query": 8,
+        "api_key.query": 16,
+        "system.reboot.info": 8,
+        "route.system_routes": 8,
+        "truenas.is_production": 8,
+        "truenas.is_ix_hardware": 8,
+        "failover.disabled.reasons": 8,
+        "failover.reboot.info": 8,
+        "smb.status": 24,
+        "device.get_info": 8,
+        "jbof.query": 8,
+        "auth.sessions": 8,
+        "disk.query": 8,
+        "system.state": 8,
+        "system.ready": 8,
+        "system.info": 8,
+        "system.product_type": 8,
+        "vm.get_available_memory": 8,
+        "vm.get_vmemory_in_use": 8,
+        "network.general.summary": 8,
+        "docker.nvidia_present": 8,
+        "docker.network.query": 8,
+        "docker.status": 8,
+        "nfs.client_count": 8,
+        "nfs.get_nfs3_clients": 8,
+        "nfs.get_nfs4_clients": 8,
+        "iscsi.global.client_count": 8,
+        "pool.query": 8,
+        "zpool.query": 8,
+        "disk.temperature_agg": 1,
+        "disk.temperature_alerts": 8,
+        "disk.temperatures": 8,
+        "interface.query": 8,
+        "service.query": 8,
+        "alert.list": 8,
+        "update.status": 8,
+        "system.host_id": 8,
+        "system.boot_id": 8,
+        "truenas.managed_by_truecommand": 8,
+        "update.available_versions": 8,
+        "update.config": 8,
+        "boot.environment.query": 8,
+        "vm.supports_virtualization": 8,
+        "vm.maximum_supported_vcpus": 8,
+        "hardware.virtualization.variant": 8,
+        "vm.flags": 8,
+        "vm.virtualization_details": 8,
+        "container.query": 8,
+        "fc.fc_host.query": 8,
+        "fcport.status": 8,
+        "nvmet.global.sessions": 8,
+        "nvmet.subsys.query": 8,
+        "nvmet.port.query": 8,
+        "iscsi.global.alua_enabled": 8,
+        "iscsi.global.iser_enabled": 8,
+        "iscsi.global.sessions": 32,
+        "interface.has_pending_changes": 8,
+        "interface.checkin_waiting": 8,
+        "app.available_space": 8,
+        "app.image.dockerhub_rate_limit": 8,
+        "sharing.webshare.query": 8,
+        "webshare.config": 8,
+        "catalog.trains": 8,
+        "catalog.config": 8,
+        "system.security.info.fips_available": 8,
+        "system.security.info.fips_enabled": 8,
+        "system.feature_enabled": 24,
+        "truenas.get_chassis_hardware": 8,
+        "audit.config": 8,
+        "ipmi.lan.channels": 8,
+        "pool.scrub.query": 8,
+        "pool.snapshot.query": 9,
+        "pool.resilver.config": 8,
+        "cloud_backup.query": 8,
+        "cronjob.query": 8,
+        "smb.config": 8,
+        "nfs.config": 8,
+        "system.general.config": 8,
+        "system.global.id": 8,
+        "kmip.kmip_sync_pending": 8,
+        "support.is_available": 8,
+        "support.is_available_and_enabled": 8,
+        "systemdataset.config": 8,
+        "user.query": 8,
+        "group.query": 8,
+        "staticroute.query": 8,
+        "tunable.query": 8,
+        "privilege.query": 8,
+        "initshutdownscript.query": 8,
+        "keychaincredential.query": 8,
+        "iscsi.target.query": 8,
+        "iscsi.portal.query": 8,
+        "iscsi.extent.query": 8,
+        "iscsi.initiator.query": 8,
+        "nvmet.host.query": 8,
+        "nvmet.namespace.query": 8,
+        "app.image.query": 8,
+        "replication.config.config": 8,
+        "reporting.exporters.query": 8,
+        "dns.query": 8,
+        "reporting.config": 8,
+        "system.ntpserver.query": 16,
+        "system.security.config": 8,
+        "vm.device.iommu_enabled": 8,
+        "auth.twofactor.config": 8,
+        "alertservice.query": 16,
+        "core.subscribe": 3,
+        "core.unsubscribe": 3
+      },
+      "errors": [],
+      "blocked_methods": [],
+      "event_messages": {
+        "reporting.realtime": 142,
+        "app.stats": 125
+      },
+      "health_statuses": {
+        "200": 148
+      },
+      "readiness_statuses": {
+        "503": 5,
+        "200": 143
+      },
+      "http_failures": {},
+      "max_http_probe_seconds": 0.045,
+      "max_samples": 1747,
+      "max_exposition_bytes": 164357,
+      "comparisons": {
+        "truenas_disk_count:match": 8,
+        "truenas_interface_count:match": 8,
+        "truenas_service_count:match": 8,
+        "truenas_host_physical_memory_bytes:match": 8,
+        "truenas_vm_available_memory_bytes:match": 8,
+        "truenas_pool_count:match": 8,
+        "truenas_pool_size_bytes:match": 16,
+        "truenas_pool_allocated_bytes:match": 16,
+        "truenas_pool_free_bytes:match": 16,
+        "truenas_pool_freeing_bytes:match": 16,
+        "truenas_smb1_enabled:mismatch": 8
+      },
+      "ttl_withholding_injected": false,
+      "reconnect_injected": false,
+      "reconnection_observed": false,
+      "http_triggered_poll_rpcs": 0,
+      "http_probe_total_rpc_delta": 0,
+      "max_rpc_seconds": 4.043,
+      "worker_stopped": true,
+      "event_worker_stopped": true,
+      "rpc_attempts": 1082,
+      "distinct_methods": 126,
+      "finite_metric_sample_names": 322,
+      "stale_cpu_nan_observed_without_injection": true
+    }
+  ],
+  "packaged_scrape": {
+    "python": "3.14.6",
+    "exporter": "5.2.0rc1",
+    "profile": "27.0",
+    "seconds": 9.554,
+    "up": 1.0,
+    "ready": true,
+    "calls": 161,
+    "distinct_methods": 125,
+    "legacy_auth": {
+      "success": true
+    },
+    "comparisons": {
+      "truenas_app_count:match": 1,
+      "truenas_dataset_count:match": 1,
+      "truenas_task_count:match": 4,
+      "truenas_dataset_used_bytes:match": 69,
+      "truenas_dataset_available_bytes:match": 69
+    },
+    "errors": []
+  },
+  "packaged_event_snapshot_check": {
+    "event_snapshot_observations": [
+      {
+        "offset_seconds": 0,
+        "event_age_seconds": 0.047,
+        "snapshot_event_age_seconds": 0.057,
+        "cpu_finite": true
+      },
+      {
+        "offset_seconds": 6,
+        "event_age_seconds": 1.324,
+        "snapshot_event_age_seconds": 6.089,
+        "cpu_finite": true
+      },
+      {
+        "offset_seconds": 12,
+        "event_age_seconds": 1.193,
+        "snapshot_event_age_seconds": 12.12,
+        "cpu_finite": true
+      },
+      {
+        "offset_seconds": 18,
+        "event_age_seconds": 1.051,
+        "snapshot_event_age_seconds": 18.15,
+        "cpu_finite": false
+      },
+      {
+        "offset_seconds": 24,
+        "event_age_seconds": 0.935,
+        "snapshot_event_age_seconds": 24.179,
+        "cpu_finite": false
+      }
+    ],
+    "python": "3.14.6",
+    "exporter": "5.2.0rc1",
+    "profile": "27.0",
+    "seconds": 35.133,
+    "up": 1.0,
+    "ready": true,
+    "calls": 165,
+    "distinct_methods": 127,
+    "legacy_auth": {
+      "success": true
+    },
+    "comparisons": {
+      "truenas_app_count:match": 1,
+      "truenas_dataset_count:match": 1,
+      "truenas_task_count:match": 4,
+      "truenas_dataset_used_bytes:match": 69,
+      "truenas_dataset_available_bytes:match": 69
+    },
+    "errors": []
+  },
+  "synthetic_reproductions": [
+    {
+      "expected_smb1_enabled": 1,
+      "expire_late": true,
+      "late_timeouts": 73,
+      "profile": "27.0",
+      "ready": true,
+      "smb1_metric": null,
+      "smb1_metric_finite": false,
+      "successful_calls": 47,
+      "up": 1.0,
+      "version": "27.0.0-RC.1"
+    },
+    {
+      "expected_smb1_enabled": 1,
+      "expire_late": false,
+      "late_timeouts": 0,
+      "profile": "27.0",
+      "ready": true,
+      "smb1_metric": null,
+      "smb1_metric_finite": false,
+      "successful_calls": 125,
+      "up": 1.0,
+      "version": "27.0.0-RC.1"
+    },
+    {
+      "expected_smb1_enabled": 0,
+      "expire_late": false,
+      "late_timeouts": 0,
+      "profile": "27.0",
+      "ready": true,
+      "smb1_metric": null,
+      "smb1_metric_finite": false,
+      "successful_calls": 125,
+      "up": 1.0,
+      "version": "27.0.0-RC.1"
+    },
+    {
+      "expected_smb1_enabled": 1,
+      "expire_late": false,
+      "late_timeouts": 0,
+      "profile": "26.0",
+      "ready": true,
+      "smb1_metric": null,
+      "smb1_metric_finite": false,
+      "successful_calls": 125,
+      "up": 1.0,
+      "version": "26.0.0"
+    },
+    {
+      "cpu_finite": false,
+      "expected_cpu": 33,
+      "latest_event_age_seconds": 0.0,
+      "mode": "collector",
+      "observed_cpu": null,
+      "republish_control": false,
+      "scenario": "continuous_events_between_polls",
+      "snapshot_event_age_seconds": 16.0,
+      "ttl_seconds": 15
+    },
+    {
+      "cpu_finite": true,
+      "expected_cpu": 33,
+      "latest_event_age_seconds": 0.0,
+      "mode": "legacy",
+      "observed_cpu": 33.0,
+      "republish_control": false,
+      "scenario": "continuous_events_between_polls",
+      "snapshot_event_age_seconds": 0.0,
+      "ttl_seconds": 15
+    },
+    {
+      "cpu_finite": true,
+      "expected_cpu": 33,
+      "latest_event_age_seconds": 0.0,
+      "mode": "collector",
+      "observed_cpu": 33.0,
+      "republish_control": true,
+      "scenario": "continuous_events_between_polls",
+      "snapshot_event_age_seconds": 0.0,
+      "ttl_seconds": 15
+    },
+    {
+      "cpu_finite": true,
+      "expected_cpu": 33,
+      "latest_event_age_seconds": 0.0,
+      "mode": "collector",
+      "observed_cpu": 25.0,
+      "republish_control": false,
+      "scenario": "continuous_events_between_polls",
+      "snapshot_event_age_seconds": 16.0,
+      "ttl_seconds": 60
+    }
+  ],
+  "image_audit": {
+    "results": [
+      {
+        "target": "truenas-scale-api-prometheus-exporter:validate (debian 13.6)",
+        "class": "os-pkgs",
+        "vulnerabilities": 329,
+        "severity": {
+          "LOW": 95,
+          "HIGH": 97,
+          "MEDIUM": 130,
+          "UNKNOWN": 4,
+          "CRITICAL": 3
+        },
+        "fix_available": 165
+      },
+      {
+        "target": "Python",
+        "class": "lang-pkgs",
+        "vulnerabilities": 1,
+        "severity": {
+          "MEDIUM": 1
+        },
+        "fix_available": 1
+      }
+    ],
+    "critical": [
+      {
+        "VulnerabilityID": "CVE-2026-13221",
+        "PkgName": "perl-base",
+        "InstalledVersion": "5.40.1-6",
+        "FixedVersion": "5.40.1-6+deb13u1",
+        "Severity": "CRITICAL"
+      },
+      {
+        "VulnerabilityID": "CVE-2026-42496",
+        "PkgName": "perl-base",
+        "InstalledVersion": "5.40.1-6",
+        "FixedVersion": "5.40.1-6+deb13u1",
+        "Severity": "CRITICAL"
+      },
+      {
+        "VulnerabilityID": "CVE-2026-8376",
+        "PkgName": "perl-base",
+        "InstalledVersion": "5.40.1-6",
+        "FixedVersion": "5.40.1-6+deb13u1",
+        "Severity": "CRITICAL"
+      }
+    ],
+    "image_id": "sha256:ec5e80fbc6db2ef34d655c43b6c779531dfd13a9d509a5fd95f3d2c74f2a2ba9"
+  },
+  "promtool": {
+    "version": "3.5.0",
+    "exit_code": 3,
+    "diagnostic_count": 97,
+    "reason_counts": {
+      "non-histogram and non-summary metrics should not have \"_count\" suffix": 87,
+      "non-counter metrics should not have \"_total\" suffix": 2,
+      "use base unit \"seconds\" instead of \"days\"": 6,
+      "use base unit \"seconds\" instead of \"minutes\"": 2
+    },
+    "all_affected_names_preexist_in_baseline": true
+  },
+  "limitations": [
+    "No READONLY_ADMIN session tested",
+    "No certificate trust verification",
+    "No live 25.10/26.0 appliances",
+    "No live PromQL evaluation",
+    "No Grafana browser acceptance",
+    "No long-duration soak",
+    "Image advisory exploitability not assessed"
+  ],
+  "nas_configuration_changes": false,
+  "deployment": false,
+  "publication": false,
+  "exporter_behavior_changes": false,
+  "remediation_2026_10_21": {
+    "base_revision": "a1a5526731e739c9dfdc60b6e931332aebb683c1",
+    "exporter_version": "5.2.0rc1",
+    "committed": false,
+    "local": {
+      "validation": "validation_ok",
+      "tests": 324,
+      "branch_coverage_percent": 91.75,
+      "python_matrix": {
+        "3.12.15": 324,
+        "3.13.16": 324,
+        "3.14.8": 324
+      },
+      "application_dependency_audit": "No known vulnerabilities found",
+      "release": "dry-run only; Python 3.14.8; prerelease does not tag latest",
+      "metric_contracts_unchanged": 420,
+      "synthetic_event_freshness": "pass",
+      "late_deadline": {
+        "up": 0,
+        "ready": false,
+        "deadline_rejections": 73,
+        "late_transport_calls": 0
+      },
+      "heavy_cache_wall_clock_regressions": "pass",
+      "safe_auth_diagnostic_regressions": "pass"
+    },
+    "live": {
+      "version": "27.0.0-RC.1",
+      "profile": "27.0",
+      "current_defaults": {
+        "poll_duration_seconds": 9.682,
+        "up": 1,
+        "ready": true,
+        "smb1_comparison": "match",
+        "event_observations": 9,
+        "event_snapshot_age_range_seconds": [1.467, 1.913],
+        "http_requests": 10,
+        "http_rpc_delta": 0,
+        "local_socket_reconnect": true
+      },
+      "historical_settings_repeat": {
+        "poll_duration_seconds": 9.651,
+        "up": 1,
+        "ready": true,
+        "smb1_comparison": "match",
+        "event_observations": 9,
+        "event_snapshot_age_range_seconds": [1.446, 1.986],
+        "http_requests": 10,
+        "http_rpc_delta": 0
+      },
+      "transient_historical_event_failure_before_repeat": true
+    },
+    "packaged": {
+      "runtime_config_digest": "sha256:0ddd7f9f386e1a56346e8d6be6d9378ce042975cd023ddb6127f0cf996516f8e",
+      "python": "3.14.8",
+      "uid": 10001,
+      "gid": 10001,
+      "samples": 1778,
+      "event_ages_seconds": [0.107, 1.85, 1.748],
+      "cpu_finite": true,
+      "hardened_runtime": true
+    },
+    "image_audit": {
+      "final_image_id": "sha256:dc30f711dd2c3b9447aa66dbb15b9660ce87964c59aba71479b9f874ccfe7996",
+      "os": "debian 13.7",
+      "scanner": "Trivy 0.72.0",
+      "os_findings": 164,
+      "severity": {
+        "CRITICAL": 0,
+        "HIGH": 44,
+        "MEDIUM": 58,
+        "LOW": 61,
+        "UNKNOWN": 1
+      },
+      "fixed_version_available": 0,
+      "python_findings": 0,
+      "removed_since_historical_scan": 166
+    },
+    "promtool": {
+      "version": "3.5.0",
+      "live_diagnostic_count": 97,
+      "all_family_diagnostic_count": 98,
+      "baseline_enforced": true
+    },
+    "credential_incident": "stdin key echoed once by Docker pseudo-TTY; rotation required",
+    "nas_configuration_changes": false,
+    "deployment": false,
+    "publication": false,
+    "push": false
+  }
+}

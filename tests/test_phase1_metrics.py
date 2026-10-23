@@ -261,6 +261,8 @@ def test_oldest_snapshot_timestamp_uses_ordered_exact_query(monkeypatch):
 
 
 def test_oldest_snapshot_timestamp_uses_reduced_cadence_cache(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
     exporter = exporter_module.TrueNASExporter(
         make_config(exporter_mode="legacy", enable_task_metrics=True)
     )
@@ -281,15 +283,18 @@ def test_oldest_snapshot_timestamp_uses_reduced_cadence_cache(monkeypatch):
     assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000001
     assert len(oldest_calls) == 1
 
-    # R06: refresh happens every SNAPSHOT_OLDEST_REFRESH_CYCLES cycles (a full
-    # 10-cycle gap from the initial fetch at cycle 1 to the next at cycle 11).
-    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1):
+    # R06: refresh follows elapsed wall time, not the number of successful cycles.
+    for cycle in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 1):
+        now[0] = 100.0 + (cycle - 1) * exporter.config.interval_seconds
         exporter._reset_poll_metrics()
         exporter._collect_snapshot_metrics(object(), {})
         assert gauge_value(exporter_module.SNAPSHOT_TOTAL_COUNT) == 321
         assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000001
         assert len(oldest_calls) == 1
 
+    now[0] = 100.0 + (
+        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES * exporter.config.interval_seconds
+    )
     exporter._reset_poll_metrics()
     exporter._collect_snapshot_metrics(object(), {})
     assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000002
@@ -297,6 +302,8 @@ def test_oldest_snapshot_timestamp_uses_reduced_cadence_cache(monkeypatch):
 
 
 def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
     exporter = exporter_module.TrueNASExporter(
         make_config(exporter_mode="legacy", enable_task_metrics=True)
     )
@@ -320,10 +327,12 @@ def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
         collector="snapshots"
     )._value.get()
     fail_oldest = True
-    # R06: the retry attempt now lands one cycle later (cycle 11, not 10).
-    for _ in range(2, exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 2):
-        exporter._reset_poll_metrics()
-        exporter._collect_snapshot_metrics(object(), {})
+    refresh_seconds = (
+        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES * exporter.config.interval_seconds
+    )
+    now[0] += refresh_seconds
+    exporter._reset_poll_metrics()
+    exporter._collect_snapshot_metrics(object(), {})
 
     assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700000000
     assert (
@@ -334,16 +343,35 @@ def test_oldest_snapshot_refresh_failure_serves_cache_then_expires(monkeypatch):
     # Prometheus counter, like every sibling collector.
     assert exporter._collector_errors["snapshots"] >= 1
 
-    for _ in range(
-        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES + 2,
-        exporter_module.SNAPSHOT_OLDEST_REFRESH_CYCLES
-        * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
-        + 2,
-    ):
-        exporter._reset_poll_metrics()
-        exporter._collect_snapshot_metrics(object(), {})
+    now[0] = 100.0 + refresh_seconds * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR + 1
+    exporter._reset_poll_metrics()
+    exporter._collect_snapshot_metrics(object(), {})
 
     assert math.isnan(gauge_value(exporter_module.SNAPSHOT_OLDEST_TS))
+
+
+def test_oldest_snapshot_refreshes_immediately_after_long_polling_outage(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
+    exporter = exporter_module.TrueNASExporter(
+        make_config(exporter_mode="legacy", enable_task_metrics=True)
+    )
+    values = [1700000000, 1700003600]
+    monkeypatch.setattr(
+        exporter,
+        "_call",
+        lambda _client, _method, _params=None: [
+            {"properties": {"creation": {"parsed": values.pop(0)}}}
+        ],
+    )
+
+    exporter._collect_snapshot_oldest_metric(object())
+    now[0] += 6 * 60 * 60
+    exporter._reset_poll_metrics()
+    exporter._collect_snapshot_oldest_metric(object())
+
+    assert gauge_value(exporter_module.SNAPSHOT_OLDEST_TS) == 1700003600
+    assert values == []
 
 
 def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeypatch):
@@ -365,6 +393,7 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
                 "usedbychildren": 11.0,
                 "usedbydataset": 12.0,
                 "usedbysnapshots": 13.0,
+                "usedbyrefreservation": 0.0,
                 "readonly": True,
                 "atime": False,
                 "exec": True,
@@ -398,6 +427,7 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
         "usedbychildren",
         "usedbydataset",
         "usedbysnapshots",
+        "usedbyrefreservation",
         "readonly",
         "atime",
         "exec",
@@ -419,6 +449,7 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
         ["usedbychildren.parsed", "usedbychildren"],
         ["usedbydataset.parsed", "usedbydataset"],
         ["usedbysnapshots.parsed", "usedbysnapshots"],
+        ["usedbyrefreservation.parsed", "usedbyrefreservation"],
         ["readonly.parsed", "readonly"],
         ["atime.parsed", "atime"],
         ["exec.parsed", "exec"],
@@ -435,6 +466,7 @@ def test_dataset_metrics_request_parsed_properties_and_snapshot_fallback(monkeyp
     assert exporter_module.DATASET_SNAPSHOT_COUNT.labels(dataset="tank/data")._value.get() == 9.0
     assert exporter_module.DATASET_RESERVATION_BYTES.labels(dataset="tank/data")._value.get() == 50.0
     assert exporter_module.DATASET_USED_BY_SNAPSHOTS_BYTES.labels(dataset="tank/data")._value.get() == 13.0
+    assert exporter_module.DATASET_USED_BY_REFRESERVATION_BYTES.labels(dataset="tank/data")._value.get() == 0.0
     assert exporter_module.DATASET_READONLY.labels(dataset="tank/data")._value.get() == 1.0
     assert exporter_module.DATASET_ATIME.labels(dataset="tank/data")._value.get() == 0.0
     assert exporter_module.DATASET_KEY_LOADED.labels(dataset="tank/data")._value.get() == 1.0
@@ -1940,6 +1972,8 @@ def test_disk_temperature_alert_failure_keeps_sibling_disk_metrics(monkeypatch):
 
 
 def test_disk_temperature_agg_uses_reduced_cadence_cache(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
     temp_calls = []
 
@@ -1954,14 +1988,17 @@ def test_disk_temperature_agg_uses_reduced_cadence_cache(monkeypatch):
     assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
     assert len(temp_calls) == 1
 
-    # R06: refresh happens every DISK_TEMP_AGG_REFRESH_CYCLES cycles (a full
-    # 10-cycle gap from the initial fetch at cycle 1 to the next at cycle 11).
-    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1):
+    # R06: refresh follows elapsed wall time, not the number of successful cycles.
+    for cycle in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 1):
+        now[0] = 100.0 + (cycle - 1) * exporter.config.interval_seconds
         exporter._reset_poll_metrics()
         exporter._collect_disk_temperature_agg(object(), ["sda"])
         assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
         assert len(temp_calls) == 1
 
+    now[0] = 100.0 + (
+        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES * exporter.config.interval_seconds
+    )
     exporter._reset_poll_metrics()
     exporter._collect_disk_temperature_agg(object(), ["sda"])
     assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 32
@@ -1969,6 +2006,8 @@ def test_disk_temperature_agg_uses_reduced_cadence_cache(monkeypatch):
 
 
 def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
     exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
     fail_agg = False
 
@@ -1987,10 +2026,12 @@ def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypa
         collector="disks"
     )._value.get()
     fail_agg = True
-    # R06: the retry attempt now lands one cycle later (cycle 11, not 10).
-    for _ in range(2, exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 2):
-        exporter._reset_poll_metrics()
-        exporter._collect_disk_temperature_agg(object(), ["sda"])
+    refresh_seconds = (
+        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES * exporter.config.interval_seconds
+    )
+    now[0] += refresh_seconds
+    exporter._reset_poll_metrics()
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
 
     assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 31
     assert (
@@ -2001,16 +2042,31 @@ def test_disk_temperature_agg_refresh_failure_serves_cache_then_expires(monkeypa
     # Prometheus counter, like every sibling collector.
     assert exporter._collector_errors["disks"] >= 1
 
-    for _ in range(
-        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES + 2,
-        exporter_module.DISK_TEMP_AGG_REFRESH_CYCLES
-        * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR
-        + 2,
-    ):
-        exporter._reset_poll_metrics()
-        exporter._collect_disk_temperature_agg(object(), ["sda"])
+    now[0] = 100.0 + refresh_seconds * exporter_module.HEAVY_QUERY_CACHE_MAX_STALE_FACTOR + 1
+    exporter._reset_poll_metrics()
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
 
     assert list(exporter_module.DISK_TEMP_AGG_C.collect())[0].samples == []
+
+
+def test_disk_temperature_agg_refreshes_immediately_after_long_polling_outage(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    values = [31, 39]
+
+    def fake_call(_client, _method, _params=None):
+        value = values.pop(0)
+        return {"sda": {"min": value, "max": value, "avg": value}}
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+    now[0] += 6 * 60 * 60
+    exporter._reset_poll_metrics()
+    exporter._collect_disk_temperature_agg(object(), ["sda"])
+
+    assert labeled_value(exporter_module.DISK_TEMP_AGG_C, "sda", "min") == 39
+    assert values == []
 
 
 def test_disk_temperature_agg_refetches_when_disk_list_changes(monkeypatch):

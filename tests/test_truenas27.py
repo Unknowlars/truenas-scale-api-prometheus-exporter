@@ -63,12 +63,28 @@ def test_deadline_bounds_connect_and_prevents_late_send(monkeypatch):
     assert socket.sent == []
 
 
-@pytest.mark.parametrize("response", [{"response_type": "AUTH_ERR"}, {"response_type": "OTP_REQUIRED"}, {}, True])
-def test_modern_auth_requires_explicit_success(monkeypatch, response):
+@pytest.mark.parametrize(
+    ("response", "diagnostic"),
+    [
+        ({"response_type": "AUTH_ERR"}, "AUTH_ERR"),
+        ({"response_type": "OTP_REQUIRED"}, "OTP_REQUIRED"),
+        ({}, "UNKNOWN"),
+        (True, "UNKNOWN"),
+        ({"response_type": "unsafe value synthetic-secret"}, "UNKNOWN"),
+    ],
+)
+def test_modern_auth_requires_explicit_success_with_safe_diagnostic(
+    monkeypatch, response, diagnostic
+):
     socket = Socket(response)
     monkeypatch.setattr(transport, "create_connection", lambda *a, **k: socket)
-    with transport.JsonRpcWsClient("wss://nas.example/api/current", 5, True) as client, pytest.raises(transport.JsonRpcError):
+    with (
+        transport.JsonRpcWsClient("wss://nas.example/api/current", 5, True) as client,
+        pytest.raises(transport.JsonRpcError) as error,
+    ):
         client.authenticate("synthetic-key", username="monitor")
+    assert f"response_type={diagnostic}" in str(error.value)
+    assert "synthetic-secret" not in str(error.value)
     assert len(socket.sent) == 1  # rejection must never downgrade to legacy auth
 
 
@@ -97,6 +113,90 @@ def test_snapshot_expiry_does_not_require_republication(monkeypatch):
     assert cpu() == 25
     now[0] = 116
     assert math.isnan(cpu())
+
+
+def test_collector_events_publish_continuously_between_poll_cycles(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
+    exporter = exporter_module.TrueNASExporter(make_config(event_stale_after_seconds=15))
+    collector = exporter_module.TrueNASCollector(exporter)
+
+    for step in range(9):
+        now[0] = 100.0 + step * 2
+        exporter._dispatch_event(
+            "reporting.realtime", {"cpu": {"cpu": {"usage": 25 + step}}}
+        )
+
+    cpu = next(
+        sample.value
+        for family in collector.collect()
+        for sample in family.samples
+        if sample.name == "truenas_cpu_usage_percent"
+    )
+    assert cpu == 33
+    assert exporter._snapshot_event_times["reporting.realtime"] == 116
+
+
+def test_collector_event_publication_recovers_after_real_expiry(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
+    exporter = exporter_module.TrueNASExporter(make_config(event_stale_after_seconds=15))
+    collector = exporter_module.TrueNASCollector(exporter)
+
+    def cpu():
+        return next(
+            sample.value
+            for family in collector.collect()
+            for sample in family.samples
+            if sample.name == "truenas_cpu_usage_percent"
+        )
+
+    exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 25}}})
+    assert cpu() == 25
+    now[0] = 116
+    assert math.isnan(cpu())
+    exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 40}}})
+    assert cpu() == 40
+
+
+def test_event_snapshot_publication_is_bounded_and_shutdown_cancels_timer(monkeypatch):
+    now = [100.0]
+    timers = []
+
+    class Timer:
+        def __init__(self, delay, target):
+            self.delay = delay
+            self.target = target
+            self.daemon = False
+            self.started = False
+            self.cancelled = False
+            timers.append(self)
+
+        def start(self):
+            self.started = True
+
+        def is_alive(self):
+            return self.started and not self.cancelled
+
+        def cancel(self):
+            self.cancelled = True
+
+    monkeypatch.setattr(exporter_module.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(runtime.threading, "Timer", Timer)
+    exporter = exporter_module.TrueNASExporter(make_config())
+    exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 1}}})
+    now[0] = 100.1
+    exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 2}}})
+    exporter._dispatch_event("reporting.realtime", {"cpu": {"cpu": {"usage": 3}}})
+
+    assert len(timers) == 1
+    assert timers[0].started and timers[0].daemon
+    assert timers[0].delay == pytest.approx(0.9)
+    assert exporter._collector_event_scalars["truenas_cpu_usage_percent"] == 3
+
+    exporter.stop()
+    assert timers[0].cancelled
+    assert exporter._metric_snapshot_publish_timer is None
 
 
 @pytest.mark.parametrize("method", ["vm.get_available_memory", "pool.query", "interface.query"])
@@ -174,6 +274,129 @@ def test_query_timeout_is_never_retried(monkeypatch):
     with pytest.raises(TimeoutError):
         exporter._call_query_with_fallback(API(), "pool.query", {"select": ["name"]})
     assert calls == ["pool.query"]
+
+
+def test_late_deadline_failure_marks_cycle_unhealthy_without_late_transport_calls(monkeypatch):
+    now = [100.0]
+    calls_after_deadline = []
+
+    class API:
+        def __init__(self, **kwargs):
+            self.deadline = kwargs["deadline_monotonic"]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def authenticate(self, _key, call=None, **_kwargs):
+            return None
+
+        def ensure_within_deadline(self, method):
+            if now[0] >= self.deadline:
+                raise TimeoutError(f"{method}: synthetic total scrape budget exhausted")
+
+        def call(self, method, params=None):
+            if now[0] >= self.deadline:
+                calls_after_deadline.append(method)
+                raise TimeoutError("synthetic total scrape budget exhausted")
+            if method == "system.version_short":
+                return "27.0.0-RC.1"
+            if method == "update.status":
+                now[0] += 26
+                return {"status": {"new_version": None}}
+            if method in {"system.state", "system.product_type"}:
+                return "READY" if method == "system.state" else "SCALE"
+            if method == "system.ready":
+                return True
+            if method == "system.info":
+                return {"physmem": 1, "uptime_seconds": 1}
+            if method == "vm.get_available_memory":
+                return 0
+            if method == "vm.get_vmemory_in_use":
+                return {"RNP": 0, "PRD": 0, "RPRD": 0}
+            if method.endswith(".query"):
+                if params and len(params) > 1 and params[1].get("count"):
+                    return 0
+                return []
+            return {}
+
+    monkeypatch.setattr(runtime, "JsonRpcWsClient", API)
+    monkeypatch.setattr(runtime.time, "monotonic", lambda: now[0])
+    exporter = exporter_module.TrueNASExporter(make_config())
+
+    exporter.scrape_once()
+
+    samples = [sample for family in exporter.metric_snapshot() for sample in family.samples]
+    assert next(sample.value for sample in samples if sample.name == "truenas_up") == 0
+    assert exporter.is_ready() is False
+    assert calls_after_deadline == []
+
+
+@pytest.mark.parametrize(
+    ("version", "smb", "expected"),
+    [
+        ("25.10.2", {"enable_smb1": True}, 1),
+        ("25.10.2", {"enable_smb1": False}, 0),
+        ("26.0.0", {"minimum_protocol": "SMB1"}, 1),
+        ("26.0.0", {"minimum_protocol": "SMB2"}, 0),
+        ("27.0.0-RC.1", {"minimum_protocol": "SMB3"}, 0),
+        ("27.0.0-RC.1", {}, None),
+        ("27.0.0-RC.1", {"minimum_protocol": None}, None),
+        ("27.0.0-RC.1", {"minimum_protocol": 1}, None),
+        ("27.0.0-RC.1", {"minimum_protocol": "UNKNOWN"}, None),
+    ],
+)
+def test_smb1_metric_uses_versioned_source_without_fabricating_unknown(
+    monkeypatch, version, smb, expected
+):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    exporter.compatibility_profile = exporter._profile_for_version_short(version)
+
+    def fake_call(_client, method, _params=None):
+        if method == "service.query":
+            return []
+        if method == "smb.config":
+            return smb
+        raise transport.JsonRpcError("synthetic optional source unavailable", code=-32601)
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+    exporter._reset_poll_metrics()
+    exporter._collect_protocol_configs(object(), {})
+    values = [
+        sample.value
+        for family in exporter_module.SMB1_ENABLED.collect()
+        for sample in family.samples
+    ]
+    if expected is None:
+        assert values and all(not math.isfinite(value) for value in values)
+    else:
+        assert values == [expected]
+
+
+def test_smb1_metric_stays_unknown_when_smb_config_fails(monkeypatch):
+    exporter = exporter_module.TrueNASExporter(make_config(exporter_mode="legacy"))
+    exporter.compatibility_profile = exporter._profile_for_version_short("27.0.0-RC.1")
+
+    def fake_call(_client, method, _params=None):
+        if method == "service.query":
+            return []
+        raise transport.JsonRpcError("synthetic unavailable", code=-32001)
+
+    monkeypatch.setattr(exporter, "_call", fake_call)
+    exporter._reset_poll_metrics()
+    exporter._collect_protocol_configs(object(), {})
+    values = [
+        sample.value
+        for family in exporter_module.SMB1_ENABLED.collect()
+        for sample in family.samples
+    ]
+    assert values and all(not math.isfinite(value) for value in values)
+
+
+def test_config_repr_redacts_api_key():
+    assert "test-key" not in repr(make_config())
 
 
 @pytest.mark.parametrize("release", ["27.0.0", "27.0.0-RC.1", "TrueNAS-SCALE-27.0.0", "27.0.1"])

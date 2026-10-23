@@ -597,6 +597,15 @@
       "variable": "CLOUD_BACKUP_TASK_COUNT"
     },
     {
+      "help": "Duration of the latest completed cloud backup job in seconds",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_cloud_backup_task_duration_seconds",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_DURATION_SECONDS"
+    },
+    {
       "help": "1 if cloud backup task is enabled",
       "labels": [
         "name"
@@ -604,6 +613,42 @@
       "name": "truenas_cloud_backup_task_enabled",
       "type": "gauge",
       "variable": "CLOUD_BACKUP_TASK_ENABLED"
+    },
+    {
+      "help": "Completion timestamp of the latest cloud backup job, including failures",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_cloud_backup_task_last_completion_timestamp_seconds",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_COMPLETION_TS"
+    },
+    {
+      "help": "1 if the cloud backup task dataset is locked",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_cloud_backup_task_locked",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_LOCKED"
+    },
+    {
+      "help": "Progress percentage of the latest cloud backup job",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_cloud_backup_task_progress_percent",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_PROGRESS_PERCENT"
+    },
+    {
+      "help": "Start timestamp of the latest cloud backup job",
+      "labels": [
+        "name"
+      ],
+      "name": "truenas_cloud_backup_task_start_timestamp_seconds",
+      "type": "gauge",
+      "variable": "CLOUD_BACKUP_TASK_START_TS"
     },
     {
       "help": "Cloud backup task state as label",
@@ -735,6 +780,15 @@
       "variable": "DATASET_COMPRESSION_RATIO"
     },
     {
+      "help": "Configured number of dataset data copies",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_copies",
+      "type": "gauge",
+      "variable": "DATASET_COPIES"
+    },
+    {
       "help": "Total number of datasets returned by query",
       "labels": [],
       "name": "truenas_dataset_count",
@@ -749,6 +803,15 @@
       "name": "truenas_dataset_creation_timestamp_seconds",
       "type": "gauge",
       "variable": "DATASET_CREATION_TS"
+    },
+    {
+      "help": "1 if dataset deduplication is ON or VERIFY",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_dedup_enabled",
+      "type": "gauge",
+      "variable": "DATASET_DEDUP_ENABLED"
     },
     {
       "help": "1 if dataset is encrypted",
@@ -787,6 +850,24 @@
       "variable": "DATASET_LOCKED"
     },
     {
+      "help": "Logical bytes referenced by the dataset before compression",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_logical_referenced_bytes",
+      "type": "gauge",
+      "variable": "DATASET_LOGICAL_REFERENCED_BYTES"
+    },
+    {
+      "help": "Logical bytes used by the dataset and descendants before compression",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_logical_used_bytes",
+      "type": "gauge",
+      "variable": "DATASET_LOGICAL_USED_BYTES"
+    },
+    {
       "help": "Dataset quota in bytes (0 = no quota)",
       "labels": [
         "dataset"
@@ -821,6 +902,15 @@
       "name": "truenas_dataset_readonly",
       "type": "gauge",
       "variable": "DATASET_READONLY"
+    },
+    {
+      "help": "Configured dataset record size in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_recordsize_bytes",
+      "type": "gauge",
+      "variable": "DATASET_RECORDSIZE_BYTES"
     },
     {
       "help": "Dataset referenced bytes",
@@ -886,6 +976,16 @@
       "variable": "DATASET_SNAPSHOT_COUNT"
     },
     {
+      "help": "Dataset synchronous write policy",
+      "labels": [
+        "dataset",
+        "mode"
+      ],
+      "name": "truenas_dataset_sync_mode",
+      "type": "gauge",
+      "variable": "DATASET_SYNC_MODE"
+    },
+    {
       "help": "Dataset space used by child datasets in bytes",
       "labels": [
         "dataset"
@@ -904,6 +1004,15 @@
       "variable": "DATASET_USED_BY_DATASET_BYTES"
     },
     {
+      "help": "Dataset space consumed by its refreservation in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_used_by_refreservation_bytes",
+      "type": "gauge",
+      "variable": "DATASET_USED_BY_REFRESERVATION_BYTES"
+    },
+    {
       "help": "Dataset space used by snapshots in bytes",
       "labels": [
         "dataset"
@@ -920,6 +1029,24 @@
       "name": "truenas_dataset_used_bytes",
       "type": "gauge",
       "variable": "DATASET_USED_BYTES"
+    },
+    {
+      "help": "Configured ZFS volume block size in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_volblocksize_bytes",
+      "type": "gauge",
+      "variable": "DATASET_VOLBLOCKSIZE_BYTES"
+    },
+    {
+      "help": "Configured ZFS volume logical size in bytes",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_dataset_volsize_bytes",
+      "type": "gauge",
+      "variable": "DATASET_VOLSIZE_BYTES"
     },
     {
       "help": "1 if directoryservices account cache is enabled",
@@ -1066,6 +1193,25 @@
       "name": "truenas_disk_rotational",
       "type": "gauge",
       "variable": "DISK_ROTATIONAL"
+    },
+    {
+      "help": "1 if the disk reports self-encrypting drive capability",
+      "labels": [
+        "disk"
+      ],
+      "name": "truenas_disk_sed_capable",
+      "type": "gauge",
+      "variable": "DISK_SED_CAPABLE"
+    },
+    {
+      "help": "Recognized self-encrypting drive status",
+      "labels": [
+        "disk",
+        "status"
+      ],
+      "name": "truenas_disk_sed_status",
+      "type": "gauge",
+      "variable": "DISK_SED_STATUS"
     },
     {
       "help": "Disk size in bytes",
@@ -2210,6 +2356,15 @@
       "variable": "POOL_EXPAND_TO_REFLOW_BYTES"
     },
     {
+      "help": "1 if the pool reports all current feature flags enabled",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_features_upgraded",
+      "type": "gauge",
+      "variable": "POOL_FEATURES_UPGRADED"
+    },
+    {
       "help": "Pool fragmentation percentage (0 to 100)",
       "labels": [
         "pool"
@@ -2307,6 +2462,15 @@
       "variable": "POOL_RESILVER_ENABLED"
     },
     {
+      "help": "Bytes issued during the current pool scan pass",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_bytes_issued",
+      "type": "gauge",
+      "variable": "POOL_SCAN_BYTES_ISSUED"
+    },
+    {
       "help": "Bytes processed in last pool scan",
       "labels": [
         "pool"
@@ -2334,6 +2498,34 @@
       "variable": "POOL_SCAN_ERRORS"
     },
     {
+      "help": "Pool scan operation from the last pool query",
+      "labels": [
+        "pool",
+        "function"
+      ],
+      "name": "truenas_pool_scan_function",
+      "type": "gauge",
+      "variable": "POOL_SCAN_FUNCTION"
+    },
+    {
+      "help": "Unix timestamp when the pool scan was paused",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_pause_timestamp_seconds",
+      "type": "gauge",
+      "variable": "POOL_SCAN_PAUSE_TS"
+    },
+    {
+      "help": "1 if the documented pool scan pause timestamp is present",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_paused",
+      "type": "gauge",
+      "variable": "POOL_SCAN_PAUSED"
+    },
+    {
       "help": "Active pool scan/scrub percentage (0 to 100)",
       "labels": [
         "pool"
@@ -2350,6 +2542,25 @@
       "name": "truenas_pool_scan_seconds_remaining",
       "type": "gauge",
       "variable": "POOL_SCAN_SECONDS_REMAINING"
+    },
+    {
+      "help": "Unix timestamp when the pool scan started",
+      "labels": [
+        "pool"
+      ],
+      "name": "truenas_pool_scan_start_timestamp_seconds",
+      "type": "gauge",
+      "variable": "POOL_SCAN_START_TS"
+    },
+    {
+      "help": "Pool scan state from the last pool query",
+      "labels": [
+        "pool",
+        "state"
+      ],
+      "name": "truenas_pool_scan_state",
+      "type": "gauge",
+      "variable": "POOL_SCAN_STATE"
     },
     {
       "help": "Unix timestamp of last scrub task run",
@@ -2963,11 +3174,56 @@
       "variable": "UPDATE_VERSION_AVAILABLE"
     },
     {
+      "help": "Latest fresh UPS battery charge percentage from reporting",
+      "labels": [],
+      "name": "truenas_ups_battery_charge_percent",
+      "type": "gauge",
+      "variable": "UPS_BATTERY_CHARGE_PERCENT"
+    },
+    {
       "help": "1 if a UPS device is configured",
       "labels": [],
       "name": "truenas_ups_configured",
       "type": "gauge",
       "variable": "UPS_CONFIGURED"
+    },
+    {
+      "help": "Latest fresh UPS input current in amperes",
+      "labels": [],
+      "name": "truenas_ups_current_amperes",
+      "type": "gauge",
+      "variable": "UPS_CURRENT_AMPERES"
+    },
+    {
+      "help": "Latest fresh UPS input frequency in hertz",
+      "labels": [],
+      "name": "truenas_ups_frequency_hertz",
+      "type": "gauge",
+      "variable": "UPS_FREQUENCY_HERTZ"
+    },
+    {
+      "help": "Latest fresh UPS load percentage from reporting",
+      "labels": [],
+      "name": "truenas_ups_load_percent",
+      "type": "gauge",
+      "variable": "UPS_LOAD_PERCENT"
+    },
+    {
+      "help": "Latest fresh estimated UPS battery runtime in seconds",
+      "labels": [],
+      "name": "truenas_ups_runtime_seconds",
+      "type": "gauge",
+      "variable": "UPS_RUNTIME_SECONDS"
+    },
+    {
+      "help": "Timestamp of the exported UPS reporting sample",
+      "labels": [
+        "graph",
+        "source"
+      ],
+      "name": "truenas_ups_sample_timestamp_seconds",
+      "type": "gauge",
+      "variable": "UPS_SAMPLE_TS"
     },
     {
       "help": "UPS status string as label",
@@ -2977,6 +3233,22 @@
       "name": "truenas_ups_status",
       "type": "gauge",
       "variable": "UPS_STATUS"
+    },
+    {
+      "help": "Latest fresh UPS temperature in degrees Celsius",
+      "labels": [],
+      "name": "truenas_ups_temperature_celsius",
+      "type": "gauge",
+      "variable": "UPS_TEMPERATURE_CELSIUS"
+    },
+    {
+      "help": "Latest fresh UPS voltage in volts",
+      "labels": [
+        "source"
+      ],
+      "name": "truenas_ups_voltage_volts",
+      "type": "gauge",
+      "variable": "UPS_VOLTAGE_VOLTS"
     },
     {
       "help": "Virt/Incus global state",
@@ -3348,6 +3620,139 @@
       "name": "truenas_zfs_l2arc_write_bytes_per_second",
       "type": "gauge",
       "variable": "ZFS_L2ARC_WRITE_BYTES_RATE"
+    },
+    {
+      "help": "1 if the ZFS tier service is enabled",
+      "labels": [],
+      "name": "truenas_zfs_tier_enabled",
+      "type": "gauge",
+      "variable": "ZFS_TIER_ENABLED"
+    },
+    {
+      "help": "Creation timestamp of the latest tier rewrite job",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_created_timestamp_seconds",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_CREATED_TS"
+    },
+    {
+      "help": "Cumulative failed files in the latest tier rewrite job",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_failed_files",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_FAILED_FILES"
+    },
+    {
+      "help": "1 if the tier rewrite inventory reached its configured query limit",
+      "labels": [],
+      "name": "truenas_zfs_tier_job_inventory_limit_reached",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_LIMIT_REACHED"
+    },
+    {
+      "help": "Bytes processed in the latest tier rewrite run; resets on resume",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_processed_bytes",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_PROCESSED_BYTES"
+    },
+    {
+      "help": "Files processed in the latest tier rewrite run; resets on resume",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_processed_files",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_PROCESSED_FILES"
+    },
+    {
+      "help": "Start timestamp of the latest tier rewrite run",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_start_timestamp_seconds",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_START_TS"
+    },
+    {
+      "help": "State of the most recent observed tier rewrite job per dataset",
+      "labels": [
+        "dataset",
+        "state"
+      ],
+      "name": "truenas_zfs_tier_job_state",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_STATE"
+    },
+    {
+      "help": "Cumulative successful files in the latest tier rewrite job",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_successful_files",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_SUCCESSFUL_FILES"
+    },
+    {
+      "help": "Target bytes for the latest tier rewrite job",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_target_bytes",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_TARGET_BYTES"
+    },
+    {
+      "help": "Target files for the latest tier rewrite job",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_target_files",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_TARGET_FILES"
+    },
+    {
+      "help": "Last statistics update timestamp of the latest tier rewrite job",
+      "labels": [
+        "dataset"
+      ],
+      "name": "truenas_zfs_tier_job_update_timestamp_seconds",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOB_UPDATE_TS"
+    },
+    {
+      "help": "Number of tier rewrite jobs returned within the bounded inventory",
+      "labels": [],
+      "name": "truenas_zfs_tier_jobs_observed",
+      "type": "gauge",
+      "variable": "ZFS_TIER_JOBS_OBSERVED"
+    },
+    {
+      "help": "Configured maximum concurrent ZFS tier rewrite jobs",
+      "labels": [],
+      "name": "truenas_zfs_tier_max_concurrent_jobs",
+      "type": "gauge",
+      "variable": "ZFS_TIER_MAX_CONCURRENT_JOBS"
+    },
+    {
+      "help": "Configured maximum used percentage for the ZFS tier service",
+      "labels": [],
+      "name": "truenas_zfs_tier_max_used_percent",
+      "type": "gauge",
+      "variable": "ZFS_TIER_MAX_USED_PERCENT"
+    },
+    {
+      "help": "Configured percentage of the special class reserved for metadata",
+      "labels": [],
+      "name": "truenas_zfs_tier_metadata_reserve_percent",
+      "type": "gauge",
+      "variable": "ZFS_TIER_METADATA_RESERVE_PERCENT"
     }
   ],
   "primary_truenas_version": "27.0.0",

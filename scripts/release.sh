@@ -22,7 +22,7 @@ fi
 
 cmd=(docker buildx build
   --platform linux/amd64,linux/arm64
-  --build-arg PYTHON_VERSION=3.14.6
+  --build-arg PYTHON_VERSION=3.14.8
   --tag "${image}:${version}"
   --sbom=true
   --provenance=mode=max)

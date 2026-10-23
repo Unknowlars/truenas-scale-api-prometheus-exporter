@@ -1001,6 +1001,78 @@ def analyze_source(methods: list[ApiPage], events: list[ApiPage], metric_variabl
     )
 
 
+EXPANDED_TELEMETRY_FIELDS: dict[str, dict[str, tuple[str, ...]]] = {
+    "pool.query": {
+        "POOL_SCAN_STATE": ("scan.state",),
+        "POOL_SCAN_FUNCTION": ("scan.function",),
+        "POOL_SCAN_BYTES_ISSUED": ("scan.bytes_issued",),
+        "POOL_SCAN_START_TS": ("scan.start_time",),
+        "POOL_SCAN_PAUSE_TS": ("scan.pause",),
+        "POOL_SCAN_PAUSED": ("scan.pause",),
+        "POOL_FEATURES_UPGRADED": ("is_upgraded (27.0 only)",),
+    },
+    "pool.dataset.query": {
+        "DATASET_REFERENCED_BYTES": ("referenced.parsed (27.0 extra property)",),
+        "DATASET_LOGICAL_USED_BYTES": ("logicalused.parsed (27.0 extra property)",),
+        "DATASET_LOGICAL_REFERENCED_BYTES": ("logicalreferenced.parsed (27.0 extra property)",),
+        "DATASET_USED_BY_REFRESERVATION_BYTES": ("usedbyrefreservation.parsed",),
+        "DATASET_RECORDSIZE_BYTES": ("recordsize.parsed",),
+        "DATASET_VOLBLOCKSIZE_BYTES": ("volblocksize.parsed",),
+        "DATASET_VOLSIZE_BYTES": ("volsize.parsed",),
+        "DATASET_COPIES": ("copies.parsed",),
+        "DATASET_SYNC_MODE": ("sync.rawvalue",),
+        "DATASET_DEDUP_ENABLED": ("deduplication.rawvalue",),
+    },
+    "disk.query": {
+        "DISK_SED_CAPABLE": ("sed",), "DISK_SED_STATUS": ("sed_status",),
+    },
+    "cloud_backup.query": {
+        "CLOUD_BACKUP_TASK_STATE": ("id", "job.state"),
+        "CLOUD_BACKUP_TASK_LOCKED": ("id", "locked"),
+        "CLOUD_BACKUP_TASK_PROGRESS_PERCENT": ("id", "job.progress.percent"),
+        "CLOUD_BACKUP_TASK_START_TS": ("id", "job.time_started"),
+        "CLOUD_BACKUP_TASK_COMPLETION_TS": ("id", "job.time_finished"),
+        "CLOUD_BACKUP_TASK_DURATION_SECONDS": ("id", "job.time_started", "job.time_finished"),
+    },
+    "reporting.get_data": {
+        "UPS_BATTERY_CHARGE_PERCENT": ("upscharge data latest fresh sample",),
+        "UPS_RUNTIME_SECONDS": ("upsruntime data latest fresh sample in seconds",),
+        "UPS_VOLTAGE_VOLTS": ("upsvoltage identifier data latest fresh sample",),
+        "UPS_CURRENT_AMPERES": ("upscurrent data latest fresh sample",),
+        "UPS_FREQUENCY_HERTZ": ("upsfrequency data latest fresh sample",),
+        "UPS_LOAD_PERCENT": ("upsload data latest fresh sample",),
+        "UPS_TEMPERATURE_CELSIUS": ("upstemperature data latest fresh sample",),
+        "UPS_SAMPLE_TS": ("data sample timestamp; graph and voltage identifier allowlists",),
+    },
+    "zfs.tier.config": {
+        "ZFS_TIER_ENABLED": ("enabled",),
+        "ZFS_TIER_MAX_CONCURRENT_JOBS": ("max_concurrent_jobs",),
+        "ZFS_TIER_MAX_USED_PERCENT": ("max_used_percentage",),
+        "ZFS_TIER_METADATA_RESERVE_PERCENT": ("special_class_metadata_reserve_pct",),
+    },
+    "zfs.tier.rewrite_job_query": {
+        "ZFS_TIER_JOBS_OBSERVED": ("bounded result length",),
+        "ZFS_TIER_JOB_LIMIT_REACHED": ("bounded result length versus limit",),
+    },
+    "zfs.tier.rewrite_job_status": {
+        "ZFS_TIER_JOB_STATE": ("dataset_name", "status"),
+        "ZFS_TIER_JOB_PROCESSED_BYTES": ("stats.count_bytes",),
+        "ZFS_TIER_JOB_TARGET_BYTES": ("stats.total_bytes",),
+        "ZFS_TIER_JOB_PROCESSED_FILES": ("stats.count_items",),
+        "ZFS_TIER_JOB_TARGET_FILES": ("stats.total_items",),
+        "ZFS_TIER_JOB_FAILED_FILES": ("stats.failures",),
+        "ZFS_TIER_JOB_SUCCESSFUL_FILES": ("stats.success",),
+        "ZFS_TIER_JOB_START_TS": ("stats.start_time",),
+        "ZFS_TIER_JOB_CREATED_TS": ("stats.initial_time",),
+        "ZFS_TIER_JOB_UPDATE_TS": ("stats.update_time",),
+    },
+}
+EXPANDED_27_ONLY = frozenset(
+    variable for source, fields in EXPANDED_TELEMETRY_FIELDS.items() for variable in fields
+    if source != "pool.query" and variable != "DATASET_USED_BY_REFRESERVATION_BYTES"
+) | {"POOL_FEATURES_UPGRADED"}
+
+
 @cache
 def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
     result: dict[str, tuple[str, ...]] = {}
@@ -1348,6 +1420,8 @@ def _metric_source_overrides() -> dict[str, tuple[str, ...]]:
         {"VM_VIRTUALIZATION_DETAILS_SUPPORTED", "VM_VIRTUALIZATION_DETAILS_ERROR_PRESENT"},
         "vm.virtualization_details",
     )
+    for source, fields in EXPANDED_TELEMETRY_FIELDS.items():
+        assign(fields, source)
     return result
 
 
@@ -1569,6 +1643,9 @@ def owned_response_fields(variable: str, sources: tuple[str, ...], analysis: Sou
     reachability, but never guesses a response field from nearby source text.
     """
 
+    for fields in EXPANDED_TELEMETRY_FIELDS.values():
+        if variable in fields:
+            return fields[variable]
     exact: dict[str, tuple[str, ...]] = {
         "SYSTEM_STATE": ("result",),
         "SYSTEM_READY": ("result",),
@@ -2202,6 +2279,8 @@ def build_metric_mappings(
             status = "generic extraction"
         elif variable in DEPRECATED_METRICS:
             status = "deprecated compatibility"
+        elif variable in EXPANDED_27_ONLY:
+            status = "unavailable: requires 27.0 profile"
         elif variable in forced_unavailable or variable not in analysis.functional_metric_variables:
             status = "unavailable: no reachable 25.10.2 producer"
         elif variable in opportunistic_dedicated:
@@ -2211,6 +2290,8 @@ def build_metric_mappings(
 
         fields = owned_response_fields(variable, sources, analysis)
         notes: list[str] = []
+        if variable in EXPANDED_27_ONLY:
+            notes.append("27.0-only typed collector; see docs/telemetry-expansion.md for pinned source, units and live evidence.")
         if variable in DEPRECATED_METRICS:
             notes.append(DEPRECATED_METRICS[variable])
         if variable == "CERT_DAYS_TO_EXPIRY":

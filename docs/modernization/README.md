@@ -7,6 +7,78 @@ evidence is produced locally.
 
 ## Status
 
+### 2026-10-22 typed telemetry expansion
+
+- Added 47 metric families (467 total), preserving all 420 previous
+  name/type/HELP/label contracts exactly. Expanded scan details, dataset
+  accounting/tuning, SED status, UPS reporting, cloud-backup outcomes and
+  bounded 27-only tiering. Existing referenced-bytes and backup-state metrics
+  now have 27 producers. New nullable boolean values allocate labelled series
+  only after validation; unknown does not become a default zero.
+- Fixed first readiness preceding snapshot publication, reproduced through a
+  deterministic concurrency regression and observed during a packaged cold
+  start. Successful snapshot publication now precedes initial readiness.
+- **LOCAL/MOCKED:** final `./scripts/validate.sh` PASS (`validation_ok`), 357
+  tests, 91.80% branch-enabled coverage, Ruff/mypy, generated artifacts,
+  dashboards, all API manifests/parity checks, Compose/release audit, image
+  build and version smoke. Promtool 3.5.0 still reports the exact 98 expected
+  full-contract warnings; no new warning was added. The optional Python
+  matrix/security scans were not repeated; dependency pins were unchanged.
+- **LIVE/source:** SCALE `27.0.0-RC.1`, 9.611-second poll, 162 read-only RPCs,
+  zero API failures, readiness true and up=1. All 556 selected source/metric
+  comparisons matched. There were 497 finite samples from new families;
+  nullable unknown SED/pool-feature flags were omitted.
+- Fully validated local image:
+  `sha256:30fb58e7872d46e1301d3068c43c6289309fda1715d9310fa0537d679378d345`,
+  exporter `5.2.0rc1`, tag `truenas-scale-api-prometheus-exporter:local-test`.
+  The original test image is retained under `:before-telemetry-expansion`.
+  **PACKAGED:** final cold-start check passed: 15 observations over 70.68
+  seconds, ready=200/up=1 throughout, at least 497 additional finite samples,
+  two polling snapshots observed and CPU/events healthy after startup. Maximum
+  observed realtime event age was 7.889 seconds (15-second TTL). The first
+  complete poll preceded the first CPU event; that initial absence stayed NaN.
+  A final Windows-side request to the LAN metrics URL returned HTTP 200;
+  access from a separate LAN scraper remains owner acceptance work.
+- Evidence and exact sources/bounds: [telemetry expansion](../telemetry-expansion.md)
+  and `.scratch/telemetry-expansion/report.md`. Real backup executions/tier
+  rewrite jobs, electrical UPS readings, all SED states, real 25.10/26 hosts,
+  least-privilege roles, verified TLS, external PromQL/browser acceptance and
+  long soak remain separate gates. Middleware UPS graphs can zero-fill gaps;
+  graph zeros alone do not prove physical measurements. Owner-directed key
+  rotation is still pending. No NAS configuration/storage changes, publication,
+  push, commit or hosted automation occurred.
+
+### 2026-10-22 local packaged scrape test
+
+- Owner requested a local running exporter and explicitly authorized reuse of
+  the previous NAS URL/key pending manual rotation. The key was recovered
+  without displaying it and is mounted read-only from a mode-0400 file outside
+  the repository, inside a mode-0700 temporary directory. No key value was
+  placed in container environment/configuration or these evidence files.
+- `./scripts/validate.sh`: PASS (`validation_ok`), 324 tests, 91.75% branch
+  coverage, Ruff/mypy, all generated-artifact/dashboard/API/Compose checks,
+  release audit, 98 expected promtool warnings, image build and version smoke.
+  Docker access was restricted in a subsequent sandbox check; an authorized
+  full repeat also passed. No security scan or Python matrix was repeated.
+- The rebuilt `5.2.0rc1` image is retained under the dedicated local-only tag
+  `truenas-scale-api-prometheus-exporter:local-test`, image ID
+  `sha256:051f34661eaf38d2dee0079de2444fad83e5327211c71d5b3a132288653bb494`.
+  Container `truenas-local-test-exporter-1` is running with Docker health
+  `healthy`, a read-only filesystem, dropped capabilities, and
+  `no-new-privileges`. Port 9108 is published on all IPv4 interfaces.
+- **LIVE/packaged:** final readiness HTTP 200, `truenas_up=1`, 1,678 samples
+  and 33 finite CPU samples. Windows-side requests to the machine's LAN
+  address returned HTTP 200 for metrics and readiness; loopback checks passed.
+  Direct Linux requests to its mirrored LAN address reset connections even
+  with proxies disabled. Access from a separate LAN machine is not verified.
+- Local Compose/spec/issue records are in `.scratch/truenas-local-test/`.
+  Key rotation, verified TLS (the owner-selected prior setup disables it),
+  external Prometheus ingestion, and longer soak acceptance remain pending.
+  The mounted key must be updated and the container recreated after rotation;
+  the temporary directory may be cleared on reboot. No image was published,
+  no NAS configuration/storage was changed, and no credentials/raw metrics
+  were committed or retained in repository evidence.
+
 | Phase | Document | Status | Evidence |
 | --- | --- | --- | --- |
 | 1 | [Reliability](01-reliability.md) | Complete | 150 tests pass in the unrestricted local gate; zero, expiry, deadline, config, readiness, transport, and API-parity regressions covered |
@@ -61,6 +133,74 @@ added a tracked-file public-release audit, and completed Docker-backed
 validation on this host.
 
 ## Verification evidence
+
+- 2026-10-21 SCALE 27 release-remediation, working tree based on `a1a5526` /
+  `5.2.0rc1`: fixed collector-mode event publication, late deadline/transport
+  false health, 26/27 SMB1 parsing, wall-clock freshness for both heavy-query
+  caches, safe modern-auth failure diagnostics, and API-key `repr` disclosure.
+  `./scripts/validate.sh` passed (`validation_ok`, 324 tests, 91.75% branch
+  coverage, Ruff/mypy, deterministic generation, dashboards, Compose,
+  release audit, image and version smoke). The Python matrix passed 324 tests
+  each on 3.12.15, 3.13.16, and 3.14.8; `pip-audit 2.10.1` found no known
+  vulnerabilities in the two pinned runtime dependencies. Release tooling was
+  exercised in dry-run mode only and selects Python 3.14.8. All 420 metric
+  contracts remain unchanged. Promtool 3.5.0 reports the same 97 live
+  compatibility warnings; a complete synthetic contract produces 98 because
+  it also instantiates `truenas_certificate_days_to_expiry`. Their exact
+  inventory is now fingerprinted and new warnings fail validation.
+  **Scanner:** exact final image
+  `sha256:dc30f711dd2c3b9447aa66dbb15b9660ce87964c59aba71479b9f874ccfe7996`
+  uses Python 3.14.8 / Debian 13.7 as UID/GID 10001 and omits pip. Trivy 0.72.0
+  reports 164 remaining OS findings (0 critical, 44 high, 58 medium, 61 low,
+  1 unknown), none with a listed fix, and zero Python findings. This removes
+  166 historical findings, including all three criticals; scanner severity is
+  not an exploitability conclusion. **Live:** the NAS still reports
+  `27.0.0-RC.1`; current and repeated historical-settings polls were healthy
+  (~9.7 s), SMB matched, realtime CPU stayed finite across the old TTL with
+  snapshot age below two seconds, ten HTTP scrapes issued zero NAS RPCs, and a
+  local event-socket close reconnected. One preceding historical-settings run
+  had a transient event-freshness assertion failure, so long-soak acceptance
+  remains open. The hardened packaged runtime exposed 1,778 live samples and
+  remained fresh across the old TTL. A Docker pseudo-TTY unexpectedly echoed
+  the supplied key once into the execution transcript; it was not retained in
+  repository/image/container data or reused, and it must be rotated. No push,
+  publication, deployment, hosted automation, or NAS mutation occurred.
+  Detailed sanitized evidence and remaining limitations are in the
+  [validation report](../../.scratch/truenas27-live-validation/report.md).
+
+- 2026-10-21 SCALE 27 live validation, source `a1a5526` / `5.2.0rc1`:
+  `./scripts/validate.sh` passed (`validation_ok`, 306 tests, 91.40% branch
+  coverage, lint/types, generated checks, dashboards, Compose, image build and
+  version smoke). Python matrix passed 306 tests each on 3.12.15, 3.13.16 and
+  3.14.8. The release image uses Python 3.14.6 and UID/GID 10001:10001. All
+  417 historical metric contracts remain unchanged; three additions make 420.
+  Runtime `pip-audit` found no known vulnerabilities in the two pinned
+  application dependencies. Release tooling was exercised in dry-run only.
+  **Live:** authenticated to `27.0.0-RC.1`, selected the `27.0` profile and
+  passed all five smoke methods. Sequential five-minute sessions with current
+  defaults and the owner's previous settings completed eight healthy polling
+  cycles each, approximately 9–10 seconds per cycle against a 25-second budget.
+  Repeated HTTP requests caused zero NAS RPCs; event expiry/recovery and local
+  event-socket reconnection were observed. The packaged image also completed a
+  successful live scrape. There were 512 successful source/metric comparisons
+  across host, pool, VM memory, disk/interface/service counts, datasets, apps
+  and task counts; SMB1 comparisons failed in all 16 sustained polling cycles.
+  **Unresolved findings:** collector-mode event caches do not refresh HTTP
+  snapshots between polls, causing realtime gaps (also confirmed via packaged
+  live HTTP: newest event <2 seconds old, snapshot >18 seconds old, CPU NaN);
+  a synthetic late-deadline
+  reproduction still reports up/ready despite 73 timeouts; SMB1 telemetry reads
+  the obsolete field. Live exposition parses but promtool reports 97 inherited
+  naming/unit lint warnings. Trivy reports 330 image package/advisory findings
+  (3 critical, 97 high); exploitability was not assessed. These results prevent
+  an unconditional release-readiness claim despite the passing existing gate.
+  The key's wildcard access was disclosed and the owner explicitly authorized
+  continuing with that key; only bounded read-only calls and reviewed transport
+  operations were used. Least-privilege access, certificate verification,
+  PromQL evaluation and Grafana browser acceptance remain unverified. No
+  deployment, publication or exporter behavior changes. Detailed sanitized
+  evidence and synthetic reproductions are in the
+  [validation report](../../.scratch/truenas27-live-validation/report.md).
 
 - 2026-07-16 T21 remediation: added the low-cost metrics batch with only
   documented read-only methods/events and fixture/synthetic validation. New
@@ -807,3 +947,12 @@ validation on this host.
   dependency/image audits in this session, Prometheus/PromQL validation in
   local containers, and Grafana browser rendering. No read-only live API key
   was available. These remain release blockers for a final 5.2.0.
+
+- 2026-10-23 local checkpoint: `./scripts/validate.sh` passed with 357
+  tests and 91.80% branch coverage, Ruff, mypy, generated-asset checks,
+  public-release secret/artifact audit, Compose validation, Docker build,
+  and the 5.2.0rc1 container version smoke test. Prometheus lint matched
+  the enforced baseline of 98 existing compatibility warnings. Staged
+  changes also passed the secret audit. This run made no live TrueNAS
+  calls and does not establish public-release readiness. Owner requested
+  a local commit only; no push, publication, or deployment was performed.

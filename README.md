@@ -253,6 +253,11 @@ verification under the project agent rules.
 - **Health and governance** — alerts, certificates, directory-service health, audit retention, NTP, UPS, and security posture.
 - **Exporter self-health** — API call failures, collector error counters, and scrape duration.
 
+The typed [telemetry expansion](docs/telemetry-expansion.md) adds 47 metric
+families for scan details, dataset accounting/tuning, SED status, UPS readings,
+cloud-backup outcomes and ZFS tiering. Hardware/feature availability determines
+which samples are emitted; unsupported values stay absent or NaN.
+
 ## Troubleshooting
 
 | Symptom | Resolution |
