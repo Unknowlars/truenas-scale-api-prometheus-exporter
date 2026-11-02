@@ -249,7 +249,8 @@ from prometheus_client.core import GaugeMetricFamily
 # Suppress *_created timestamp series added by the Python client for Counters/
 # Summaries/Histograms — they add noise without operational value.
 disable_created_metrics()
-from wsgiref.simple_server import WSGIRequestHandler, make_server
+from socketserver import ThreadingMixIn
+from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 from websocket import create_connection, WebSocket, WebSocketTimeoutException
 
 
@@ -1219,6 +1220,7 @@ class Config:
     enable_generic_event_metrics: bool
     dataset_snapshot_fallback_limit: int
     exporter_mode: str
+    max_concurrent_metrics_requests: int = 4
 
 
 # ---------------------------------------------------------------------------
@@ -6718,6 +6720,16 @@ class _QuietHandler(WSGIRequestHandler):
         pass
 
 
+class _ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
+    """Serve each request in its own thread.
+
+    The stock wsgiref server handles one request at a time. A /metrics request
+    waiting for the exporter lock during a long API poll would then also block
+    /healthz, and orchestrators would kill a healthy exporter.
+    """
+    daemon_threads = True
+
+
 _LANDING_PAGE = b"""\
 <html><head><title>TrueNAS Exporter</title></head><body>
 <h1>TrueNAS Exporter</h1>
@@ -6732,7 +6744,8 @@ def _start_http_server(
     lock: threading.Lock,
     registry: CollectorRegistry | None = None,
     lock_metrics: bool = True,
-) -> None:
+    max_concurrent_metrics: int = 4,
+) -> WSGIServer:
     """Start a WSGI server exposing /, /metrics and /healthz on *port*.
 
     The standard prometheus_client.start_http_server() only exposes /metrics.
@@ -6745,6 +6758,9 @@ def _start_http_server(
     merges event snapshots.
     """
     metrics_app = make_wsgi_app() if registry is None else make_wsgi_app(registry=registry)
+    # Bound concurrent /metrics requests: each one may wait on the exporter lock (legacy mode)
+    # or open its own API session (collector mode). /healthz is never limited.
+    metrics_slots = threading.BoundedSemaphore(max_concurrent_metrics)
 
     def app(environ: dict[str, Any], start_response: Any) -> list[bytes]:
         path = environ.get("PATH_INFO", "")
@@ -6754,16 +6770,23 @@ def _start_http_server(
         if path == "/healthz":
             start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8")])
             return [b"ok\n"]
-        if lock_metrics:
-            # Acquire the exporter lock so /metrics cannot read partially-updated state.
-            with lock:
-                return metrics_app(environ, start_response)
-        return metrics_app(environ, start_response)
+        if not metrics_slots.acquire(blocking=False):
+            start_response("503 Service Unavailable", [("Content-Type", "text/plain; charset=utf-8")])
+            return [b"too many concurrent /metrics requests\n"]
+        try:
+            if lock_metrics:
+                # Acquire the exporter lock so /metrics cannot read partially-updated state.
+                with lock:
+                    return metrics_app(environ, start_response)
+            return metrics_app(environ, start_response)
+        finally:
+            metrics_slots.release()
 
-    server = make_server("", port, app, handler_class=_QuietHandler)
+    server = make_server("", port, app, server_class=_ThreadingWSGIServer, handler_class=_QuietHandler)
     thread = threading.Thread(target=server.serve_forever, name="http-server", daemon=True)
     thread.start()
     LOG.info("HTTP server started on :%d (GET /, GET /metrics, GET /healthz)", port)
+    return server
 
 
 # ---------------------------------------------------------------------------
@@ -6816,6 +6839,9 @@ def _load_config() -> Config:
     if exporter_mode not in {"legacy", "collector"}:
         raise ValueError("EXPORTER_MODE must be either 'legacy' or 'collector'")
 
+    max_concurrent_metrics_requests = int(os.getenv("MAX_CONCURRENT_METRICS_REQUESTS", "4"))
+    if max_concurrent_metrics_requests < 1:
+        raise ValueError("MAX_CONCURRENT_METRICS_REQUESTS must be at least 1")
     return Config(
         ws_url=ws_url,
         api_key=api_key,
@@ -6846,6 +6872,7 @@ def _load_config() -> Config:
         enable_generic_event_metrics=_bool_env("ENABLE_GENERIC_EVENT_METRICS", "false"),
         dataset_snapshot_fallback_limit=int(os.getenv("DATASET_SNAPSHOT_FALLBACK_LIMIT", "0")),
         exporter_mode=exporter_mode,
+        max_concurrent_metrics_requests=max_concurrent_metrics_requests,
     )
 
 
@@ -6867,12 +6894,18 @@ def main() -> None:
     if config.exporter_mode == "collector":
         registry = CollectorRegistry(auto_describe=True)
         registry.register(TrueNASCollector(exporter))
-        _start_http_server(config.exporter_port, exporter._lock, registry=registry, lock_metrics=False)
+        _start_http_server(
+            config.exporter_port, exporter._lock, registry=registry, lock_metrics=False,
+            max_concurrent_metrics=config.max_concurrent_metrics_requests,
+        )
         exporter._ensure_event_thread()
         while True:
             time.sleep(3600)
     else:
-        _start_http_server(config.exporter_port, exporter._lock)
+        _start_http_server(
+            config.exporter_port, exporter._lock,
+            max_concurrent_metrics=config.max_concurrent_metrics_requests,
+        )
         exporter.run_forever()
 
 

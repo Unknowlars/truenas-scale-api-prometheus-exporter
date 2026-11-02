@@ -162,6 +162,7 @@ Everything supported by the exporter is documented in `.env.example`. These are 
 | `TRUENAS_API_KEY` | yes | TrueNAS API key; use a read-only key |
 | `TRUENAS_VERIFY_TLS` | no | Keep `true` in production; set `false` only for controlled testing |
 | `EXPORTER_PORT` | no | HTTP port for `/metrics` and `/healthz`; default `9108` |
+| `MAX_CONCURRENT_METRICS_REQUESTS` | no | Maximum parallel `/metrics` requests (default `4`); further requests get `503`. `/healthz` is never limited |
 | `SCRAPE_INTERVAL_SECONDS` | no | Poll interval for regular collectors |
 | `TRUENAS_TIMEOUT_SECONDS` | no | Timeout for API call batches |
 | `LOG_LEVEL` | no | `DEBUG`, `INFO`, `WARNING`, or `ERROR` |
