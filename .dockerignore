@@ -8,6 +8,14 @@ api
 venv/
 node_modules/
 .env
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+dist/
+build/
+*.log
 .agent/
 .opencode/
 .claude/
@@ -29,3 +37,18 @@ requirements-dev.txt
 !requirements-dev.txt
 deploy/prometheus/docker-compose.prometheus.yml
 deploy/prometheus/prometheus.yml
+
+# Secret-bearing inputs never belong in any build context (PRR-01).
+# Kept last so earlier re-includes such as !tests/** cannot override it.
+# Dockerfile.test needs only the synthetic template.
+**/.env
+**/.env.*
+!.env.example
+**/*.env
+**/secrets/
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+*api_key*
+*apikey*

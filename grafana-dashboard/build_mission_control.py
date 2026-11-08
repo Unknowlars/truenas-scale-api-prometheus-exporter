@@ -25,15 +25,22 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "operations-center-dashboard.json"
 OUT = HERE / "truenas-mission-control.json"
+sys.path.insert(0, str(HERE.parent / "scripts"))
+
+# One semantic palette and one set of shared query fragments for both
+# dashboards: the classic generator owns them, Mission Control reuses them.
+import generate_truenas_dashboard as classic_gen  # noqa: E402
 
 DS_VAR = "${DS_PROMETHEUS}"
 
-GREEN = "#1A9E3A"
-RED = "#F2495C"
-ORANGE = "#FF9830"
-YELLOW = "#E0B400"
-BLUE = "#5794F2"
-PURPLE = "#B877D9"
+GREEN = classic_gen.OK
+RED = classic_gen.CRIT
+ORANGE = classic_gen.WARN
+YELLOW = classic_gen.WARN
+BLUE = classic_gen.INFO
+PURPLE = classic_gen.ACCENT
+GREY = classic_gen.NEUTRAL
+NA = classic_gen.NO_VALUE
 
 # New hero/overview panels get IDs above every classic panel ID.
 NEW_ID_START = 400
@@ -227,11 +234,7 @@ def convert_target(t: dict, idx: int) -> dict:
     }
 
 
-NAN_STAT_MAPPING = {
-    "type": "special",
-    "options": {"match": "nan",
-                "result": {"text": "n/a", "color": "#808080", "index": 99}},
-}
+NAN_STAT_MAPPING = copy.deepcopy(classic_gen.NA_MAPPINGS[1])
 
 
 def restyle_classic(p: dict) -> dict:
@@ -240,7 +243,7 @@ def restyle_classic(p: dict) -> dict:
     fc = p.setdefault("fieldConfig", {}).setdefault("defaults", {})
     if p["type"] == "timeseries":
         custom = fc.setdefault("custom", {})
-        if custom.get("fillOpacity", 0) < 10:
+        if 0 < custom.get("fillOpacity", 0) < 10:
             custom["fillOpacity"] = 15
         if custom.get("gradientMode", "none") == "none":
             custom["gradientMode"] = "opacity"
@@ -269,7 +272,8 @@ def restyle_classic(p: dict) -> dict:
         # Plain inventory counts (single-step threshold, no value mappings)
         # become quiet colored numbers; solid backgrounds stay reserved for
         # panels that actually signal health.
-        steps = fc.get("thresholds", {}).get("steps", [])
+        steps = [st for st in fc.get("thresholds", {}).get("steps", [])
+                 if st.get("color") not in (GREY, "#808080")]
         value_maps = [m for m in mappings if m.get("type") != "special"]
         if len(steps) <= 1 and not value_maps and \
                 opts.get("colorMode") in ("background", "background_solid"):
@@ -298,35 +302,8 @@ def guard_nan(expr: str) -> str:
     return NAN_GUARD_RE.sub(r"(\1 >= 0)", expr)
 
 
-def _set_mappings(p, mapping, color_mode=None):
-    p["fieldConfig"]["defaults"]["mappings"] = [value_map(mapping)]
-    if color_mode:
-        p.setdefault("options", {})["colorMode"] = color_mode
-
-
 def _set_color(p, mode):
     p["fieldConfig"]["defaults"]["color"] = {"mode": mode}
-
-
-def _hit_pct_expr(kind: str) -> str:
-    hits = f'sum(truenas_zfs_{kind}_hits_per_second{{instance=~"$instance"}})'
-    misses = f'sum(truenas_zfs_{kind}_misses_per_second{{instance=~"$instance"}})'
-    return f"100 * {hits} / clamp_min({hits} + {misses}, 1)"
-
-
-def _patch_hit_pct(kind, neutral=False):
-    def fn(p):
-        p["targets"][0]["expr"] = _hit_pct_expr(kind)
-        fc = p["fieldConfig"]["defaults"]
-        if neutral:
-            fc["thresholds"] = thresholds((BLUE, None))
-            p["description"] = (p.get("description", "") +
-                                " Shows 0% when no L2ARC device exists.").strip()
-        else:
-            fc["thresholds"] = thresholds(("red", None), (YELLOW, 80),
-                                          ("green", 95))
-        fc["noValue"] = "n/a"
-    return fn
 
 
 def _patch_policy_bool_column(overrides, column, one, zero):
@@ -364,15 +341,6 @@ def _patch_app_states(p):
     p["fieldConfig"]["overrides"].extend(copy.deepcopy(APP_STATE_OVERRIDES))
 
 
-def _patch_blkio(p):
-    p["title"] = "App Block I/O Rate"
-    p["description"] = "Read/write throughput per app (rate of cumulative counters)."
-    for t in p["targets"]:
-        t["expr"] = re.sub(r"(truenas_app_blkio_\w+\{[^}]*\})",
-                           r"rate(\1[$__rate_interval])", t["expr"])
-    p["fieldConfig"]["defaults"]["unit"] = "Bps"
-
-
 def _patch_load_avg(p):
     p["targets"] = [t for t in p["targets"]
                     if "host_cpu_cores" not in t["expr"]]
@@ -386,14 +354,6 @@ def _patch_oldest_snap(p):
 
 
 PANEL_PATCHES = {
-    ("Apps & Docker", "DH RL Error"): lambda p: _set_mappings(
-        p, {0: ("✅ None", "green"), 1: ("Rate limited", "red")}),
-    ("Apps & Docker", "NVIDIA GPU"): lambda p: _set_mappings(
-        p, {0: ("Not present", "#808080"), 1: ("Yes", "green")},
-        color_mode="value"),
-    ("Memory & Swap", "ECC"): lambda p: _set_mappings(
-        p, {0: ("No", ORANGE), 1: ("Yes", "green")}, color_mode="value"),
-    ("Apps & Docker", "App Block I/O"): _patch_blkio,
     ("Apps & Docker", "App State Distribution"): _patch_app_states,
     ("Apps & Docker", "App Container State Distribution"): _patch_app_states,
     ("Apps & Docker", "Top Apps by CPU"): lambda p: (
@@ -402,10 +362,6 @@ PANEL_PATCHES = {
         p, "continuous-blues"),
     ("CPU & Load", "Load Average"): _patch_load_avg,
     ("Storage & Pools", "Oldest Snap"): _patch_oldest_snap,
-    ("System Overview", "Data Hit %"): _patch_hit_pct("demand_data"),
-    ("ZFS ARC & Cache", "Data Hit %"): _patch_hit_pct("demand_data"),
-    ("ZFS ARC & Cache", "Meta Hit %"): _patch_hit_pct("demand_meta"),
-    ("ZFS ARC & Cache", "L2ARC Hit %"): _patch_hit_pct("l2arc", neutral=True),
     ("Dataset Deep-Dive", "Dataset Policy Detail"): _patch_policy_table,
     ("Dataset Deep-Dive", "Dataset Compression Ratio"): lambda p: (
         p["fieldConfig"]["defaults"].update(min=1)),
@@ -427,6 +383,9 @@ def convert_panel(p: dict, row_title: str = "") -> tuple[str, dict]:
     patch = PANEL_PATCHES.get((row_title, p.get("title", "")))
     if patch:
         patch(p)
+    question = QUESTION_TITLES.get((row_title, p.get("title", "")))
+    if question:
+        p["title"] = question
     name = f"panel-{p['id']}"
     queries = [convert_target(t, i) for i, t in enumerate(p.get("targets", []))]
     transformations = [{"kind": tr["id"], "spec": tr}
@@ -548,214 +507,255 @@ def apply_nan_guard(elements: dict) -> None:
                 spec["expr"] = guard_nan(spec["expr"])
 
 
+# ---------------------------------------------------------------------------
+# Mission Control hand-built content: hero Overview, Incident tab, helpers
+# ---------------------------------------------------------------------------
+
+DASH_UID = "truenas-mission-control"
+INST = 'instance=~"$instance"'
+
+
+def tab_slug(title: str) -> str:
+    """Grafana slugifyForUrl(title): lowercase, drop non-word chars, spaces -> '-'."""
+    return re.sub(r" +", "-", re.sub(r"[^\w ]+", "", title.lower()))
+
+
+def tab_url(title: str, keep_vars: bool = True) -> str:
+    vars_part = "&${__all_variables}" if keep_vars else "&${instance:queryparam}"
+    return f"/d/{DASH_UID}?${{__url_time_range}}{vars_part}&dtab={tab_slug(title)}"
+
+
+def steps(*pairs) -> dict:
+    """(color, value) pairs -> thresholds with the shared neutral base, so a
+    panel without data reads grey N/A instead of the first real colour."""
+    return {"mode": "absolute", "steps": classic_gen.neutral_base(
+        [{"color": c, "value": v} for c, v in pairs])}
+
+
+def na_maps(mapping: dict | None = None) -> list:
+    base = [value_map(mapping)] if mapping else []
+    return classic_gen.with_na(base)
+
+
+def mc_stat(title, expr, desc, *, unit="short", th=((BLUE, None),), mapping=None,
+            graph="none", color_mode="background", decimals=None, link=None,
+            text_mode="auto", no_value=NA, legend="", value_size=None):
+    fd = {"unit": unit, "noValue": no_value, "mappings": na_maps(mapping),
+          "thresholds": steps(*th), "color": {"mode": "thresholds"}}
+    if decimals is not None:
+        fd["decimals"] = decimals
+    opts = stat_options(color_mode=color_mode, graph=graph, text_mode=text_mode)
+    if value_size:
+        opts["text"] = {"valueSize": value_size}
+    el = panel_element(next_id(), "stat", title, desc,
+                       [panel_query(expr, legend=legend)], opts, fd)
+    if link:
+        el["spec"]["links"] = [{"title": link[0], "url": link[1], "targetBlank": False}]
+    return el
+
+
+def check(label: str, expr: str) -> str:
+    return f'label_replace({expr}, "check", "{label}", "", "")'
+
+
+# Each component scores 0 (OK), 1 (attention) or 2 (action). The verdict is
+# the worst score; the Health checks table lists every component so the
+# verdict is never a black box. Absent components simply drop out; with no
+# data at all the verdict is N/A (grey).
+FULLEST_POOL = (f'max(100 * truenas_pool_allocated_bytes{{{INST}}} '
+                f'/ (truenas_pool_size_bytes{{{INST}}} > 0))')
+HOTTEST_DISK = f'max({classic_gen.DISK_TEMP.replace(chr(36) + "disk", ".*")})'
+SCRAPE_AGE = f'(time() - max(truenas_last_scrape_timestamp_seconds{{{INST}}}))'
+HEALTH_CHECKS = [
+    ("Exporter reachable", f"2 * (1 - min(truenas_up{{{INST}}}))"),
+    ("Middleware ready", f"2 * (1 - min(truenas_system_ready{{{INST}}}))"),
+    ("All pools healthy", f"2 * (1 - min(truenas_pool_healthy{{{INST}}}))"),
+    ("Boot pool healthy", f"2 * (1 - min(truenas_boot_pool_healthy{{{INST}}}))"),
+    ("No outstanding alerts", f"clamp_max({classic_gen.OUTSTANDING_ALERTS}, 1)"),
+    ("Pools below 80 % / 90 %", f"({FULLEST_POOL} > bool 80) + ({FULLEST_POOL} > bool 90)"),
+    ("Disks below 45 / 55 °C", f"({HOTTEST_DISK} > bool 45) + ({HOTTEST_DISK} > bool 55)"),
+    ("Data fresh (< 5 / 15 min)", f"({SCRAPE_AGE} > bool 300) + ({SCRAPE_AGE} > bool 900)"),
+]
+HEALTH_UNION = " or ".join(check(label, expr) for label, expr in HEALTH_CHECKS)
+VERDICT = f"max({HEALTH_UNION})"
+VERDICT_MAP = {0: ("✓  HEALTHY", GREEN), 1: ("⚠  ATTENTION", ORANGE), 2: ("✕  ACTION NEEDED", RED)}
+CHECK_MAP = {0: ("✓ OK", GREEN), 1: ("⚠ Attention", ORANGE), 2: ("✕ Action", RED)}
+
+
+def bars(title, desc, expr, legend, *, unit, th, mx=None, decimals=None, instant=True,
+         no_value=NA, link=None, mode="gradient"):
+    fd = {"unit": unit, "min": 0, "thresholds": steps(*th), "noValue": no_value,
+          "mappings": na_maps(), "color": {"mode": "thresholds"}}
+    if mx is not None:
+        fd["max"] = mx
+    if decimals is not None:
+        fd["decimals"] = decimals
+    el = panel_element(next_id(), "bargauge", title, desc,
+                       [panel_query(expr, legend=legend, instant=instant)],
+                       {"displayMode": mode, "orientation": "horizontal",
+                        "valueMode": "text", "namePlacement": "top", "showUnfilled": True,
+                        "minVizHeight": 30, "maxVizHeight": 36, "sizing": "manual",
+                        "text": {"titleSize": 12, "valueSize": 14},
+                        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
+                        "legend": {"showLegend": False}}, fd)
+    if link:
+        el["spec"]["links"] = [{"title": link[0], "url": link[1], "targetBlank": False}]
+    return el
+
+
+def ts(title, desc, queries, *, unit, overrides=None, mn=None, mx=None, stack=False,
+       fill=18, no_value=NA):
+    fd = {"unit": unit, "noValue": no_value,
+          "custom": ts_custom(fillOpacity=fill,
+                              stacking={"mode": "normal" if stack else "none", "group": "A"}),
+          "color": {"mode": "palette-classic-by-name"},
+          "thresholds": steps((GREEN, None))}
+    if mn is not None:
+        fd["min"] = mn
+    if mx is not None:
+        fd["max"] = mx
+    return panel_element(next_id(), "timeseries", title, desc, queries,
+                         copy.deepcopy(TS_OPTIONS), fd, overrides=overrides)
+
+
+def state_table(title, desc, expr, columns, value_col, mapping, *, sort_desc=True,
+                no_value=NA, unit="short"):
+    """Instant table keeping only the named label columns plus Value."""
+    keep = [label for label, _ in columns] + ["Value"]
+    rename = dict(columns)
+    rename["Value"] = value_col
+    fd = {"noValue": no_value, "unit": unit, "mappings": [], "thresholds": steps((BLUE, None)),
+          "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": False}}
+    overrides = [{"matcher": {"id": "byName", "options": value_col}, "properties": [
+        {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+        {"id": "mappings", "value": [value_map(mapping)] if mapping else []},
+        {"id": "custom.width", "value": 150}]}]
+    transformations = [
+        {"kind": "filterFieldsByName", "spec": {"id": "filterFieldsByName", "options": {
+            "include": {"names": keep}}}},
+        {"kind": "organize", "spec": {"id": "organize", "options": {
+            "renameByName": rename,
+            "indexByName": {name: i for i, name in enumerate(keep)}}}},
+        {"kind": "sortBy", "spec": {"id": "sortBy", "options": {
+            "fields": [{"displayName": value_col, "desc": sort_desc}]}}},
+    ]
+    return panel_element(next_id(), "table", title, desc,
+                         [panel_query(expr, instant=True, fmt="table")],
+                         {"showHeader": True, "cellHeight": "sm",
+                          "footer": {"show": False, "reducer": ["sum"], "fields": ""}},
+                         fd, overrides=overrides, transformations=transformations)
+
+
+def add_to(elements: dict, items: list, x, y, w, h, element, repeat=None) -> None:
+    name = f"panel-{element['spec']['id']}"
+    assert name not in elements, f"duplicate element name {name}"
+    elements[name] = element
+    item = grid_item(x, y, w, h, name)
+    if repeat:
+        item["spec"]["repeat"] = repeat
+    items.append(item)
+
+
 def build_overview(elements: dict, snapshot_panels: list,
-                   live: set | None) -> dict:
-    items = []
+                   live: set | None, tabs_by_key: dict) -> dict:
+    items: list = []
+    add = lambda *a, **k: add_to(elements, items, *a, **k)  # noqa: E731
+    inc = classic_gen
 
-    def add(x, y, w, h, element):
-        name = f"panel-{element['spec']['id']}"
-        assert name not in elements, f"duplicate element name {name}"
-        elements[name] = element
-        items.append(grid_item(x, y, w, h, name))
+    # --- Hero: one verdict, eight linked sparkline tiles -----------------
+    add(0, 0, 8, 8, mc_stat(
+        "Is my NAS OK?",
+        VERDICT,
+        "Worst of: exporter reachability, middleware ready, pool and boot-pool health, outstanding "
+        "(non-dismissed) alerts, fullest pool (80/90 %), hottest disk (45/55 °C) and data freshness "
+        "(5/15 min). See 'Health checks' for which one fired. N/A means no data at all.",
+        mapping=VERDICT_MAP, th=((GREEN, 0), (ORANGE, 1), (RED, 2)),
+        link=("Open Incident view", tab_url(tabs_by_key["incident"])), value_size=44))
 
-    inst = 'instance=~"$instance"'
+    tiles = [
+        ("CPU", f"avg(truenas_cpu_usage_percent{{{INST}}})", "percent", 1,
+         ((GREEN, 0), (ORANGE, 70), (RED, 90)), "compute", "Average CPU utilisation."),
+        ("RAM excl. ARC", inc.RAM_EXCL_ARC, "percent", 1, inc.RAM_THRESHOLDS, "compute",
+         inc.RAM_EXCL_ARC_DESC),
+        ("Fullest pool", FULLEST_POOL, "percent", 1, ((GREEN, 0), (ORANGE, 80), (RED, 90)), "pools",
+         "Used share of the fullest pool."),
+        ("Hottest disk", HOTTEST_DISK, "celsius", 0, ((GREEN, 0), (ORANGE, 45), (RED, 55)), "disks",
+         "Highest disk temperature; 0 °C readings (no sensor) are ignored."),
+        ("Network", f"sum(truenas_network_rx_bytes_per_second{{{INST}}}) + "
+                    f"sum(truenas_network_tx_bytes_per_second{{{INST}}})",
+         "Bps", 1, ((BLUE, None),), "network", "Total receive + transmit across all interfaces."),
+        ("Alerts", inc.OUTSTANDING_ALERTS, "short", 0, ((GREEN, 0), (ORANGE, 1), (RED, 5)), "alerts",
+         "Outstanding alerts: alert_count minus dismissed (alert_count includes dismissed alerts)."),
+        ("ARC hit", inc.rate_pct("demand_data_hits_per_second", "demand_data_accesses_per_second"),
+         "percent", 1, ((RED, 0), (ORANGE, 70), (GREEN, 90)), "pools",
+         "ZFS ARC demand-data hit rate from hits/s ÷ accesses/s."),
+        ("Uptime", f"max(truenas_host_uptime_seconds{{{INST}}})", "s", 1, ((BLUE, None),), "exporter",
+         "Host uptime."),
+    ]
+    for i, (title, expr, unit, dec, th, key, desc) in enumerate(tiles):
+        th_pairs = [(t["color"], t["value"]) for t in th] if th and isinstance(th[0], dict) else th
+        add(8 + (i % 4) * 4, (i // 4) * 4, 4, 4, mc_stat(
+            title, expr, desc + f" Click to open {tabs_by_key[key].split(' ', 1)[1]}.", unit=unit,
+            decimals=dec, th=th_pairs, graph="area", color_mode="value",
+            link=(f"Open {tabs_by_key[key].split(' ', 1)[1]}", tab_url(tabs_by_key[key]))))
 
-    # --- Hero band: 8 tiles, w=3 h=4, solid backgrounds -------------------
-    add(0, 0, 3, 4, panel_element(
-        next_id(), "stat", "System", "TrueNAS middleware state (system.ready).",
-        [panel_query(f"min(truenas_system_ready{{{inst}}})")],
-        stat_options(),
-        {"unit": "short",
-         "mappings": [value_map({1: ("🟢 READY", "green"),
-                                 0: ("🔴 NOT READY", "red")})],
-         "thresholds": thresholds(("red", None), ("green", 1))}))
+    # --- Why: checks, capacity, temperatures ------------------------------
+    add(0, 8, 7, 11, state_table(
+        "Health checks", "Each component of the verdict above. ✓ OK, ⚠ attention, ✕ action needed.",
+        HEALTH_UNION, [("check", "Check")], "Status", CHECK_MAP))
+    add(7, 8, 6, 11, bars(
+        "Which pool fills first?", "Used share of each pool (allocated ÷ size).",
+        f'sort_desc(100 * truenas_pool_allocated_bytes{{{INST}, pool=~"$pool"}} '
+        f'/ (truenas_pool_size_bytes{{{INST}, pool=~"$pool"}} > 0))', "{{pool}}",
+        unit="percent", th=((GREEN, 0), (ORANGE, 80), (RED, 90)), mx=100, decimals=1,
+        link=("Open Pools & ZFS", tab_url(tabs_by_key["pools"]))))
+    add(13, 8, 5, 11, bars(
+        "Days until full", "Projection of the last 7 days' growth per pool. 'Not growing' when "
+        "allocation is flat or shrinking; short history gives rough estimates.",
+        f"sort({inc.DAYS_UNTIL_FULL})", "{{pool}}", unit="d", decimals=0, mx=365,
+        th=((RED, 0), (ORANGE, 30), (GREEN, 90)), no_value="Not growing", mode="basic"))
+    add(18, 8, 6, 11, bars(
+        "Hottest disks", "Current temperature per disk, hottest first (0 °C = no sensor, hidden).",
+        f"sort_desc(topk(8, {inc.DISK_TEMP}))", "{{disk}}", unit="celsius", decimals=0, mx=70,
+        th=((GREEN, 0), (ORANGE, 45), (RED, 55)), mode="basic",
+        link=("Open Disks & Hardware", tab_url(tabs_by_key["disks"]))))
 
-    add(3, 0, 3, 4, panel_element(
-        next_id(), "stat", "Active Alerts", "Alerts currently raised by TrueNAS.",
-        [panel_query(f"sum(truenas_alert_count{{{inst}}}) OR on() vector(0)")],
-        stat_options(),
-        {"unit": "short", "decimals": 0,
-         "mappings": [value_map({0: ("✅ 0", "green")})],
-         "thresholds": thresholds(("green", None), (YELLOW, 1), ("red", 3))}))
-
-    add(6, 0, 3, 4, panel_element(
-        next_id(), "stat", "Pools", "Worst pool health across all ZFS pools.",
-        [panel_query(f"min(truenas_pool_healthy{{{inst}}})")],
-        stat_options(),
-        {"unit": "short",
-         "mappings": [value_map({1: ("🟢 HEALTHY", "green"),
-                                 0: ("🔴 DEGRADED", "red")})],
-         "thresholds": thresholds(("red", None), ("green", 1))}))
-
-    add(9, 0, 3, 4, panel_element(
-        next_id(), "stat", "Pool Capacity", "Allocated share of total pool space.",
-        [panel_query(
-            f"100 * (sum(truenas_pool_allocated_bytes{{{inst}}}) "
-            f"/ clamp_min(sum(truenas_pool_size_bytes{{{inst}}}), 1))")],
-        stat_options(graph="area"),
-        {"unit": "percent", "decimals": 1, "min": 0, "max": 100,
-         "thresholds": thresholds(("green", None), (YELLOW, 70), ("red", 85))}))
-
-    add(12, 0, 3, 4, panel_element(
-        next_id(), "stat", "CPU", "Average CPU utilization.",
-        [panel_query(f"avg(truenas_cpu_usage_percent{{{inst}}})")],
-        stat_options(graph="area"),
-        {"unit": "percent", "decimals": 1, "min": 0, "max": 100,
-         "thresholds": thresholds(("green", None), (YELLOW, 70), ("red", 90))}))
-
-    add(15, 0, 3, 4, panel_element(
-        next_id(), "stat", "RAM", "Physical memory in use.",
-        [panel_query(
-            f"100 * (sum(truenas_memory_physical_used_bytes{{{inst}}}) "
-            f"/ clamp_min(sum(truenas_memory_physical_total_bytes{{{inst}}}), 1))")],
-        stat_options(graph="area"),
-        {"unit": "percent", "decimals": 1, "min": 0, "max": 100,
-         "thresholds": thresholds(("green", None), (YELLOW, 80), ("red", 92))}))
-
-    add(18, 0, 3, 4, panel_element(
-        next_id(), "stat", "Hottest Disk", "Highest current disk temperature.",
-        [panel_query(f"max(truenas_disk_temperature_celsius{{{inst}}})")],
-        stat_options(graph="area"),
-        {"unit": "celsius", "decimals": 0,
-         "thresholds": thresholds(("green", None), (YELLOW, 45), ("red", 55))}))
-
-    add(21, 0, 3, 4, panel_element(
-        next_id(), "stat", "Uptime", "Host uptime.",
-        [panel_query(f"max(truenas_host_uptime_seconds{{{inst}}})")],
-        stat_options(color_mode="value"),
-        {"unit": "s", "decimals": 1, "color": {"mode": "fixed", "fixedColor": BLUE},
-         "thresholds": thresholds((BLUE, None))}))
-
-    # --- Second band: 6 tiles, w=4 h=3, quieter ---------------------------
-    quiet = stat_options(color_mode="value")
-    add(0, 4, 4, 3, panel_element(
-        next_id(), "stat", "Services Running", "TrueNAS services currently running.",
-        [panel_query(f"sum(truenas_service_running{{{inst}}})")],
-        quiet, {"unit": "short", "decimals": 0,
-                "thresholds": thresholds((BLUE, None))}))
-    add(4, 4, 4, 3, panel_element(
-        next_id(), "stat", "Apps", "Installed apps (Docker).",
-        [panel_query(f"max(truenas_app_count{{{inst}}})")],
-        quiet, {"unit": "short", "decimals": 0,
-                "thresholds": thresholds((PURPLE, None))}))
-    add(8, 4, 4, 3, panel_element(
-        next_id(), "stat", "ARC Data Hit",
-        "ZFS ARC demand-data hit ratio (computed from hit/miss counters).",
-        [panel_query(_hit_pct_expr("demand_data"))],
-        quiet, {"unit": "percent", "decimals": 1, "noValue": "n/a",
-                "thresholds": thresholds(("red", None), (YELLOW, 80),
-                                         ("green", 95))}))
-    add(12, 4, 4, 3, panel_element(
-        next_id(), "stat", "Load (1m)", "1-minute load average.",
-        [panel_query(f'avg(truenas_host_load_average{{{inst}, window="1m"}})')],
-        quiet, {"unit": "short", "decimals": 2,
-                "thresholds": thresholds(("green", None), (YELLOW, 4),
-                                         ("red", 8))}))
-    add(16, 4, 4, 3, panel_element(
-        next_id(), "stat", "Update", "Whether a TrueNAS update is available.",
-        [panel_query(f"max(truenas_update_available{{{inst}}})")],
-        quiet, {"unit": "short",
-                "mappings": [value_map({0: ("✅ Up to date", "green"),
-                                        1: ("⬆️ Available", YELLOW)})],
-                "thresholds": thresholds(("green", None), (YELLOW, 1))}))
-    add(20, 4, 4, 3, panel_element(
-        next_id(), "stat", "Scrape Time", "Exporter scrape duration (last run).",
-        [panel_query(f"max(truenas_scrape_duration_seconds{{{inst}}})")],
-        quiet, {"unit": "s", "decimals": 2,
-                "thresholds": thresholds(("green", None), (YELLOW, 15),
-                                         ("red", 30))}))
-
-    # --- Visual band ------------------------------------------------------
-    add(0, 7, 8, 8, panel_element(
-        next_id(), "bargauge", "Pool Utilization",
-        "Allocated percentage per ZFS pool against real capacity.",
-        [panel_query(
-            f'100 * max by (pool) (truenas_pool_allocated_bytes{{{inst}, pool=~"$pool"}}) '
-            f'/ clamp_min(max by (pool) (truenas_pool_size_bytes{{{inst}, pool=~"$pool"}}), 1)',
-            legend="{{pool}}", instant=True)],
-        {"displayMode": "gradient", "orientation": "horizontal",
-         "valueMode": "color", "showUnfilled": True, "minVizHeight": 16,
-         "maxVizHeight": 300, "sizing": "auto",
-         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "",
-                           "values": False},
-         "legend": {"showLegend": False}},
-        {"unit": "percent", "decimals": 1, "min": 0, "max": 100,
-         "thresholds": thresholds(("green", None), (YELLOW, 70), ("red", 85))}))
-
-    add(8, 7, 6, 8, panel_element(
-        next_id(), "piechart", "Alerts by Level",
-        "Current alert distribution by severity level.",
-        [panel_query(
-            f"sum by (level) (truenas_alert_count_by_level{{{inst}}})",
-            legend="{{level}}", instant=True)],
-        {"pieType": "donut",
-         "displayLabels": ["name", "value"],
-         "legend": {"displayMode": "list", "placement": "right",
-                    "showLegend": True, "values": []},
-         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "",
-                           "values": False},
-         "tooltip": {"mode": "single", "sort": "none"}},
-        {"unit": "short", "decimals": 0,
-         "color": {"mode": "palette-classic-by-name"}},
-        overrides=[
-            color_override("CRITICAL", RED),
-            color_override("ERROR", ORANGE),
-            color_override("WARNING", YELLOW),
-            color_override("NOTICE", BLUE),
-            color_override("INFO", GREEN),
-        ]))
-
-    add(14, 7, 10, 8, panel_element(
-        next_id(), "timeseries", "Load per Core",
-        "Load average normalized by CPU core count. 100% means the run queue "
-        "equals the core count; the dashed line marks that saturation point.",
-        [panel_query(
-            f'100 * avg by (window) (truenas_host_load_average{{{inst}}})'
-            f' / on () group_left () max(truenas_host_cpu_cores{{{inst}}})',
-            legend="load {{window}}")],
-        TS_OPTIONS,
-        {"unit": "percent", "decimals": 1,
-         "custom": ts_custom(thresholdsStyle={"mode": "dashed+area"}),
-         "color": {"mode": "palette-classic-by-name"},
-         "thresholds": thresholds(("transparent", None), (YELLOW, 70),
-                                  ("red", 100))}))
-
-    # --- Trend band -------------------------------------------------------
-    add(0, 15, 12, 8, panel_element(
-        next_id(), "timeseries", "CPU Usage",
-        "Total and per-core CPU usage. TrueNAS 25.10 no longer reports CPU mode splits.",
-        [panel_query(f"truenas_cpu_core_usage_percent{{{inst}}}", "A", "Core {{core}}"),
-         panel_query(f"avg(truenas_cpu_usage_percent{{{inst}}})", "B", "Total")],
-        TS_OPTIONS,
-        {"unit": "percent", "min": 0,
-         "custom": ts_custom(fillOpacity=35, gradientMode="none", lineWidth=1),
-         "color": {"mode": "palette-classic-by-name"},
-         "thresholds": thresholds(("green", None))}))
-
-    add(12, 15, 12, 8, panel_element(
-        next_id(), "timeseries", "Memory & ZFS ARC",
-        "Physical memory used vs total, with the ZFS ARC share.",
-        [panel_query(f"sum(truenas_memory_physical_used_bytes{{{inst}}})",
-                     "A", "Used"),
-         panel_query(f"sum(truenas_zfs_arc_size_bytes{{{inst}}})",
-                     "B", "ZFS ARC"),
-         panel_query(f"sum(truenas_memory_physical_total_bytes{{{inst}}})",
-                     "C", "Total")],
-        TS_OPTIONS,
-        {"unit": "bytes", "min": 0,
-         "custom": ts_custom(),
-         "color": {"mode": "palette-classic-by-name"},
-         "thresholds": thresholds(("green", None))},
-        overrides=[
-            color_override("ZFS ARC", PURPLE),
-            {"matcher": {"id": "byName", "options": "Total"},
-             "properties": [
-                 {"id": "color", "value": {"mode": "fixed", "fixedColor": RED}},
-                 {"id": "custom.lineStyle",
-                  "value": {"fill": "dash", "dash": [10, 10]}},
-                 {"id": "custom.fillOpacity", "value": 0},
-             ]},
-        ]))
+    # --- Trends --------------------------------------------------------
+    add(0, 19, 12, 8, ts(
+        "Network throughput", "Receive (up) and transmit (down) per interface.",
+        [panel_query(f'sum by (interface) (truenas_network_rx_bytes_per_second{{{INST}, interface=~"$interface"}})',
+                     "A", "{{interface}} rx"),
+         panel_query(f'-1 * sum by (interface) (truenas_network_tx_bytes_per_second{{{INST}, interface=~"$interface"}})',
+                     "B", "{{interface}} tx")],
+        unit="Bps"))
+    add(12, 19, 12, 8, ts(
+        "CPU and memory pressure",
+        "CPU %, RAM used excluding the ZFS ARC, and RAM including ARC (dashed, informational).",
+        [panel_query(f"avg(truenas_cpu_usage_percent{{{INST}}})", "A", "CPU"),
+         panel_query(inc.RAM_EXCL_ARC, "B", "RAM excl. ARC"),
+         panel_query(inc.RAM_INCL_ARC, "C", "RAM incl. ARC")],
+        unit="percent", mn=0, mx=100, fill=10,
+        overrides=[color_override("CPU", BLUE), color_override("RAM excl. ARC", GREEN),
+                   {"matcher": {"id": "byName", "options": "RAM incl. ARC"}, "properties": [
+                       {"id": "color", "value": {"mode": "fixed", "fixedColor": PURPLE}},
+                       {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [8, 6]}},
+                       {"id": "custom.fillOpacity", "value": 0}]}]))
+    add(0, 27, 12, 8, ts(
+        "Storage throughput", "Read (up) and write (down) across all disks. Uses per-disk series where the NAS "
+        "reports them (25.10/26.0) and the aggregate disk=\"total\" series on TrueNAS 27.",
+        [panel_query(f'sum({inc.disk_sel("truenas_disk_read_bytes_per_second").replace(chr(36) + "disk", ".*")})', "A", "read"),
+         panel_query(f'-1 * sum({inc.disk_sel("truenas_disk_write_bytes_per_second").replace(chr(36) + "disk", ".*")})', "B", "write")],
+        unit="Bps", overrides=[color_override("read", BLUE), color_override("write", PURPLE)]))
+    add(12, 27, 6, 8, bars(
+        "Which apps use the most memory?", "Top 8 apps by memory.",
+        f'sort_desc(topk(8, truenas_app_memory_bytes{{{INST}, app=~"$app"}}))', "{{app}}",
+        unit="bytes", th=((BLUE, None),), decimals=1, no_value="No apps",
+        link=("Open Apps & Docker", tab_url(tabs_by_key["apps"]))))
+    add(18, 27, 6, 8, bars(
+        "What are the alerts about?", "Current alert classes (includes dismissed alerts).",
+        f'sort_desc(sum by (klass) (truenas_alert_count_by_class{{{INST}}}))', "{{klass}}",
+        unit="short", th=((BLUE, None),), decimals=0, no_value="No alerts",
+        link=("Open Alerts & Jobs", tab_url(tabs_by_key["alerts"]))))
 
     hero_grid = grid_layout(items)
     dead: list = []
@@ -763,13 +763,171 @@ def build_overview(elements: dict, snapshot_panels: list,
                                         "System Overview", dead, live)
     rows = [
         layout_row(hero_grid, hide_header=True),
-        layout_row(snapshot_grid, title="📋 System Snapshot", collapse=True),
+        layout_row(snapshot_grid, title="📋 System snapshot (all headline numbers)", collapse=True),
     ]
     if dead:
         rows.append(layout_row(pack_grid(dead, elements),
                                title="🚫 Not collected on this system",
                                collapse=True))
     return rows_layout(rows)
+
+
+def attention(expr: str, kind: str, item_label: str, severity: int) -> str:
+    """One 'needs attention' source: value = severity, labels kind + item."""
+    inner = f'label_replace(0 * ({expr}) + {severity}, "kind", "{kind}", "", "")'
+    if item_label:
+        return f'label_replace({inner}, "item", "$1", "{item_label}", "(.*)")'
+    return f'label_replace({inner}, "item", "—", "", "")'
+
+
+def changed(expr: str, kind: str, item_label: str) -> str:
+    inner = f'label_replace({expr}, "kind", "{kind}", "", "")'
+    if item_label:
+        return f'label_replace({inner}, "item", "$1", "{item_label}", "(.*)")'
+    return f'label_replace({inner}, "item", "—", "", "")'
+
+
+def build_incident(elements: dict, tabs_by_key: dict) -> dict:
+    items: list = []
+    add = lambda *a, **k: add_to(elements, items, *a, **k)  # noqa: E731
+    inc = classic_gen
+    z = inc.ZERO_IF_UP
+    tiles = [
+        ("Alerts", inc.OUTSTANDING_ALERTS, ((GREEN, 0), (ORANGE, 1), (RED, 5)),
+         "Alerts not dismissed (alert_count − dismissed)."),
+        ("Critical", f'sum(truenas_alert_count_by_level{{{INST}, level=~"CRITICAL|ALERT|EMERGENCY"}})' + z,
+         ((GREEN, 0), (RED, 1)), "Critical-or-worse alerts (may include dismissed)."),
+        ("Bad pools", f"count(truenas_pool_healthy{{{INST}}} == 0)" + z,
+         ((GREEN, 0), (RED, 1)), "Pools whose healthy flag is false."),
+        ("Svc stopped", f"count((truenas_service_enabled{{{INST}}} == 1) and on (instance, service) "
+                             f"(truenas_service_running{{{INST}}} == 0))" + z,
+         ((GREEN, 0), (ORANGE, 1)), "Services enabled at boot but not running."),
+        ("API failing", f"count(truenas_api_call_success{{{INST}}} == 0)" + z,
+         ((GREEN, 0), (ORANGE, 1), (RED, 5)), "API methods whose latest call failed."),
+        ("Errors 1h", f"sum(increase(truenas_collector_errors_total{{{INST}}}[1h]))" + z,
+         ((GREEN, 0), (ORANGE, 1), (RED, 5)), "Collector errors in the last hour."),
+        ("Data age", SCRAPE_AGE, ((GREEN, 0), (ORANGE, 300), (RED, 900)),
+         "Seconds since the exporter last completed a poll."),
+        ("Realtime", f'min(truenas_event_stream_up{{{INST}, event="reporting.realtime"}})', ((RED, 0), (GREEN, 1)),
+         "reporting.realtime subscription (feeds CPU, memory, network and ZFS ARC). Optional subscriptions such as "
+         "virt.instance.metrics may be inactive on systems without that feature; see the Exporter tab."),
+    ]
+    for i, (title, expr, th, desc) in enumerate(tiles):
+        unit = "s" if title == "Data age" else "short"
+        mapping = {1: ("Up", GREEN), 0: ("Down", RED)} if title == "Realtime" else None
+        add(i * 3, 0, 3, 4, mc_stat(title, expr, desc, unit=unit, th=th, decimals=0,
+                                    mapping=mapping, graph="area" if not mapping else "none"))
+
+    sources = " or ".join([
+        attention(f"truenas_up{{{INST}}} == 0", "Exporter cannot reach TrueNAS", "instance", 2),
+        attention(f"truenas_pool_healthy{{{INST}}} == 0", "Pool unhealthy", "pool", 2),
+        attention(f"truenas_boot_pool_healthy{{{INST}}} == 0", "Boot pool unhealthy", "", 2),
+        attention(f"truenas_directoryservices_fault_present{{{INST}}} == 1", "Directory service faulted", "service", 2),
+        attention(f'truenas_app_state{{{INST}, state=~"CRASHED|ERROR"}}', "App crashed", "app", 2),
+        attention(f"(truenas_service_enabled{{{INST}}} == 1) and on (instance, service) "
+                  f"(truenas_service_running{{{INST}}} == 0)", "Service enabled but stopped", "service", 2),
+        attention(f"truenas_pool_warning{{{INST}}} == 1", "Pool warning", "pool", 1),
+        attention(f"100 * truenas_pool_allocated_bytes{{{INST}}} / (truenas_pool_size_bytes{{{INST}}} > 0) > 85",
+                  "Pool over 85 % full", "pool", 1),
+        attention(f'{inc.DISK_TEMP.replace(chr(36) + "disk", ".*")} > 50', "Disk above 50 °C", "disk", 1),
+        attention(f"(truenas_certificate_expiry_timestamp_seconds{{{INST}}} - time()) < 30 * 86400",
+                  "Certificate expires within 30 days", "name", 1),
+        attention(f"truenas_api_call_success{{{INST}}} == 0", "API method failing", "method", 1),
+        attention(f"{inc.OUTSTANDING_ALERTS} > 0", "Outstanding alerts in TrueNAS", "", 1),
+        attention(f"truenas_system_reboot_required{{{INST}}} == 1", "Reboot required", "", 1),
+    ])
+    add(0, 4, 14, 11, state_table(
+        "What needs attention right now?",
+        "Everything currently failing or close to a limit, worst first. Empty means nothing needs attention.",
+        sources, [("kind", "Problem"), ("item", "Where")], "Severity",
+        {2: ("✕ Action", RED), 1: ("⚠ Attention", ORANGE)},
+        no_value="✓ Nothing needs attention"))
+    changes = " or ".join([
+        changed(f"resets(truenas_host_uptime_seconds{{{INST}}}[$__range]) > 0", "Host rebooted", ""),
+        changed(f"changes(truenas_pool_healthy{{{INST}}}[$__range]) > 0", "Pool health changed", "pool"),
+        changed(f"changes(truenas_service_running{{{INST}}}[$__range]) > 0", "Service started/stopped", "service"),
+        changed(f"changes(truenas_interface_link_up{{{INST}}}[$__range]) > 0", "Link went up/down", "interface"),
+        changed(f"changes(truenas_app_container_count{{{INST}}}[$__range]) > 0", "App containers changed", "app"),
+        changed(f"changes(truenas_alert_count{{{INST}}}[$__range]) > 0", "Alert count changed", ""),
+        changed(f"changes(truenas_update_available{{{INST}}}[$__range]) > 0", "Update availability changed", ""),
+        changed(f"changes(truenas_up{{{INST}}}[$__range]) > 0", "Exporter connectivity flapped", "instance"),
+    ])
+    add(14, 4, 10, 11, state_table(
+        "What changed in this time range?",
+        "State flips inside the selected time range (count of changes). Widen the time range to look further back.",
+        changes, [("kind", "Change"), ("item", "Where")], "Changes", None,
+        no_value="No changes in this time range"))
+    add(0, 15, 8, 8, ts(
+        "Alerts over time", "Outstanding vs dismissed alerts.",
+        [panel_query(inc.OUTSTANDING_ALERTS, "A", "Outstanding"),
+         panel_query(f"sum(truenas_alert_dismissed_count{{{INST}}})", "B", "Dismissed")],
+        unit="short", mn=0,
+        overrides=[color_override("Outstanding", ORANGE), color_override("Dismissed", GREY)]))
+    add(8, 15, 8, 8, ts(
+        "Error rates", "API-call and collector error rates (errors per second).",
+        [panel_query(f"sum by (method) (rate(truenas_api_call_errors_total{{{INST}}}[$__rate_interval])) > 0", "A", "{{method}}"),
+         panel_query(f"sum(rate(truenas_collector_errors_total{{{INST}}}[$__rate_interval])) > 0", "B", "collector")],
+        unit="ops", mn=0, no_value="No errors recorded"))
+    add(16, 15, 8, 8, ts(
+        "Exporter poll time", "How long each poll of the TrueNAS API takes; spikes precede stale data.",
+        [panel_query(f"max(truenas_scrape_duration_seconds{{{INST}}})", "A", "poll duration")],
+        unit="s", mn=0))
+    return rows_layout([layout_row(grid_layout(items), hide_header=True)])
+
+
+# MC-only question-led titles (the classic dashboard keeps its noun titles).
+QUESTION_TITLES = {
+    ("CPU & Load", "CPU Usage"): "How busy is the CPU?",
+    ("Storage & Pools", "Pool Utilization"): "Which pool fills first?",
+    ("Storage & Pools", "Days Until Full"): "When will each pool be full?",
+    ("Storage & Pools", "Pool Capacity Trends"): "How fast are pools growing?",
+    ("Disks & Temperatures", "Disk Temperatures"): "Hottest disks",
+    ("Disks & Temperatures", "Disk Busy %"): "Which disks are saturated?",
+    ("Network & Interfaces", "Network RX by Interface"): "Inbound traffic per interface",
+    ("Network & Interfaces", "Network TX by Interface"): "Outbound traffic per interface",
+    ("Apps & Docker", "Top Apps by CPU"): "Which apps use the most CPU?",
+    ("Apps & Docker", "Top Apps by Memory"): "Which apps use the most memory?",
+    ("Dataset Deep-Dive", "Top Datasets by Used Bytes"): "Top space consumers",
+    ("Dataset Deep-Dive", "Datasets Using Snapshot Space"): "Where is snapshot space going?",
+    ("Dataset Deep-Dive", "Datasets by Available Space (Bottom 15)"): "Datasets closest to their limit",
+    ("Alerts, Tasks & Updates", "Alert Classes"): "What are the alerts about?",
+}
+
+# Table columns that link to the matching tab filtered by that variable.
+DRILLDOWN = {"Pool": ("pool", "pools"), "Disk": ("disk", "disks"),
+             "App": ("app", "apps"), "Dataset": ("dataset", "datasets")}
+
+
+def add_drilldown_links(elements: dict, tabs_by_key: dict) -> None:
+    for el in elements.values():
+        spec = el["spec"]
+        if spec["vizConfig"]["group"] != "table":
+            continue
+        overrides = spec["vizConfig"]["spec"]["fieldConfig"].setdefault("overrides", [])
+        names = json.dumps(spec["data"]["spec"]["transformations"])
+        for column, (var, key) in DRILLDOWN.items():
+            if f'"{column}"' not in names:
+                continue
+            url = (f"/d/{DASH_UID}?${{__url_time_range}}&${{instance:queryparam}}"
+                   f"&var-{var}=${{__value.raw}}&dtab={tab_slug(tabs_by_key[key])}")
+            overrides.append({"matcher": {"id": "byName", "options": column}, "properties": [
+                {"id": "links", "value": [{"title": f"Show {column.lower()} ${{__value.raw}}",
+                                            "url": url, "targetBlank": False}]}]})
+
+
+def pool_cards(elements: dict) -> dict:
+    """Per-pool capacity cards, repeated by $pool (1 pool or 20)."""
+    items: list = []
+    card = mc_stat(
+        "Pool $pool",
+        f'100 * truenas_pool_allocated_bytes{{{INST}, pool=~"$pool"}} '
+        f'/ (truenas_pool_size_bytes{{{INST}, pool=~"$pool"}} > 0)',
+        "Used share of this pool with its trend. Repeated for every pool selected in the Pool variable.",
+        unit="percent", decimals=1, th=((GREEN, 0), (ORANGE, 80), (RED, 90)), graph="area",
+        color_mode="background")
+    add_to(elements, items, 0, 0, 6, 4, card,
+           repeat={"mode": "variable", "value": "pool", "direction": "h", "maxPerRow": 4})
+    return grid_layout(items)
 
 
 # ---------------------------------------------------------------------------
@@ -828,23 +986,35 @@ def convert_variables(classic_vars: list) -> list:
 # Assembly
 # ---------------------------------------------------------------------------
 
-# New tab title -> classic row titles feeding it (order preserved).
-TAB_SOURCES: list[tuple[str, list[str]]] = [
-    ("💻 Compute", ["CPU & Load", "Memory & Swap"]),
-    ("🗄️ Pools & ZFS", ["Storage & Pools", "ZFS ARC & Cache"]),
-    ("📁 Datasets", ["Dataset Deep-Dive"]),
-    ("💿 Disks & Hardware", ["Disks & Temperatures", "Hardware & IPMI"]),
-    ("🌐 Network", ["Network & Interfaces"]),
-    ("🔗 Shares & Protocols",
-     ["Services & Shares", "Advanced Protocols (NVMe-oF / FC / HA)"]),
-    ("📦 Apps & Docker", ["Apps & Docker"]),
-    ("🖥️ VMs & Virt", ["Virtualization (VMs & Incus)"]),
-    ("🚨 Alerts & Jobs", ["Alerts, Tasks & Updates"]),
-    ("🔐 Security & Audit",
-     ["Security & Platform", "Audit & Directory Services", "Boot Environment"]),
-    ("⚙️ Exporter & Config",
-     ["Exporter + Advanced ZFS", "System Configuration"]),
+# New tab title -> (key, classic rows). A row is "show" (expanded), "split"
+# (first band of tiles visible, the rest collapsed as details) or "collapse"
+# (optional feature: collapsed, its tiles read N/A when the feature is absent).
+TAB_SOURCES: list[tuple[str, str, list[tuple[str, str]]]] = [
+    ("💻 Compute", "compute", [("CPU & Load", "show"), ("Memory & Swap", "show")]),
+    ("🗄️ Pools & ZFS", "pools", [("Storage & Pools", "show"), ("ZFS ARC & Cache", "show")]),
+    ("📁 Datasets", "datasets", [("Dataset Deep-Dive", "show")]),
+    ("💿 Disks & Hardware", "disks",
+     [("Disks & Temperatures", "show"), ("Hardware & IPMI", "collapse")]),
+    ("🌐 Network", "network", [("Network & Interfaces", "show")]),
+    ("🔗 Shares & Protocols", "shares",
+     [("Services & Shares", "show"), ("Advanced Protocols (NVMe-oF / FC / HA)", "collapse")]),
+    ("📦 Apps & Docker", "apps", [("Apps & Docker", "show")]),
+    ("🖥️ VMs & Virt", "vms", [("Virtualization (VMs & Incus)", "split")]),
+    ("🚨 Alerts & Jobs", "alerts", [("Alerts, Tasks & Updates", "show")]),
+    ("🔐 Security & Audit", "security",
+     [("Security & Platform", "show"), ("Boot Environment", "show"),
+      ("Audit & Directory Services", "collapse")]),
+    ("⚙️ Exporter & Config", "exporter",
+     [("Exporter + Advanced ZFS", "show"), ("System Configuration", "collapse")]),
 ]
+OVERVIEW_TITLE = "🏠 Overview"
+INCIDENT_TITLE = "🚑 Incident"
+FEATURE_NOTE = {
+    "Hardware & IPMI": "Hardware & IPMI — tiles read N/A on systems without IPMI/GPUs",
+    "Advanced Protocols (NVMe-oF / FC / HA)": "NVMe-oF, Fibre Channel & HA — N/A unless configured",
+    "Audit & Directory Services": "Audit & directory services",
+    "System Configuration": "System configuration",
+}
 
 
 def build(live: set | None = None) -> tuple[dict, set | None]:
@@ -857,20 +1027,39 @@ def build(live: set | None = None) -> tuple[dict, set | None]:
     elements: dict = {}
     tabs = []
     relocated: list[str] = []
+    tabs_by_key = {key: title for title, key, _ in TAB_SOURCES}
+    tabs_by_key["incident"] = INCIDENT_TITLE
+    tabs_by_key["overview"] = OVERVIEW_TITLE
 
     overview_layout = build_overview(elements,
-                                     classic_rows.pop("System Overview"), live)
-    tabs.append(tab("🏠 Overview", overview_layout))
+                                     classic_rows.pop("System Overview"), live,
+                                     tabs_by_key)
+    tabs.append(tab(OVERVIEW_TITLE, overview_layout))
+    tabs.append(tab(INCIDENT_TITLE, build_incident(elements, tabs_by_key)))
 
     consumed = set()
-    for tab_title, row_titles in TAB_SOURCES:
+    for tab_title, key, row_specs in TAB_SOURCES:
         rows = []
         dead: list = []
-        for rt in row_titles:
+        if key == "pools":
+            rows.append(layout_row(pool_cards(elements), title="Pools at a glance"))
+        for rt, mode in row_specs:
             panels = classic_rows[rt]
             consumed.add(rt)
+            if mode == "split":
+                y_first = min(p["gridPos"]["y"] for p in panels)
+                head = [p for p in panels if p["gridPos"]["y"] == y_first]
+                tail = [p for p in panels if p["gridPos"]["y"] != y_first]
+                rows.append(layout_row(classic_row_to_grid(head, elements, rt, dead, live),
+                                       title=f"{rt} — what is configured?"))
+                rows.append(layout_row(classic_row_to_grid(tail, elements, rt, dead, live),
+                                       title="Details (expand when VMs or Incus instances exist)",
+                                       collapse=True))
+                continue
             grid = classic_row_to_grid(panels, elements, rt, dead, live)
-            if len(row_titles) == 1:
+            if mode == "collapse":
+                rows.append(layout_row(grid, title=FEATURE_NOTE.get(rt, rt), collapse=True))
+            elif len(row_specs) == 1 and key != "pools":
                 rows.append(layout_row(grid, hide_header=True))
             else:
                 rows.append(layout_row(grid, title=rt))
@@ -887,6 +1076,7 @@ def build(live: set | None = None) -> tuple[dict, set | None]:
             print(f"  - {entry}")
 
     apply_nan_guard(elements)
+    add_drilldown_links(elements, tabs_by_key)
 
     leftover = set(classic_rows) - consumed
     assert not leftover, f"classic rows not mapped to any tab: {leftover}"
@@ -895,9 +1085,11 @@ def build(live: set | None = None) -> tuple[dict, set | None]:
         "title": "TrueNAS · Mission Control",
         "description": (
             "Flagship TrueNAS SCALE dashboard fed by the "
-            "truenas-scale-api-prometheus-exporter. Tabs group the full "
-            "metric surface by operational concern; the Overview tab is the "
-            "30-second health check. Generated by build_mission_control.py."),
+            "truenas-scale-api-prometheus-exporter. Overview answers 'is my NAS "
+            "OK?' in seconds, Incident puts everything failing on one screen, "
+            "and the remaining tabs group the full metric surface by concern. "
+            "Grey N/A always means 'no data / not present', never healthy. "
+            "Generated by build_mission_control.py."),
         "tags": ["truenas", "mission-control", "generated"],
         "cursorSync": "Crosshair",
         "editable": True,
@@ -916,7 +1108,7 @@ def build(live: set | None = None) -> tuple[dict, set | None]:
             },
         }],
         "links": [{
-            "title": "Operations Center (classic)",
+            "title": "← Operations Center (classic)",
             "type": "link",
             "icon": "dashboard",
             "tooltip": "Open the original TrueNAS Operations Center dashboard",
@@ -942,12 +1134,12 @@ def build(live: set | None = None) -> tuple[dict, set | None]:
         "layout": {"kind": "TabsLayout", "spec": {"tabs": tabs}},
     }
 
-    return {
+    return classic_gen.finalize({
         "apiVersion": "dashboard.grafana.app/v2beta1",
         "kind": "Dashboard",
         "metadata": {"name": "truenas-mission-control"},
         "spec": spec,
-    }, live
+    }), live
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,9 @@ pip install -r requirements-dev.txt
 cp .env.example .env
 ```
 
-Set `TRUENAS_WS_URL` and `TRUENAS_API_KEY` in `.env` before manual testing.
+`.env` is read by Docker Compose (`env_file`) only. For a local Python run, export
+`TRUENAS_WS_URL` and `TRUENAS_API_KEY_FILE` (or `TRUENAS_API_KEY`) in the shell; the
+exporter does not load `.env` itself.
 Use a read-only API key when talking to a real system.
 
 ## Tests

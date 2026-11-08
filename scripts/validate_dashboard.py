@@ -83,6 +83,19 @@ DEPRECATED_DASHBOARD_METRIC_REPLACEMENTS = {
 }
 DEPRECATED_DASHBOARD_METRICS = frozenset(DEPRECATED_DASHBOARD_METRIC_REPLACEMENTS)
 
+# D2: TrueNAS 27.0 RC.1 sends 0 for the upstream hit/miss percentage fields
+# while hits ~= accesses. Dashboards must derive percentages from the
+# *_per_second rates instead of querying these series.
+UNRELIABLE_RATIO_RE = re.compile(r"\btruenas_zfs_\w*_(?:hit|miss)_(?:ratio|percentage)\b")
+# D1: truenas_alert_count includes dismissed alerts; outstanding alerts are
+# alert_count minus alert_dismissed_count.
+OUTSTANDING_ALERTS_RE = re.compile(
+    r"truenas_alert_count\{[^}]*\}\)\s*-\s*\(sum\(truenas_alert_dismissed_count")
+# D7: "No data" takes the base threshold colour, so it must be neutral grey.
+NEUTRAL_COLOR = "#7B828C"
+# D8: longest stat title that fits a tile of the given width (grid columns).
+TITLE_LIMITS = {2: 7, 3: 11, 4: 16, 5: 20, 6: 24}
+
 
 def walk_panels(panels: Iterable[dict[str, Any]]) -> Iterable[dict[str, Any]]:
     for panel in panels:
@@ -158,6 +171,29 @@ def dashboard_validation_errors(dashboard: dict[str, Any], contract: dict[str, A
         grid = panel.get("gridPos", {})
         if isinstance(grid, dict) and grid.get("x", 0) + grid.get("w", 0) > 24:
             errors.append(f"panel exceeds 24 columns: {panel.get('title', panel.get('id'))}")
+
+    expressions = [
+        target["expr"]
+        for panel in panels
+        for target in panel.get("targets", [])
+        if isinstance(target, dict) and isinstance(target.get("expr"), str)
+    ]
+    unreliable = sorted({m for e in expressions for m in UNRELIABLE_RATIO_RE.findall(e)})
+    if unreliable:
+        errors.append("dashboard queries unreliable upstream ratio metrics (compute from rates): "
+                      + ", ".join(unreliable))
+    if panels and not any(OUTSTANDING_ALERTS_RE.search(e) for e in expressions):
+        errors.append("dashboard lacks the outstanding-alerts expression "
+                      "(truenas_alert_count minus truenas_alert_dismissed_count)")
+    for panel in panels:
+        if panel.get("type") not in ("stat", "bargauge", "gauge"):
+            continue
+        steps = panel.get("fieldConfig", {}).get("defaults", {}).get("thresholds", {}).get("steps", [])
+        if steps and steps[0].get("color") != NEUTRAL_COLOR:
+            errors.append(f"no-data colour is not neutral for panel: {panel.get('title', panel.get('id'))}")
+        width = panel.get("gridPos", {}).get("w")
+        if panel.get("type") == "stat" and len(panel.get("title", "")) > TITLE_LIMITS.get(width, 99):
+            errors.append(f"stat title too long for w={width}: {panel.get('title')}")
 
     referenced = referenced_metric_names(dashboard)
     missing = sorted(referenced - metric_names)

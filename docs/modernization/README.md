@@ -956,3 +956,124 @@ validation on this host.
   changes also passed the secret audit. This run made no live TrueNAS
   calls and does not establish public-release readiness. Owner requested
   a local commit only; no push, publication, or deployment was performed.
+
+### 2026-11-07 independent public-release review
+
+Review: `docs/reviews/public-release-readiness-review.md`; handoff:
+`.scratch/public-release-review/spec.md`. Reviewed clean branch
+`feat/truenas-27-support` at `04ca8b1`, against main/merge-base `de0e18b`.
+Verdict **NOT READY**: three medium and two low confirmed findings; current
+live/browser/platform/image-security and upstream notice gates remain open.
+No implementation fixes, publication or deployment were performed.
+
+`./scripts/validate.sh` passed end to end with Docker access:357 tests,
+91.80% coverage, Ruff/mypy, contract and98-warning Promtool baseline,
+generators/manifests/parity, public audit, Compose, Docker build and5.2.0rc1
+version smoke. Initial restricted run stopped on Promtool output; rerun passed.
+Focused runtime suite:124 passed. Runtime pip-audit initially failed DNS;
+network-enabled retry passed with no known vulnerabilities. Neither this audit
+nor unit coverage establishes image security or authenticated appliance
+compatibility. No fresh live NAS check was performed. Validation updated only
+ignored caches/coverage and the local validation image; tracked implementation
+and generated assets remained unchanged. Official27 and25.10 indexes refreshed;
+26 index unavailable. Detailed limits and remediation acceptance are in report.
+
+### 2026-11-07 public-release remediation (PRR-01..05)
+
+Closeout: `docs/reviews/public-release-remediation-2026-11-07.md` (review
+findings preserved). Candidate: `04ca8b1` plus uncommitted changes; no commit,
+push, publication or deployment.
+
+- **Fixed:** PRR-01 `.dockerignore` secret exclusions (synthetic context
+  export shows only `.env.example`); PRR-02 directory-service missing/malformed
+  data now absent/NaN, explicit disabled state preserved; PRR-03 local Python
+  instructions (copied steps reached a local listener); PRR-04 supported-version
+  docs; PRR-05 dated readiness/event-lifetime corrections. No metric contract,
+  readiness or event semantics changed.
+- **Tests added:** `test_build_context.py`, `test_directoryservices_status.py`,
+  `test_readiness_lifetimes.py` (static/mocked).
+- **Local/container:** `./scripts/validate.sh` exit 0, `validation_ok`, 377
+  passed, 91.88% coverage, 98-warning Promtool baseline, image 5.2.0rc1.
+  Python matrix 3.12/3.13/3.14 passed (375 + 2 skipped each, amd64). Trivy
+  0.72.0: 51 HIGH / 0 CRITICAL in Debian base packages, 0 in Python packages.
+  Parity/inventory artifacts regenerated (line citations and hashes only).
+- **Official:** v27.0 and v25.10 doc sites carry iXsystems copyright with no
+  stated license; v26.0 empty. Root `NOTICE` added; redistribution remains an
+  owner decision (PRR-U1).
+- **Not done:** live smoke BLOCKED (no read-only key), arm64 BLOCKED (no
+  builder), clean exact-SHA checkout, live PromQL/Grafana UNCONFIRMED. Verdict
+  remains NOT READY pending those gates.
+
+### 2026-11-07 authenticated live acceptance (owner-authorized)
+
+**Live** on the owner's `27.0.0-RC.1` appliance using an owner-authorized
+FULL_ADMIN key (least privilege UNCONFIRMED; key deleted locally, owner will
+rotate it). Smoke passed; the hardened container became ready in ~20 s and
+values matched the API (memory, pool health, disabled directory services).
+Outage via a local proxy showed `truenas_up=0` first, `/readyz` 503 ~50 s
+after the last success, and recovery within 15 s. Dashboard PromQL: 0 errors;
+all referenced metrics exposed; empty panels classified. Found and fixed
+LIVE-01: ctime-format certificate `until` left expiry metrics absent
+(`collection._parse_ts`, 11 new tests, re-verified live). Final
+`./scripts/validate.sh`: exit 0, `validation_ok`, 388 passed, 91.88% coverage.
+Details: `docs/reviews/public-release-remediation-2026-11-07.md`.
+
+### 2026-11-07 live Grafana dashboard review
+
+**Live**, 27.0.0-RC.1, Grafana 13.0.1 + renderer, Prometheus v3.5.0, local
+throwaway stack. Both dashboards import and render with no query errors.
+15 dashboard findings (2 high: dismissed alerts counted as active; upstream
+zero ARC hit percentage trusted by several panels), recorded in
+`docs/reviews/dashboard-live-review-2026-11-07.md`. Dashboard JSON was not
+changed. Two values were verified as upstream quirks passed through
+faithfully (scrub 101.39%, demand_data_hit_percentage 0).
+
+### 2026-11-07 dashboard overhaul (D1–D15, Mission Control redesign)
+
+**Mocked + empty + live.** All of D1–D15 from the live dashboard review are
+fixed in the generators (`scripts/generate_truenas_dashboard.py`,
+`grafana-dashboard/build_mission_control.py`); the JSON is regenerated, never
+hand-edited. Mission Control gained a hero verdict with health checks, an
+Incident tab, `$pool`-repeated cards, question-led titles, drill-down links
+and one semantic palette. Owner decisions: RAM is shown both excluding and
+including the ZFS ARC; the Incident tab was added.
+
+Counts: classic 370→367 panels and 364→356 metric references (the
+unreliable `*_ratio` ZFS metrics were dropped, D2); MC 369→379 elements and
+12→13 tabs. No exporter metric, collector, HELP text, label, dashboard UID
+or template variable changed.
+
+Checks:
+- New validator rules reject `*_hit_ratio`/`*_miss_ratio`/`*_hit_percentage`
+  queries, require the outstanding-alerts expression, require a neutral
+  no-data colour and enforce tile title length. They are covered by
+  `tests/test_dashboard_overhaul.py` (12 tests).
+- `eval_queries.py` found 0 PromQL errors on mock 27, mock 25.10 and live
+  27.0.0-RC.1. Every empty query is classified.
+- The empty-Prometheus render has no green or red value tile.
+
+Tools: Grafana 13.0.1, grafana-image-renderer `latest`, Prometheus/promtool
+v3.5.0, Python 3.12.3.
+
+`./scripts/validate.sh`: exit 0, `validation_ok`, 400 passed, 91.88 %
+coverage. Generators are `--check` clean; the parity, compat-diff and 27
+review artifacts were regenerated because they derive from the dashboard.
+
+Live: the owner supplied a session key for this check. It was kept in a
+mode-600 file outside the repo, mounted read-only and deleted afterwards. No
+live renders or responses were committed. Committed screenshots use the
+synthetic `mock_exporter.py` only.
+
+Limits: Grafana 13.0.1 state timelines ignore value mappings (worked around).
+Interaction, mobile widths and long-range live history are unverified. Details,
+before/after per tab and nine exporter metric proposals (write-up only) are in
+`docs/reviews/dashboard-overhaul-2026-11-07.md`.
+
+Follow-up (same day, docs only):
+- The README was rewritten for users: hero image, colour legend, tab guide
+  and new mock screenshots (`grafana-dashboard/screenshots/hero-overview.png`
+  added).
+- The repository skill gained `references/dashboards.md` (dashboard rules,
+  upstream quirks, Grafana 13.0.1 behaviour, mock/render loop).
+- `references/diagnostics.md` now lists the live-verified 27.0.0-RC.1 data
+  shapes, and `docs/truenas27-migration.md` notes the 27 dashboard behaviour.

@@ -18,3 +18,12 @@
 - Event series disappear after their TTL while stream health reports down.
 - Invalid configuration fails before threads or sockets start.
 - `/healthz` remains liveness-only; `/readyz` reflects scrape freshness.
+
+> **Correction (2026-11-07, PRR-05).** The second and fourth bullets above are
+> retained as originally written but overstate the implemented contract.
+> `truenas_event_stream_up` means the subscription is active (its HELP text);
+> event values expire to NaN/absent after their TTL independently, so an
+> active subscription can coexist with expired data. `/readyz` reflects the
+> age of the last *successful* poll cycle, so a later failed cycle sets
+> `truenas_up=0` without immediately clearing readiness. Both lifetimes are
+> pinned by `tests/test_readiness_lifetimes.py`; neither metric was redefined.

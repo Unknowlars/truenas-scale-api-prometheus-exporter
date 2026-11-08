@@ -15,6 +15,7 @@ Start from the four reviews under docs/reviews and check their provenance.
 - New collector, API removal or subscription: [collectors](references/collectors.md).
 - Missing values, failures or high cardinality: [diagnostics](references/diagnostics.md).
 - Tests, Grafana, compatibility or releases: [validation](references/validation.md).
+- Dashboard queries, layout, no-data styling or renders: [dashboards](references/dashboards.md).
 
 Preserve metric names, types, HELP and labels; corrections need compatibility
 aliases and migration notes. Unsupported data stays absent/NaN; valid zero/false

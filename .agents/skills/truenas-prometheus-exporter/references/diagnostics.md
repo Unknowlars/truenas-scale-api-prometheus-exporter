@@ -31,3 +31,13 @@ Never add usernames, UUIDs, paths, command lines, alert text, arguments or
 arbitrary strings as new labels. Preserve contractual labels while documenting
 any necessary migration. Use the diagnosing-bugs skill when installed: reproduce
 through the real interface, test falsifiable hypotheses and preserve a regression.
+
+Known 27.0.0-RC.1 shapes (live, 2026-11-07), so do not chase them as exporter bugs:
+- `reporting.realtime` has no CPU user/system split (NaN), aggregate disk I/O
+  (`disk="total"`) only, and pool capacity but no pool read/write rates.
+- `virt.instance.metrics` is suppressed by the 27.0 profile
+  (`container.metrics` replaces it), yet its `event_stream_up` series stays at 0.
+- `pool.dataset.query` as currently projected returns no
+  encrypted/key_loaded/locked fields.
+- Alert, cron and snapshot-task `name` labels are numeric IDs.
+- Data age from `last_scrape_timestamp` is normally 25–60 s with 30 s polling.

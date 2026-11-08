@@ -25,6 +25,10 @@ push, publication, deployment, or NAS configuration/storage change occurred.
   check, and scrape-local state records deadline/transport failures even when an
   independent helper catches the exception. Late exhaustion now produces
   `truenas_up=0` and readiness false while retaining earlier partial metrics.
+  *(Qualified 2026-11-07, PRR-05: "readiness false" was shown only from a
+  cold start with no prior success. Readiness intentionally tracks the last
+  successful cycle, so after a warm success a failed cycle leaves readiness true
+  until that success ages out; see `tests/test_readiness_lifetimes.py`.)*
   The synthetic late-deadline case records 73 pre-send rejections and **zero**
   late transport calls. Existing early-deadline coverage confirms no connect or
   send occurs after expiry.

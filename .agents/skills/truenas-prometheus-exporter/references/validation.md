@@ -34,6 +34,8 @@ Control is offline by default; optional --metric-names takes local names-only
 JSON. Never personalize committed dashboards from production observations.
 JSON/reference validation is separate from PromQL evaluation and browser
 acceptance. Use local Prometheus/promtool for expression/exposition checks.
+Dashboard rules, upstream quirks and the mock/render loop are in
+[dashboards](dashboards.md).
 
 Record exact checks, tool versions, counts and limitations in the modernization
 ledger; update27 reviews and migration notes. Live tests still need a verified

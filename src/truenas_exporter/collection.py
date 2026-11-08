@@ -308,6 +308,14 @@ def _parse_ts(value: Any) -> float | None:
             return dt.timestamp()
         except ValueError:
             pass
+        try:
+            # certificate.query ``until`` is documented as ISO 8601, but a live
+            # 27.0.0-RC.1 appliance returns ctime text ("Sun Mar  8 12:00:00
+            # 2026"); OpenSSL notAfter values are UTC.
+            dt = datetime.strptime(" ".join(value.split()), "%a %b %d %H:%M:%S %Y")
+            return dt.replace(tzinfo=UTC).timestamp()
+        except ValueError:
+            pass
     return None
 
 

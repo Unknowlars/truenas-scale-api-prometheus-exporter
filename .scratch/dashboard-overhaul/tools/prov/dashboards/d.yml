@@ -1,0 +1,3 @@
+apiVersion: 1
+providers:
+  - {name: truenas, type: file, options: {path: /var/lib/grafana/dashboards}}

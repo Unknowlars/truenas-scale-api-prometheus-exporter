@@ -36,3 +36,7 @@ python3 scripts/generate_api_docs_manifest.py --target 27-official --check
 The manifest checker verifies generated file checksums against the pinned manifest. Full converter `--check` also regenerates metadata, inventory and files from the original source archive. No acquisition or conversion invokes a TrueNAS API method or uses credentials.
 
 Previous [25.10.2](../truenas-api/README.md) and [26.0.0](../truenas-api-v26/README.md) corpora remain available. The manifest tool defaults to 25.10.2 for compatibility; select 27 or 27-official explicitly.
+
+## Copyright and license
+
+The snapshots under `docs/api/`, `docs/truenas-api/` and `docs/truenas-api-v26/` are converted from documentation (c) iXsystems, Inc. dba TrueNAS. They are not covered by the repository MIT license; see the root [NOTICE](../../NOTICE). Snapshot READMEs are hash-pinned by their manifests and are intentionally left unchanged.

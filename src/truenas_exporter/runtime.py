@@ -591,6 +591,36 @@ def _set_optional_bool_gauge(gauge: Any, value: Any) -> None:
 # Main exporter class
 # ---------------------------------------------------------------------------
 
+
+_DIRECTORYSERVICES_TYPES = frozenset({"ACTIVEDIRECTORY", "IPA", "LDAP"})
+_DIRECTORYSERVICES_STATES = frozenset({"DISABLED", "FAULTED", "LEAVING", "JOINING", "HEALTHY"})
+
+
+def _parse_directoryservices_status(result: Any) -> tuple[str | None, str, str] | None:
+    """Validate ``directoryservices.status`` before any metric is allocated.
+
+    ``type`` is required and nullable; ``status`` defaults to null. An explicit
+    ``type: null`` with null/absent status is the documented disabled state.
+    Missing ``type``, non-enum values or inconsistent combinations are unknown
+    and return ``None`` (PRR-02).
+    """
+    if not isinstance(result, dict) or "type" not in result:
+        return None
+    service_type = result["type"]
+    raw_status = result.get("status")
+    if service_type is None:
+        if raw_status is None:
+            return None, "none", "DISABLED"
+        return None
+    if not isinstance(service_type, str) or not isinstance(raw_status, str):
+        return None
+    if service_type.upper() not in _DIRECTORYSERVICES_TYPES:
+        return None
+    status = raw_status.upper()
+    if status not in _DIRECTORYSERVICES_STATES:
+        return None
+    return service_type, _str_label(service_type).lower(), status
+
 class TrueNASExporter:
     def __init__(
         self,
@@ -3094,20 +3124,17 @@ class TrueNASExporter:
         except Exception:
             LOG.debug("directoryservices.status failed", exc_info=True)
 
-        if isinstance(result, dict):
-            DIRECTORYSERVICES_STATUS.clear()
-            DIRECTORYSERVICES_HEALTHY.clear()
-            DIRECTORYSERVICES_FAULT_REASON.clear()
-            service_type = result.get("type")
-            raw_status = result.get("status")
-            if service_type is None and raw_status is None:
-                service = "none"
-                status = "DISABLED"
-            elif isinstance(service_type, str) and isinstance(raw_status, str):
-                service = _str_label(service_type).lower()
-                status = _str_label(raw_status).upper()
-            else:
-                return
+        # Every owned series is cleared first so a missing, failed or malformed
+        # response leaves them absent/NaN rather than stale (PRR-02).
+        DIRECTORYSERVICES_STATUS.clear()
+        DIRECTORYSERVICES_HEALTHY.clear()
+        DIRECTORYSERVICES_FAULT_REASON.clear()
+        DIRECTORYSERVICES_FAULT_PRESENT.clear()
+        DIRECTORYSERVICES_SERVICE_TYPE.clear()
+        DIRECTORYSERVICES_CONFIG_ENABLED.set(float("nan"))
+        parsed = _parse_directoryservices_status(result)
+        if parsed is not None:
+            service_type, service, status = parsed
             faulted = status == "FAULTED"
 
             DIRECTORYSERVICES_STATUS.labels(service=service, status=status).set(1)
