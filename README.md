@@ -8,6 +8,8 @@ A read-only Prometheus exporter for TrueNAS SCALE, with a Grafana dashboard
 that shows the health of your whole NAS at a glance. Nothing gets installed
 on TrueNAS.
 
+**AI disclosure:** This project was built with the assistance of AI tools.
+
 ![TrueNAS SCALE 27.0 primary, 25.10 and 26.0 retained](https://img.shields.io/badge/TrueNAS%20SCALE-27.0%20%7C%2026.0%20%7C%2025.10-0095d5?style=flat-square)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776ab?style=flat-square&logo=python&logoColor=white)
 ![Docker Ready](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)
@@ -46,7 +48,9 @@ supported), a machine with Docker, and about five minutes.
 4. Save, and copy the key straight away: TrueNAS shows it only once.
 
 > [!TIP]
-> The exporter only ever makes read-only calls, so even a full-access key is used safely. A read-only key is extra protection.
+> Use an account with the least privilege your TrueNAS version supports. A
+> full-access key can change your NAS if disclosed; the exporter's read-only
+> method restrictions do not limit what another client can do with that key.
 
 ### 2. Configure
 
@@ -87,13 +91,13 @@ If you see `truenas_up 1`, the exporter is connected. 🎉
 <details>
 <summary>Other ways to run it: plain Docker image or local Python</summary>
 
-**Docker image**
+**Local Docker image**
 
 ```bash
 cp .env.example .env      # set TRUENAS_WS_URL and TRUENAS_API_KEY
-docker pull ghcr.io/unknowlars/truenas-scale-api-prometheus-exporter:latest
+docker build -t truenas-exporter:local .
 docker run --rm --env-file .env -p 9108:9108 \
-  ghcr.io/unknowlars/truenas-scale-api-prometheus-exporter:latest
+  truenas-exporter:local
 ```
 
 **Local Python (3.12+)**

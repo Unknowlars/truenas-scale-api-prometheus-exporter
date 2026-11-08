@@ -1077,3 +1077,13 @@ Follow-up (same day, docs only):
   upstream quirks, Grafana 13.0.1 behaviour, mock/render loop).
 - `references/diagnostics.md` now lists the live-verified 27.0.0-RC.1 data
   shapes, and `docs/truenas27-migration.md` notes the 27 dashboard behaviour.
+
+# Public release follow-up — 2026-11-08
+
+The focused documentation and release review is recorded in
+[`../reviews/public-release-followup-2026-11-08.md`](../reviews/public-release-followup-2026-11-08.md).
+The local tracked-file audit passed and the release script produced a dry run
+for `5.2.0rc1`; these checks do not validate Git history or authorize release.
+The validation run completed with `validation_ok`: Ruff, mypy, 400 tests
+(91.88% coverage), the 98-warning Prometheus lint baseline, dashboard checks,
+generated artifacts and the container build passed.

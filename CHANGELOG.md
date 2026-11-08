@@ -23,8 +23,9 @@ All notable changes to this project are documented here.
   inventories, architecture and baseline reviews, and a reusable Codex/Claude skill.
 - Keep publication local and explicit; prereleases never update `latest`.
 
-Live server acceptance is pending valid read-only authentication. Local API docs
-identify 27.0.0; that is not proof of the appliance's exact installed release.
+Authenticated live checks against 27.0.0-RC.1 were performed with an
+administrator key. A least-privilege key and the 27.0 GA release remain
+unverified.
 See `docs/reviews/` and `docs/modernization/README.md` for evidence and limitations.
 
 ## Unreleased - 5.2.0

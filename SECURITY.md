@@ -4,7 +4,7 @@
 
 Security fixes are applied to the latest released version. TrueNAS SCALE 27.0
 is the primary API target; the 25.10 and 26.0 compatibility profiles are
-retained. See the README "TrueNAS 27 release candidate" section for which
+retained. See the README [version evidence table](README.md#supported-truenas-versions) for which
 versions have documented, mocked, and historical live evidence.
 
 ## Reporting a vulnerability
