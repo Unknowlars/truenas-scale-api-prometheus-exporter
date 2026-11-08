@@ -40,3 +40,11 @@ grafana-dashboard/.metric-names-cache.json
 docs/truenas-api-v26.0.0/truenas-v26.0.0-docs
 .scratch/dashboard-overhaul/tools/shots/
 *.eval.json
+
+# Local work and optional agent tooling; keep the exporter skill bridge public.
+.scratch/
+.agents/skills/*
+!.agents/skills/truenas-prometheus-exporter/
+skills/
+skills-lock.json
+.github/images/

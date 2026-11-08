@@ -1087,3 +1087,11 @@ for `5.2.0rc1`; these checks do not validate Git history or authorize release.
 The validation run completed with `validation_ok`: Ruff, mypy, 400 tests
 (91.88% coverage), the 98-warning Prometheus lint baseline, dashboard checks,
 generated artifacts and the container build passed.
+
+Public-tree cleanup: local scratch work, optional general-purpose agent skills,
+and older `.github/images/` assets are ignored and removed from the Git index;
+the current dashboard screenshot gallery and exporter-specific skill remain.
+This does not remove prior Git history or resolve API documentation rights.
+The follow-up `./scripts/validate.sh` completed with `validation_ok`: 400
+tests (91.88% coverage), lint, type, Prometheus baseline, dashboard checks,
+generated-artifact checks and the container build passed.

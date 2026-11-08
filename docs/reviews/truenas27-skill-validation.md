@@ -150,7 +150,7 @@ claim that the current cap resolves every growth report.
 
 Environment: Python `3.12.3`, pytest `8.4.2`. Commands below completed locally.
 
-- `python3 /root/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/truenas-prometheus-exporter`:
+- `python3 <local-path> .agents/skills/truenas-prometheus-exporter`:
   PASS, `Skill is valid!`.
 - The same validator against `.claude/skills/truenas-prometheus-exporter`:
   PASS, `Skill is valid!`.
@@ -169,7 +169,7 @@ Environment: Python `3.12.3`, pytest `8.4.2`. Commands below completed locally.
   `_publish_metric_snapshot`, and public `TrueNASCollector.collect`. Three cycles
   provided six distinct synthetic numeric dictionary keys each. Assertions
   passed: current sample counts `[3, 3, 3]`, union **9** distinct label sets.
-- `git -c safe.directory=/mnt/c/repo/new_truenas/truenas-scale-api-prometheus-exporter rev-parse --short HEAD`:
+- `git -c safe.directory=<repository-path> rev-parse --short HEAD`:
   `523686d`. The first plain Git status attempt failed on checkout ownership;
   no global Git setting was changed. Two early exploratory reads guessed test
   filenames or a dotted event filename that do not exist; subsequent checks used

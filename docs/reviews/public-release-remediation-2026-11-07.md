@@ -69,7 +69,7 @@ retain them privately (removal requires reworking manifest/parity generators).
 ## Authenticated live acceptance (2026-11-07, owner-authorized)
 
 Target: owner's appliance, `27.0.0-RC.1` (not GA), `wss://` with
-`TRUENAS_VERIFY_TLS=false`, key `root_claude` on user `root`. The owner
+`TRUENAS_VERIFY_TLS=false`, an administrator key. The owner
 explicitly authorized this **FULL_ADMIN** key after being told it is not
 read-only, so **least privilege remains UNCONFIRMED**. The key was kept only in
 a mode-600 scratch file, mounted read-only, and deleted afterwards; it never
