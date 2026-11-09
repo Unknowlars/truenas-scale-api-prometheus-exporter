@@ -48,3 +48,8 @@ docs/truenas-api-v26.0.0/truenas-v26.0.0-docs
 skills/
 skills-lock.json
 .github/images/
+.scratch
+.github
+.claude
+.agents
+.agents/skills/truenas-prometheus-exporter

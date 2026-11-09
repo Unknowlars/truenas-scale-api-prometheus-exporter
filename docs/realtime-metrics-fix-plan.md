@@ -34,7 +34,7 @@ the exporter.
 
 Environment: exporter container `truenas-exporter` (image
 `truenas-scale-api-prometheus-exporter:local`) on the owner's host, TrueNAS
-SCALE 25.10.3 at `wss://192.168.0.238:449/api/current`.
+SCALE 25.10.3 at `wss://<truenas-host>:449/api/current`.
 
 Verified facts:
 
