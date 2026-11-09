@@ -8,7 +8,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 WORKDIR /build
 COPY requirements.txt /build/
 RUN python -m pip wheel --wheel-dir /wheels -r requirements.txt
-COPY pyproject.toml README.md LICENSE /build/
+COPY pyproject.toml README.md /build/
 COPY src /build/src
 RUN python -m pip wheel --no-deps --wheel-dir /wheels .
 
@@ -16,8 +16,7 @@ FROM python:${PYTHON_VERSION}-slim AS runtime
 
 LABEL org.opencontainers.image.title="TrueNAS Prometheus Exporter" \
       org.opencontainers.image.description="Prometheus exporter for the TrueNAS SCALE JSON-RPC API" \
-      org.opencontainers.image.source="https://github.com/Unknowlars/truenas-scale-api-prometheus-exporter" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.source="https://github.com/Unknowlars/truenas-scale-api-prometheus-exporter"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
