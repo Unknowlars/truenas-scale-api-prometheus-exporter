@@ -2,6 +2,8 @@
 
 # TrueNAS Prometheus Exporter
 
+# Hi i have done alot of work on a rework of the exporter and support for truenas scale "27.0.0-RC.1" its currently in branch truenas-27-support 
+
 Standalone Prometheus exporter for the TrueNAS JSON-RPC WebSocket API, with Docker-first deployment, safe metric defaults, and an included Grafana dashboard.
 
 ![TrueNAS SCALE 25.10.2](https://img.shields.io/badge/TrueNAS%20SCALE-25.10.2-0095d5?style=flat-square)
