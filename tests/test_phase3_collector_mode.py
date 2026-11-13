@@ -1,3 +1,4 @@
+import pytest
 import truenas_exporter as exporter_module
 
 
@@ -235,7 +236,7 @@ def _capture_http_stack(monkeypatch):
         def serve_forever(self):
             return
 
-    def fake_make_server(host, port, app, handler_class):
+    def fake_make_server(host, port, app, server_class, handler_class):
         captured["http_app"] = app
         return FakeServer()
 
@@ -281,3 +282,75 @@ def test_start_http_server_collector_uses_custom_registry_without_lock(monkeypat
     assert body == [b"metrics\n"]
     assert status_codes and status_codes[0] == "200 OK"
     assert lock.enter_count == 0
+
+
+def test_healthz_is_served_while_metrics_waits_for_the_exporter_lock():
+    import threading
+    import urllib.request
+
+    lock = threading.Lock()
+    server = exporter_module._start_http_server(0, lock, registry=None, lock_metrics=True)
+    port = server.server_address[1]
+    lock.acquire()  # simulates a long API poll holding the lock
+    try:
+        metrics_thread = threading.Thread(
+            target=lambda: urllib.request.urlopen(f"http://127.0.0.1:{port}/metrics", timeout=10).read(),
+            daemon=True,
+        )
+        metrics_thread.start()
+
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=2) as response:
+            assert response.status == 200
+            assert response.read() == b"ok\n"
+        assert metrics_thread.is_alive()
+    finally:
+        lock.release()
+        server.shutdown()
+        server.server_close()
+
+
+def test_metrics_requests_beyond_the_concurrency_cap_get_503(monkeypatch):
+    import threading
+    import time
+    import urllib.error
+    import urllib.request
+
+    lock = threading.Lock()
+    server = exporter_module._start_http_server(
+        0, lock, registry=None, lock_metrics=True, max_concurrent_metrics=1
+    )
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    lock.acquire()  # the first /metrics request occupies the only slot while waiting here
+    try:
+        first = threading.Thread(
+            target=lambda: urllib.request.urlopen(f"{base}/metrics", timeout=10).read(), daemon=True
+        )
+        first.start()
+        time.sleep(0.3)
+
+        with pytest.raises(urllib.error.HTTPError) as excinfo:
+            urllib.request.urlopen(f"{base}/metrics", timeout=2)
+        assert excinfo.value.code == 503
+
+        with urllib.request.urlopen(f"{base}/healthz", timeout=2) as response:
+            assert response.status == 200
+    finally:
+        lock.release()
+        first.join(5)
+        server.shutdown()
+        server.server_close()
+
+
+def test_max_concurrent_metrics_requests_defaults_overrides_and_rejects_zero(monkeypatch):
+    monkeypatch.setenv("TRUENAS_WS_URL", "wss://nas.example/api/current")
+    monkeypatch.setenv("TRUENAS_API_KEY", "secret")
+
+    monkeypatch.delenv("MAX_CONCURRENT_METRICS_REQUESTS", raising=False)
+    assert exporter_module._load_config().max_concurrent_metrics_requests == 4
+
+    monkeypatch.setenv("MAX_CONCURRENT_METRICS_REQUESTS", "2")
+    assert exporter_module._load_config().max_concurrent_metrics_requests == 2
+
+    monkeypatch.setenv("MAX_CONCURRENT_METRICS_REQUESTS", "0")
+    with pytest.raises(ValueError, match="MAX_CONCURRENT_METRICS_REQUESTS"):
+        exporter_module._load_config()
