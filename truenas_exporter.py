@@ -397,10 +397,10 @@ SMB_SHARE_COUNT = Gauge("truenas_smb_share_count", "Number of configured SMB sha
 # Alerts
 # ---------------------------------------------------------------------------
 ALERT_COUNT = Gauge("truenas_alert_count", "Total number of active alerts")
-ALERT_COUNT_BY_LEVEL = Gauge("truenas_alert_count_by_level", "Alert count by level", ["level"])
-ALERT_COUNT_BY_SOURCE = Gauge("truenas_alert_count_by_source", "Alert count by source component", ["source"])
-ALERT_COUNT_BY_CLASS = Gauge("truenas_alert_count_by_class", "Alert count by class and level", ["klass", "level"])
-ALERT_COUNT_BY_NODE = Gauge("truenas_alert_count_by_node", "Alert count by node", ["node"])
+ALERT_COUNT_BY_LEVEL = Gauge("truenas_alert_count_by_level", "Alert count by level and dismissed state", ["level", "dismissed"])
+ALERT_COUNT_BY_SOURCE = Gauge("truenas_alert_count_by_source", "Alert count by source component and dismissed state", ["source", "dismissed"])
+ALERT_COUNT_BY_CLASS = Gauge("truenas_alert_count_by_class", "Alert count by class, level, and dismissed state", ["klass", "level", "dismissed"])
+ALERT_COUNT_BY_NODE = Gauge("truenas_alert_count_by_node", "Alert count by node and dismissed state", ["node", "dismissed"])
 ALERT_DISMISSED_COUNT = Gauge("truenas_alert_dismissed_count", "Number of dismissed alerts")
 ALERT_ONE_SHOT_COUNT = Gauge("truenas_alert_one_shot_count", "Number of one-shot alerts")
 ALERT_OLDEST_TS = Gauge("truenas_alert_oldest_timestamp_seconds", "Unix timestamp of the oldest current alert")
@@ -2099,10 +2099,10 @@ class TrueNASExporter:
 
         ALERT_COUNT.set(len(alert_list))
 
-        level_counts: dict[str, int] = {}
-        source_counts: dict[str, int] = {}
-        class_counts: dict[tuple[str, str], int] = {}
-        node_counts: dict[str, int] = {}
+        level_counts: dict[tuple[str, str], int] = {}
+        source_counts: dict[tuple[str, str], int] = {}
+        class_counts: dict[tuple[str, str, str], int] = {}
+        node_counts: dict[tuple[str, str], int] = {}
         last_occurrence_by_level: dict[str, float] = {}
         dismissed_count = 0
         one_shot_count = 0
@@ -2116,13 +2116,14 @@ class TrueNASExporter:
             source = _str_label(alert.get("source"), "unknown")
             klass = _str_label(alert.get("klass"), "unknown")
             node = _str_label(alert.get("node"), "unknown")
+            dismissed = "true" if _as_bool(alert.get("dismissed")) else "false"
 
-            level_counts[level] = level_counts.get(level, 0) + 1
-            source_counts[source] = source_counts.get(source, 0) + 1
-            class_counts[(klass, level)] = class_counts.get((klass, level), 0) + 1
-            node_counts[node] = node_counts.get(node, 0) + 1
+            level_counts[(level, dismissed)] = level_counts.get((level, dismissed), 0) + 1
+            source_counts[(source, dismissed)] = source_counts.get((source, dismissed), 0) + 1
+            class_counts[(klass, level, dismissed)] = class_counts.get((klass, level, dismissed), 0) + 1
+            node_counts[(node, dismissed)] = node_counts.get((node, dismissed), 0) + 1
 
-            if _as_bool(alert.get("dismissed")):
+            if dismissed == "true":
                 dismissed_count += 1
             if _as_bool(alert.get("one_shot")):
                 one_shot_count += 1
@@ -2138,14 +2139,14 @@ class TrueNASExporter:
                     last_occurrence_ts,
                 )
 
-        for level, count in level_counts.items():
-            ALERT_COUNT_BY_LEVEL.labels(level=level).set(count)
-        for source, count in source_counts.items():
-            ALERT_COUNT_BY_SOURCE.labels(source=source).set(count)
-        for (klass, level), count in class_counts.items():
-            ALERT_COUNT_BY_CLASS.labels(klass=klass, level=level).set(count)
-        for node, count in node_counts.items():
-            ALERT_COUNT_BY_NODE.labels(node=node).set(count)
+        for (level, dismissed), count in level_counts.items():
+            ALERT_COUNT_BY_LEVEL.labels(level=level, dismissed=dismissed).set(count)
+        for (source, dismissed), count in source_counts.items():
+            ALERT_COUNT_BY_SOURCE.labels(source=source, dismissed=dismissed).set(count)
+        for (klass, level, dismissed), count in class_counts.items():
+            ALERT_COUNT_BY_CLASS.labels(klass=klass, level=level, dismissed=dismissed).set(count)
+        for (node, dismissed), count in node_counts.items():
+            ALERT_COUNT_BY_NODE.labels(node=node, dismissed=dismissed).set(count)
         for level, ts in last_occurrence_by_level.items():
             ALERT_LAST_OCCURRENCE_TS.labels(level=level).set(ts)
 
@@ -6403,10 +6404,10 @@ class TrueNASExporter:
         alerts = alerts_raw if isinstance(alerts_raw, list) else []
         self._snapshot_set_scalar(snapshot, ALERT_COUNT, len(alerts))
 
-        level_counts: dict[str, int] = {}
-        source_counts: dict[str, int] = {}
-        class_counts: dict[tuple[str, str], int] = {}
-        node_counts: dict[str, int] = {}
+        level_counts: dict[tuple[str, str], int] = {}
+        source_counts: dict[tuple[str, str], int] = {}
+        class_counts: dict[tuple[str, str, str], int] = {}
+        node_counts: dict[tuple[str, str], int] = {}
         last_occurrence_by_level: dict[str, float] = {}
         dismissed_count = 0
         one_shot_count = 0
@@ -6419,13 +6420,14 @@ class TrueNASExporter:
             source = _str_label(alert.get("source"), "unknown")
             klass = _str_label(alert.get("klass"), "unknown")
             node = _str_label(alert.get("node"), "unknown")
+            dismissed = "true" if _as_bool(alert.get("dismissed")) else "false"
 
-            level_counts[level] = level_counts.get(level, 0) + 1
-            source_counts[source] = source_counts.get(source, 0) + 1
-            class_counts[(klass, level)] = class_counts.get((klass, level), 0) + 1
-            node_counts[node] = node_counts.get(node, 0) + 1
+            level_counts[(level, dismissed)] = level_counts.get((level, dismissed), 0) + 1
+            source_counts[(source, dismissed)] = source_counts.get((source, dismissed), 0) + 1
+            class_counts[(klass, level, dismissed)] = class_counts.get((klass, level, dismissed), 0) + 1
+            node_counts[(node, dismissed)] = node_counts.get((node, dismissed), 0) + 1
 
-            if _as_bool(alert.get("dismissed")):
+            if dismissed == "true":
                 dismissed_count += 1
             if _as_bool(alert.get("one_shot")):
                 one_shot_count += 1
@@ -6441,14 +6443,14 @@ class TrueNASExporter:
                     last_occurrence_ts,
                 )
 
-        for level, count in level_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_LEVEL, (level,), count)
-        for source, count in source_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_SOURCE, (source,), count)
-        for (klass, level), count in class_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_CLASS, (klass, level), count)
-        for node, count in node_counts.items():
-            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_NODE, (node,), count)
+        for (level, dismissed), count in level_counts.items():
+            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_LEVEL, (level, dismissed), count)
+        for (source, dismissed), count in source_counts.items():
+            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_SOURCE, (source, dismissed), count)
+        for (klass, level, dismissed), count in class_counts.items():
+            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_CLASS, (klass, level, dismissed), count)
+        for (node, dismissed), count in node_counts.items():
+            self._snapshot_set_series(snapshot, ALERT_COUNT_BY_NODE, (node, dismissed), count)
         for level, ts in last_occurrence_by_level.items():
             self._snapshot_set_series(snapshot, ALERT_LAST_OCCURRENCE_TS, (level,), ts)
 

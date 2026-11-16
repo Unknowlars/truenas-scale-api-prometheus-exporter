@@ -1274,7 +1274,7 @@ def build_dashboard():
     y += 4
     panels.append(piechart(
         "Alert Level Distribution",
-        [tgt(f'truenas_alert_count_by_level{{instance=~"{I}", level=~"$level"}}', '{{level}}', 'A')],
+        [tgt(f'sum by (level) (truenas_alert_count_by_level{{instance=~"{I}", level=~"$level"}})', '{{level}}', 'A')],
         0, y, w=8, desc="Current alert severity mix.",
     ))
     task_type_transforms = [
@@ -1305,7 +1305,7 @@ def build_dashboard():
     ))
     panels.append(piechart(
         "Alert Sources",
-        [tgt(f'truenas_alert_count_by_source{{instance=~"{I}"}}', '{{source}}', 'A')],
+        [tgt(f'sum by (source) (truenas_alert_count_by_source{{instance=~"{I}"}})', '{{source}}', 'A')],
         8, y, w=8, desc="Which subsystems are generating alerts.",
     ))
     panels.append(bargauge(
@@ -1353,8 +1353,8 @@ def build_dashboard():
     panels.append(table(
         "Alert Source and Node Detail",
         [
-            table_target(f'truenas_alert_count_by_source{{instance=~"{I}"}}', 'A'),
-            table_target(f'truenas_alert_count_by_node{{instance=~"{I}"}}', 'B'),
+            table_target(f'sum by (source) (truenas_alert_count_by_source{{instance=~"{I}"}})', 'A'),
+            table_target(f'sum by (node) (truenas_alert_count_by_node{{instance=~"{I}"}})', 'B'),
         ],
         12, y, w=12,
         desc="Current alert counts grouped by source and by node.",

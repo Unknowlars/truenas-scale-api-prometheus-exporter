@@ -14945,7 +14945,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "truenas_alert_count_by_level{instance=~\"$instance\", level=~\"$level\"}",
+              "expr": "sum by (level) (truenas_alert_count_by_level{instance=~\"$instance\", level=~\"$level\"})",
               "legendFormat": "{{level}}",
               "refId": "A"
             }
@@ -15347,7 +15347,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "truenas_alert_count_by_source{instance=~\"$instance\"}",
+              "expr": "sum by (source) (truenas_alert_count_by_source{instance=~\"$instance\"})",
               "legendFormat": "{{source}}",
               "refId": "A"
             }
@@ -15901,7 +15901,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "truenas_alert_count_by_source{instance=~\"$instance\"}",
+              "expr": "sum by (source) (truenas_alert_count_by_source{instance=~\"$instance\"})",
               "format": "table",
               "instant": true,
               "legendFormat": "",
@@ -15912,7 +15912,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "truenas_alert_count_by_node{instance=~\"$instance\"}",
+              "expr": "sum by (node) (truenas_alert_count_by_node{instance=~\"$instance\"})",
               "format": "table",
               "instant": true,
               "legendFormat": "",
