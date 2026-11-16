@@ -357,10 +357,14 @@ def test_alert_metrics_export_enriched_rollups():
     ])
 
     assert gauge_value(exporter_module.ALERT_COUNT) == 3
-    assert labeled_value(exporter_module.ALERT_COUNT_BY_LEVEL, "WARNING") == 2
-    assert labeled_value(exporter_module.ALERT_COUNT_BY_SOURCE, "SMART") == 2
-    assert labeled_value(exporter_module.ALERT_COUNT_BY_CLASS, "DiskTemp", "WARNING") == 2
-    assert labeled_value(exporter_module.ALERT_COUNT_BY_NODE, "A") == 2
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_LEVEL, "WARNING", "false") == 1
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_LEVEL, "WARNING", "true") == 1
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_SOURCE, "SMART", "false") == 1
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_SOURCE, "SMART", "true") == 1
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_CLASS, "DiskTemp", "WARNING", "false") == 1
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_CLASS, "DiskTemp", "WARNING", "true") == 1
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_NODE, "A", "false") == 2
+    assert labeled_value(exporter_module.ALERT_COUNT_BY_NODE, "B", "true") == 1
     assert gauge_value(exporter_module.ALERT_DISMISSED_COUNT) == 1
     assert gauge_value(exporter_module.ALERT_ONE_SHOT_COUNT) == 1
     assert gauge_value(exporter_module.ALERT_OLDEST_TS) == exporter_module._parse_ts("2025-01-01T00:00:00+00:00")
